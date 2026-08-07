@@ -11,7 +11,9 @@
     "ios:simulator": "expo run:ios --device",
     "android": "expo run:android",
     "android:device": "expo run:android --device",
-    "prebuild": "expo prebuild --clean",
+    "prebuild": "cross-env EAS_BUILD_PROFILE=staging expo prebuild --clean",
+    "prebuild:staging": "cross-env EAS_BUILD_PROFILE=staging expo prebuild --clean",
+    "prebuild:production": "cross-env EAS_BUILD_PROFILE=production expo prebuild --clean",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -36,6 +38,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
+    "cross-env": "^10.1.0",
     "typescript": "~5.9.2"
   }
 }
