@@ -12,7 +12,13 @@
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "server:dev": "pnpm --filter @bnewapp/server dev",
-    "mobile": "pnpm --filter @bnewapp/mobile start"
+    "mobile": "pnpm --filter @bnewapp/mobile start",
+    "mobile:fresh": "pnpm --filter @bnewapp/mobile start:fresh",
+    "mobile:clear-cache": "pnpm --filter @bnewapp/mobile clear-cache",
+    "mobile:ios": "pnpm --filter @bnewapp/mobile ios",
+    "mobile:ios:simulator": "pnpm --filter @bnewapp/mobile ios:simulator",
+    "mobile:android": "pnpm --filter @bnewapp/mobile android",
+    "mobile:android:device": "pnpm --filter @bnewapp/mobile android:device"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

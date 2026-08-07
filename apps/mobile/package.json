@@ -6,6 +6,11 @@
   "scripts": {
     "start": "expo start",
     "start:fresh": "expo start --clear",
+    "clear-cache": "expo start --clear",
+    "ios": "expo run:ios",
+    "ios:simulator": "expo run:ios --device",
+    "android": "expo run:android",
+    "android:device": "expo run:android --device",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
