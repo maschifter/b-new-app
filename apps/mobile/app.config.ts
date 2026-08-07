@@ -10,6 +10,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: "automatic",
   ios: { supportsTablet: false, bundleIdentifier: "com.bnewapp.mobile" },
   android: { package: "com.bnewapp.mobile", edgeToEdgeEnabled: true },
-  plugins: ["expo-router"],
+  plugins: ["expo-router", "expo-web-browser"],
   experiments: { typedRoutes: true },
 });
