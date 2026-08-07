@@ -9,6 +9,8 @@ describe("health endpoint", () => {
       HOST: "127.0.0.1",
       LOG_LEVEL: "fatal",
       RATE_LIMIT_MAX: 120,
+      SUPABASE_URL: "https://example.supabase.co",
+      SUPABASE_SECRET_KEY: "test-secret-key",
     });
     const response = await app.inject({ method: "GET", url: "/health" });
     expect(response.statusCode).toBe(200);

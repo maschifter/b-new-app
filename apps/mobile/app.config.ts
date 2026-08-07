@@ -12,9 +12,4 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: { package: "com.bnewapp.mobile", edgeToEdgeEnabled: true },
   plugins: ["expo-router"],
   experiments: { typedRoutes: true },
-  extra: {
-    apiUrl: process.env.EXPO_PUBLIC_API_URL,
-    supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
-    supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
-  },
 });

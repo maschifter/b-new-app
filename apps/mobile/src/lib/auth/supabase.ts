@@ -1,13 +1,18 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import Constants from "expo-constants";
 
-const url = Constants.expoConfig?.extra?.supabaseUrl as string | undefined;
-const anonKey = Constants.expoConfig?.extra?.supabaseAnonKey as string | undefined;
+const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const publishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 export const supabase: SupabaseClient | null =
-  url && anonKey
-    ? createClient(url, anonKey, {
-        auth: { storage: AsyncStorage, autoRefreshToken: true, persistSession: true },
+  url && publishableKey
+    ? createClient(url, publishableKey, {
+        auth: {
+          storage: AsyncStorage,
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: false,
+          flowType: "pkce",
+        },
       })
     : null;

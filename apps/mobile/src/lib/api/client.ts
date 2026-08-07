@@ -1,7 +1,5 @@
 import type { HealthStatus } from "@bnewapp/types";
-import Constants from "expo-constants";
-
-const apiUrl = Constants.expoConfig?.extra?.apiUrl as string | undefined;
+const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 
 export async function getHealth(): Promise<HealthStatus> {
   if (!apiUrl) {
