@@ -1,4 +1,4 @@
-import { AppButton } from "@/components/app-button";
+import { BouncablePress } from "@/components/bouncable-press";
 import { Screen } from "@/components/screen";
 import { getCurrentUser } from "@/lib/api/client";
 import { useAuthSession } from "@/lib/auth/session-provider";
@@ -42,7 +42,9 @@ export default function HomeScreen() {
         <Text style={styles.caption}>
           This screen verifies the authenticated mobile → API → database path.
         </Text>
-        <AppButton label="Sign out" onPress={signOut} variant="secondary" />
+        <BouncablePress accessibilityRole="button" onPress={signOut} style={styles.signOutButton}>
+          <Text style={styles.signOutButtonLabel}>Sign out</Text>
+        </BouncablePress>
       </View>
     </Screen>
   );
@@ -56,4 +58,14 @@ const styles = StyleSheet.create({
   copy: { color: "#C7C7D1", fontSize: 16 },
   caption: { color: "#898995", fontSize: 14, lineHeight: 20 },
   error: { color: "#FFBE8F", fontSize: 14, lineHeight: 20 },
+  signOutButton: {
+    alignItems: "center",
+    borderColor: "#4A4856",
+    borderRadius: 12,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 52,
+    paddingHorizontal: 20,
+  },
+  signOutButtonLabel: { color: "#F8F7FC", fontSize: 16, fontWeight: "700" },
 });

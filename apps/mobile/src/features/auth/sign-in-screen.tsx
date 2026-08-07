@@ -1,10 +1,10 @@
-import { AppButton } from "@/components/app-button";
+import { BouncablePress } from "@/components/bouncable-press";
 import { Screen } from "@/components/screen";
 import { TextField } from "@/components/text-field";
 import { supabase } from "@/lib/auth/supabase";
 import { router } from "expo-router";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
 
 type AuthMode = "sign-in" | "sign-up";
 
@@ -129,17 +129,25 @@ export function SignInScreen() {
           ) : null}
 
           <View style={styles.actions}>
-            <AppButton
-              isLoading={isSubmitting}
-              label={isSignUp ? "Create account" : "Sign in"}
-              onPress={submit}
-            />
-            <AppButton
+            <BouncablePress
+              accessibilityRole="button"
               disabled={isSubmitting}
-              label={isSignUp ? "I already have an account" : "Create an account"}
+              onPress={submit}
+              style={[styles.button, styles.primaryButton, isSubmitting && styles.disabledButton]}
+            >
+              {isSubmitting ? <ActivityIndicator color="#121014" /> : null}
+              <Text style={styles.primaryButtonLabel}>{isSignUp ? "Create account" : "Sign in"}</Text>
+            </BouncablePress>
+            <BouncablePress
+              accessibilityRole="button"
+              disabled={isSubmitting}
               onPress={switchMode}
-              variant="secondary"
-            />
+              style={[styles.button, styles.secondaryButton, isSubmitting && styles.disabledButton]}
+            >
+              <Text style={styles.secondaryButtonLabel}>
+                {isSignUp ? "I already have an account" : "Create an account"}
+              </Text>
+            </BouncablePress>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -156,6 +164,20 @@ const styles = StyleSheet.create({
   copy: { color: "#C7C7D1", fontSize: 16, lineHeight: 24 },
   form: { gap: 18 },
   actions: { gap: 12 },
+  button: {
+    alignItems: "center",
+    borderRadius: 12,
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "center",
+    minHeight: 52,
+    paddingHorizontal: 20,
+  },
+  primaryButton: { backgroundColor: "#D9FF72" },
+  primaryButtonLabel: { color: "#121014", fontSize: 16, fontWeight: "700" },
+  secondaryButton: { borderColor: "#4A4856", borderWidth: 1 },
+  secondaryButtonLabel: { color: "#F8F7FC", fontSize: 16, fontWeight: "700" },
+  disabledButton: { opacity: 0.55 },
   error: { color: "#FF8F8F", fontSize: 14, lineHeight: 20 },
   notice: { color: "#D9FF72", fontSize: 14, lineHeight: 20 },
 });
