@@ -11,6 +11,7 @@
     "ios:simulator": "expo run:ios --device",
     "android": "expo run:android",
     "android:device": "expo run:android --device",
+    "prebuild": "expo prebuild --clean",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

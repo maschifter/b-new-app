@@ -18,7 +18,8 @@
     "mobile:ios": "pnpm --filter @bnewapp/mobile ios",
     "mobile:ios:simulator": "pnpm --filter @bnewapp/mobile ios:simulator",
     "mobile:android": "pnpm --filter @bnewapp/mobile android",
-    "mobile:android:device": "pnpm --filter @bnewapp/mobile android:device"
+    "mobile:android:device": "pnpm --filter @bnewapp/mobile android:device",
+    "mobile:prebuild": "pnpm --filter @bnewapp/mobile prebuild"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
