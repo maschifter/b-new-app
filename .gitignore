@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.env
+.env.local
+.turbo/
+.expo/
+apps/mobile/android/
+apps/mobile/ios/
+supabase/.temp/
+*.log
+.DS_Store
