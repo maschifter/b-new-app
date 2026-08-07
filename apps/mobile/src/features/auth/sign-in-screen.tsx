@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/auth/supabase";
+import { isUiPreviewEnabled } from "@/lib/auth/ui-preview";
 import { makeRedirectUri } from "expo-auth-session";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
@@ -63,7 +64,7 @@ export function SignInScreen() {
         />
         <Button title="Continue with email" onPress={sendEmailLink} />
         <Button title="Continue with Google" onPress={startGoogleSignIn} />
-        <Button title="Preview home" onPress={() => router.replace("/home")} />
+        {isUiPreviewEnabled ? <Button title="Preview home" onPress={() => router.replace("/home")} /> : null}
       </View>
     </Screen>
   );

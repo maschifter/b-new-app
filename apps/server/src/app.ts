@@ -20,7 +20,17 @@ export async function buildApp(config: Env) {
     },
   });
   await app.register(sensible);
-  await app.register(cors, { origin: config.NODE_ENV === "development" });
+  const allowedOrigins = config.ALLOWED_ORIGINS?.split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  await app.register(cors, {
+    origin:
+      config.NODE_ENV === "development"
+        ? true
+        : allowedOrigins && allowedOrigins.length > 0
+          ? allowedOrigins
+          : false,
+  });
   await app.register(rateLimit, { max: config.RATE_LIMIT_MAX, timeWindow: "1 minute" });
   const getJwks = buildGetJwks();
   await app.register(jwt, {
