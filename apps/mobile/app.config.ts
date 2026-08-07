@@ -41,6 +41,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     package: `com.bnewapp.mobile${BUNDLE_ID_SUFFIX}`,
     edgeToEdgeEnabled: true,
   },
-  plugins: ["expo-router", "expo-web-browser"],
+  plugins: ["expo-router"],
   experiments: { typedRoutes: true },
 });

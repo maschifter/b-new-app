@@ -1,3 +1,5 @@
+export type { Database } from "./database.generated.js";
+
 export interface ApiSuccess<T> {
   data: T;
 }
@@ -13,6 +15,7 @@ export interface HealthStatus {
 }
 
 export interface UserProfile {
+  createdAt: string;
   id: string;
-  email: string | null;
+  email: string;
 }

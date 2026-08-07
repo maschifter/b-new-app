@@ -1,78 +1,161 @@
+import { AppButton } from "@/components/app-button";
+import { Screen } from "@/components/screen";
+import { TextField } from "@/components/text-field";
 import { supabase } from "@/lib/auth/supabase";
-import { isUiPreviewEnabled } from "@/lib/auth/ui-preview";
-import { makeRedirectUri } from "expo-auth-session";
 import { router } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
-import { Alert, Button, StyleSheet, Text, TextInput, View } from "react-native";
-import { Screen } from "../../components/screen";
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
+
+type AuthMode = "sign-in" | "sign-up";
 
 export function SignInScreen() {
+  const [mode, setMode] = useState<AuthMode>("sign-in");
   const [email, setEmail] = useState("");
-  const redirectTo = makeRedirectUri({ scheme: "bnewapp", path: "auth/callback" });
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const completeSession = async (url: string) => {
-    if (!supabase) return;
-    const code = new URL(url).searchParams.get("code");
-    if (!code) return;
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error) Alert.alert("Sign-in unavailable", error.message);
-    else router.replace("/home");
+  const isSignUp = mode === "sign-up";
+
+  const switchMode = () => {
+    setMode((currentMode) => (currentMode === "sign-in" ? "sign-up" : "sign-in"));
+    setErrorMessage(null);
+    setNotice(null);
   };
 
-  const sendEmailLink = async () => {
-    if (!supabase) {
-      Alert.alert("Setup needed", "Add Supabase public credentials to enable sign-in.");
-      return;
-    }
-    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } });
-    if (error) Alert.alert("Sign-in unavailable", error.message);
-    else Alert.alert("Check your email", "Open the sign-in link on this device to continue.");
-  };
+  const submit = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+    setErrorMessage(null);
+    setNotice(null);
 
-  const startGoogleSignIn = async () => {
+    if (!normalizedEmail.includes("@")) {
+      setErrorMessage("Enter a valid email address.");
+      return;
+    }
+    if (password.length < 8) {
+      setErrorMessage("Password must contain at least 8 characters.");
+      return;
+    }
+    if (isSignUp && password !== confirmPassword) {
+      setErrorMessage("Passwords do not match.");
+      return;
+    }
     if (!supabase) {
-      Alert.alert("Setup needed", "Add Supabase public credentials to enable sign-in.");
+      setErrorMessage("Add Supabase public credentials to enable sign-in.");
       return;
     }
-    const result = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo, skipBrowserRedirect: true },
-    });
-    if (result.error || !result.data.url) {
-      Alert.alert("Sign-in unavailable", result.error?.message ?? "No sign-in URL was returned.");
+
+    setIsSubmitting(true);
+    const result = isSignUp
+      ? await supabase.auth.signUp({ email: normalizedEmail, password })
+      : await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
+    setIsSubmitting(false);
+
+    if (result.error) {
+      setErrorMessage(result.error.message);
       return;
     }
-    const response = await WebBrowser.openAuthSessionAsync(result.data.url, redirectTo);
-    if (response.type === "success") await completeSession(response.url);
+    if (result.data.session) {
+      router.replace("/home");
+      return;
+    }
+    if (isSignUp && !result.data.session) {
+      setNotice("Check your email to confirm your account, then sign in.");
+    }
   };
 
   return (
     <Screen>
-      <View style={styles.content}>
-        <Text style={styles.title}>Welcome</Text>
-        <Text style={styles.copy}>Sign-in will be available when the Supabase project is connected.</Text>
-        <TextInput
-          autoCapitalize="none"
-          autoComplete="email"
-          keyboardType="email-address"
-          onChangeText={setEmail}
-          placeholder="Email address"
-          placeholderTextColor="#898995"
-          style={styles.input}
-          value={email}
-        />
-        <Button title="Continue with email" onPress={sendEmailLink} />
-        <Button title="Continue with Google" onPress={startGoogleSignIn} />
-        {isUiPreviewEnabled ? <Button title="Preview home" onPress={() => router.replace("/home")} /> : null}
-      </View>
+      <KeyboardAvoidingView
+        behavior={Platform.select({ ios: "padding", default: undefined })}
+        style={styles.keyboard}
+      >
+        <View style={styles.content}>
+          <View style={styles.heading}>
+            <Text style={styles.eyebrow}>BNEWAPP</Text>
+            <Text style={styles.title}>{isSignUp ? "Create your account" : "Welcome back"}</Text>
+            <Text style={styles.copy}>
+              {isSignUp
+                ? "Start with an email and password."
+                : "Sign in to continue your dance journey."}
+            </Text>
+          </View>
+
+          <View style={styles.form}>
+            <TextField
+              autoCapitalize="none"
+              autoComplete="email"
+              autoCorrect={false}
+              keyboardType="email-address"
+              label="Email"
+              onChangeText={setEmail}
+              placeholder="you@example.com"
+              textContentType="emailAddress"
+              value={email}
+            />
+            <TextField
+              autoComplete={isSignUp ? "new-password" : "password"}
+              label="Password"
+              onChangeText={setPassword}
+              placeholder="At least 8 characters"
+              secureTextEntry
+              textContentType={isSignUp ? "newPassword" : "password"}
+              value={password}
+            />
+            {isSignUp ? (
+              <TextField
+                autoComplete="new-password"
+                label="Confirm password"
+                onChangeText={setConfirmPassword}
+                placeholder="Repeat your password"
+                secureTextEntry
+                textContentType="newPassword"
+                value={confirmPassword}
+              />
+            ) : null}
+          </View>
+
+          {errorMessage ? (
+            <Text accessibilityRole="alert" style={styles.error}>
+              {errorMessage}
+            </Text>
+          ) : null}
+          {notice ? (
+            <Text accessibilityRole="alert" style={styles.notice}>
+              {notice}
+            </Text>
+          ) : null}
+
+          <View style={styles.actions}>
+            <AppButton
+              isLoading={isSubmitting}
+              label={isSignUp ? "Create account" : "Sign in"}
+              onPress={submit}
+            />
+            <AppButton
+              disabled={isSubmitting}
+              label={isSignUp ? "I already have an account" : "Create an account"}
+              onPress={switchMode}
+              variant="secondary"
+            />
+          </View>
+        </View>
+      </KeyboardAvoidingView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { flex: 1, justifyContent: "center", gap: 16 },
-  title: { color: "#FFFFFF", fontSize: 32, fontWeight: "700" },
+  keyboard: { flex: 1 },
+  content: { flex: 1, gap: 32, justifyContent: "center" },
+  heading: { gap: 10 },
+  eyebrow: { color: "#D9FF72", fontSize: 12, fontWeight: "800", letterSpacing: 1.5 },
+  title: { color: "#F8F7FC", fontSize: 32, fontWeight: "700", letterSpacing: -0.5 },
   copy: { color: "#C7C7D1", fontSize: 16, lineHeight: 24 },
-  input: { borderColor: "#50505B", borderWidth: 1, borderRadius: 8, color: "#FFFFFF", padding: 12 },
+  form: { gap: 18 },
+  actions: { gap: 12 },
+  error: { color: "#FF8F8F", fontSize: 14, lineHeight: 20 },
+  notice: { color: "#D9FF72", fontSize: 14, lineHeight: 20 },
 });

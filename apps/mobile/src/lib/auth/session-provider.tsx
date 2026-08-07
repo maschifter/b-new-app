@@ -1,5 +1,5 @@
 import type { Session } from "@supabase/supabase-js";
-import { createContext, type PropsWithChildren, useContext, useEffect, useState } from "react";
+import { type PropsWithChildren, createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "./supabase";
 
 interface AuthSessionContextValue {
@@ -36,7 +36,11 @@ export function AuthSessionProvider({ children }: PropsWithChildren) {
     };
   }, []);
 
-  return <AuthSessionContext.Provider value={{ hydrated, session }}>{children}</AuthSessionContext.Provider>;
+  return (
+    <AuthSessionContext.Provider value={{ hydrated, session }}>
+      {children}
+    </AuthSessionContext.Provider>
+  );
 }
 
 export function useAuthSession(): AuthSessionContextValue {

@@ -1,6 +1,5 @@
-import { QueryProvider } from "@/lib/providers/query-provider";
 import { AuthSessionProvider, useAuthSession } from "@/lib/auth/session-provider";
-import { isUiPreviewEnabled } from "@/lib/auth/ui-preview";
+import { QueryProvider } from "@/lib/providers/query-provider";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ActivityIndicator, View } from "react-native";
@@ -36,7 +35,7 @@ function RootNavigator() {
       <Stack.Protected guard={session === null}>
         <Stack.Screen name="auth" />
       </Stack.Protected>
-      <Stack.Protected guard={session !== null || isUiPreviewEnabled}>
+      <Stack.Protected guard={session !== null}>
         <Stack.Screen name="home" />
       </Stack.Protected>
     </Stack>

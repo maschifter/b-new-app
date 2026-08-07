@@ -21,7 +21,10 @@
     "mobile:android:device": "pnpm --filter @bnewapp/mobile android:device",
     "mobile:prebuild": "pnpm --filter @bnewapp/mobile prebuild",
     "mobile:prebuild:staging": "pnpm --filter @bnewapp/mobile prebuild:staging",
-    "mobile:prebuild:production": "pnpm --filter @bnewapp/mobile prebuild:production"
+    "mobile:prebuild:production": "pnpm --filter @bnewapp/mobile prebuild:production",
+    "db:new": "npx supabase migration new",
+    "db:push": "npx supabase db push",
+    "db:types": "npx supabase gen types typescript --linked > packages/types/src/database.generated.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
