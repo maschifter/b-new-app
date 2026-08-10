@@ -1,4 +1,5 @@
 import { BouncablePress } from "@/components/bouncable-press";
+import { Image } from "expo-image";
 import { StyleSheet, Text, View } from "react-native";
 import type { ContentRef, Spot } from "../domain/types";
 import { describeContent, itemLabel } from "./placeholder";
@@ -38,7 +39,18 @@ export function SpotLayer({ spot, frame, content, selected, showEmpty, onPress }
       testID={`spot-content-${spot.id}`}
       style={[styles.block, { backgroundColor: presentation.color }, selected && styles.selected]}
     >
-      <Text numberOfLines={2} style={styles.blockLabel}>
+      {presentation.art ? (
+        <Image
+          source={presentation.art}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          transition={200}
+        />
+      ) : null}
+      <Text
+        numberOfLines={2}
+        style={[styles.blockLabel, presentation.art && styles.blockLabelOnArt]}
+      >
         {presentation.label}
       </Text>
     </View>
@@ -74,6 +86,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     flex: 1,
     justifyContent: "center",
+    overflow: "hidden",
     padding: 6,
   },
   blockLabel: {
@@ -81,6 +94,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     textAlign: "center",
+  },
+  // Keep the label legible when it sits over the art rather than a flat block.
+  blockLabelOnArt: {
+    textShadowColor: "rgba(0,0,0,0.75)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   empty: {
     alignItems: "center",
