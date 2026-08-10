@@ -57,6 +57,36 @@ export type Database = {
         }
         Relationships: []
       }
+      studio_rooms: {
+        Row: {
+          created_at: string
+          id: string
+          map: Json
+          owner_id: string
+          template_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          map?: Json
+          owner_id: string
+          template_id: string
+          updated_at?: string
+          version: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          map?: Json
+          owner_id?: string
+          template_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
