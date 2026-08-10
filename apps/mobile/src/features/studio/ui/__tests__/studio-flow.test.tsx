@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react-native";
+import { fireEvent, render, screen } from "@testing-library/react-native";
 import { Provider, createStore } from "jotai";
 import { StudioProvider, useStudio } from "../../state/studio-provider";
 import { ItemPicker } from "../item-picker";
@@ -59,10 +59,9 @@ describe("studio flow", () => {
     // Pick a compatible item (decor-1 accepts type=decor,size=S -> "Plant").
     fireEvent.press(screen.getByText("Plant"));
 
-    // The spot now renders a filled block labelled "Plant"; empty outline gone.
+    // The spot now renders the filled sprite; the empty outline is gone.
     expect(screen.queryByTestId("spot-empty-decor-1")).toBeNull();
-    const block = screen.getByTestId("spot-content-decor-1");
-    expect(within(block).getByText("Plant")).toBeTruthy();
+    expect(screen.getByTestId("spot-content-decor-1")).toBeTruthy();
   });
 
   it("clearing a filled spot empties it again", () => {

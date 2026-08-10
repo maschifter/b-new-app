@@ -1,5 +1,5 @@
 import { createStore } from "jotai";
-import { emptyDecoration } from "../../data/templates";
+import { SAMPLE_DECORATION, emptyDecoration } from "../../data/templates";
 import type { DecorationSnapshot } from "../../domain/types";
 import { coerceSnapshot, decorationAtom } from "../atoms";
 
@@ -107,6 +107,8 @@ describe("decorationAtom persistence", () => {
     );
     const reader = createStore();
     const other = withRoom(reader, "user-2", () => reader.get(decorationAtom("user-2")).map);
-    expect(other).toEqual({});
+    // user-2 has nothing persisted, so it reads back the first-run SAMPLE default,
+    // not user-1's room — proving the two owners stay isolated.
+    expect(other).toEqual(SAMPLE_DECORATION.map);
   });
 });

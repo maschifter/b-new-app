@@ -1,6 +1,7 @@
+import { Image } from "expo-image";
 import { useState } from "react";
 import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
-import { DESIGN_CANVAS, THEME_BACKGROUNDS } from "../data/templates";
+import { DESIGN_CANVAS, THEME_BACKGROUND_IMAGES, THEME_BACKGROUNDS } from "../data/templates";
 import type { ContentRef, RoomTemplate, StudioMode } from "../domain/types";
 import { SpotLayer } from "./spot-layer";
 
@@ -45,6 +46,7 @@ export function StudioStage({
   const offsetY = 0; // pin the top; surplus height (cover) bleeds off the bottom
 
   const background = THEME_BACKGROUNDS[template.themeId] ?? "#17171D";
+  const backgroundImage = THEME_BACKGROUND_IMAGES[template.themeId];
   const showEmpty = mode === "edit";
   const handleSelect = mode === "edit" ? onSelectSpot : undefined;
 
@@ -70,6 +72,15 @@ export function StudioStage({
             },
           ]}
         >
+          {backgroundImage ? (
+            <Image
+              testID="studio-stage-background"
+              source={backgroundImage}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              transition={200}
+            />
+          ) : null}
           {spots.map((spot) => (
             <SpotLayer
               key={spot.id}

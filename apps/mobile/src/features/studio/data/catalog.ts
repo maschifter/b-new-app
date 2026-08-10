@@ -24,10 +24,12 @@ import type { CatalogItem } from "../domain/types";
 export const CATALOG: CatalogItem[] = [
   // 1. Hero Video Zone — type=video, size=L
   { id: "big-screen", tags: { type: "video", size: "L" } },
+  { id: "big-screen-2", tags: { type: "video", size: "L" } },
   { id: "led-wall", tags: { type: "video", size: "L" } },
 
   // 2. Preview Zone — type=preview, size=S (smaller companion screens)
   { id: "preview-screen", tags: { type: "preview", size: "S" } },
+  { id: "preview-screen-2", tags: { type: "preview", size: "S" } },
 
   // 3. Tall Module — type=tall, size=L
   { id: "locker", tags: { type: "tall", size: "L" } },
@@ -35,37 +37,44 @@ export const CATALOG: CatalogItem[] = [
   { id: "costume-rack", tags: { type: "tall", size: "L" } },
   { id: "snack-bar", tags: { type: "tall", size: "L" } },
   { id: "trophy", tags: { type: "tall", size: "L" } },
+  { id: "trophy-2", tags: { type: "tall", size: "L" } },
 
   // 4. Low Module — type=low, size=M (DJ booth / sound system / storage)
   { id: "dj-booth", tags: { type: "low", size: "M" } },
   { id: "speaker", tags: { type: "low", size: "M" } },
   { id: "boombox", tags: { type: "low", size: "M" } },
+  { id: "boombox-2", tags: { type: "low", size: "M" } },
   { id: "storage", tags: { type: "low", size: "M" } },
 
   // 5. Lounge Kit — type=lounge
   { id: "sofa", tags: { type: "lounge" } },
+  { id: "sofa-2", tags: { type: "lounge" } },
   { id: "coffee-table", tags: { type: "lounge" } },
   { id: "pouf", tags: { type: "lounge" } },
 
   // 6. Ceiling — type=ceiling
   { id: "spotlight", tags: { type: "ceiling" } },
+  { id: "spotlight-2", tags: { type: "ceiling" } },
   { id: "disco-ball", tags: { type: "ceiling" } },
   { id: "neon-ring", tags: { type: "ceiling" } },
 
   // 7. Floor Module — type=floor, size=L
   { id: "rug", tags: { type: "floor", size: "L" } },
   { id: "stage", tags: { type: "floor", size: "L" } },
+  { id: "stage-2", tags: { type: "floor", size: "L" } },
   { id: "dance-mat", tags: { type: "floor", size: "L" } },
   { id: "neon-circle", tags: { type: "floor", size: "L" } },
 
   // 8. Wall Art — type=wall, size=M
   { id: "poster", tags: { type: "wall", size: "M" } },
   { id: "mirror", tags: { type: "wall", size: "M" } },
+  { id: "mirror-2", tags: { type: "wall", size: "M" } },
   { id: "neon-sign", tags: { type: "wall", size: "M" } },
   { id: "moodboard", tags: { type: "wall", size: "M" } },
 
   // 9. Small Decor — type=decor, size=S
   { id: "plant", tags: { type: "decor", size: "S" } },
+  { id: "plant-2", tags: { type: "decor", size: "S" } },
   { id: "skateboard", tags: { type: "decor", size: "S" } },
   { id: "basketball", tags: { type: "decor", size: "S" } },
   { id: "water-bottle", tags: { type: "decor", size: "S" } },

@@ -28,6 +28,11 @@ export interface Spot {
   frame: { x: number; y: number; w: number; h: number };
   layer: number; // fixed draw order
   accept: AcceptRule;
+  // How the item's art is anchored inside its frame. Art is fit with `contain`
+  // (whole sprite, no distortion); this picks where the surplus space goes.
+  // "bottom" grounds floor-standing items (their base meets the frame's bottom
+  // edge = the floor line); "center" (default) suits wall/ceiling art.
+  anchor?: "center" | "bottom";
 }
 
 /** The set of spots for one kind of room, tied to a theme. Shared. */

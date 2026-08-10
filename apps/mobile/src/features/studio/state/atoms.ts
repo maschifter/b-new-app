@@ -4,8 +4,8 @@ import { atomFamily } from "jotai-family";
 import { MMKV } from "react-native-mmkv";
 import { CATALOG } from "../data/catalog";
 import {
-  DEFAULT_TEMPLATE_ID,
   ROOM_TEMPLATE,
+  SAMPLE_DECORATION,
   emptyDecoration,
   templateById,
 } from "../data/templates";
@@ -62,8 +62,12 @@ export function coerceSnapshot(value: unknown): DecorationSnapshot {
 
 // Raw persisted snapshot per owner. Keyed by ownerId from the start so visiting
 // another user's room is just `snapshotAtom(otherUserId)` with no API change.
+// The first-run default is the pre-decorated SAMPLE room (not empty): a brand-new
+// owner with nothing persisted opens onto the fully-illustrated reference studio,
+// and their first edit overwrites it. `atomWithStorage` only returns this initial
+// when the key is absent — it is never written until the user actually edits.
 const snapshotAtom = atomFamily((ownerId: string) =>
-  atomWithMMKV<DecorationSnapshot>(`${KEY_PREFIX}${ownerId}`, emptyDecoration(DEFAULT_TEMPLATE_ID)),
+  atomWithMMKV<DecorationSnapshot>(`${KEY_PREFIX}${ownerId}`, SAMPLE_DECORATION),
 );
 
 // The rendered decoration: the raw snapshot validated against the *current*

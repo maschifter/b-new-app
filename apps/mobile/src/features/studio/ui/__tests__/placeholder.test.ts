@@ -26,6 +26,17 @@ describe("describeContent", () => {
 
   it("shows a neutral screen block with no art for video content", () => {
     const presentation = describeContent({ source: "video", id: "clip-1" });
-    expect(presentation).toEqual({ label: "Video", color: "#7A3E8E", art: null });
+    expect(presentation).toEqual({ label: "Video", color: "#7A3E8E", art: null, isVideo: true });
+  });
+
+  it("flags video and preview screens so the spot renders a play badge", () => {
+    expect(describeContent({ source: "catalog", id: "big-screen" })?.isVideo).toBe(true);
+    expect(describeContent({ source: "catalog", id: "preview-screen" })?.isVideo).toBe(true);
+    expect(describeContent({ source: "catalog", id: "plant" })?.isVideo).toBe(false);
+  });
+
+  it("renders both mirror variants in the same wall-art frame", () => {
+    expect(describeContent({ source: "catalog", id: "mirror" })?.artFit).toBe("fill");
+    expect(describeContent({ source: "catalog", id: "mirror-2" })?.artFit).toBe("fill");
   });
 });

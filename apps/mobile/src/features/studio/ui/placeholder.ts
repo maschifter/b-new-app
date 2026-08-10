@@ -1,7 +1,7 @@
 import type { ImageSource } from "expo-image";
 import { catalogItemById } from "../data/catalog";
 import type { CatalogItem, ContentRef } from "../domain/types";
-import { artSource } from "./art";
+import { artHitBox, artSource, type ArtHitBox } from "./art";
 
 // Presentation layer: turns a ContentRef into what a filled slot shows. Items
 // render as their bundled art (see ./art), falling back to a labelled colored
@@ -42,6 +42,17 @@ export interface ContentPresentation {
   color: string;
   /** Bundled art for the item, or null to render the colored block only. */
   art: ImageSource | null;
+  /** A screen that plays video (hero or preview) — the spot shows a ▶ overlay. */
+  isVideo: boolean;
+  /** Per-asset fit override for art whose native canvas differs from its slot. */
+  artFit?: "contain" | "cover" | "fill";
+  /** Alpha-aware hit area for art that includes transparent composition padding. */
+  artHitBox?: ArtHitBox;
+}
+
+function isVideoType(item: CatalogItem): boolean {
+  const type = primaryType(item);
+  return type === "video" || type === "preview";
 }
 
 /** Resolve what a filled slot should look like, or null if it can't be shown. */
@@ -49,8 +60,21 @@ export function describeContent(ref: ContentRef): ContentPresentation | null {
   if (ref.source === "catalog") {
     const item = catalogItemById(ref.id);
     if (!item) return null;
-    return { label: itemLabel(item.id), color: itemColor(item), art: artSource(item.id) };
+    const isMirror = item.id === "mirror" || item.id === "mirror-2";
+    const hitBox = artHitBox(item.id);
+
+    return {
+      label: itemLabel(item.id),
+      color: itemColor(item),
+      art: artSource(item.id),
+      ...(hitBox ? { artHitBox: hitBox } : {}),
+      isVideo: isVideoType(item),
+      // Both mirror variants deliberately fill the same authored wall-art
+      // frame. Their source canvases have different aspect ratios, so contain
+      // would otherwise make Mirror 2 smaller and differently positioned.
+      ...(isMirror ? { artFit: "fill" as const } : {}),
+    };
   }
   // Video (UGC) has no catalog entry this stage; show a neutral screen block.
-  return { label: "Video", color: TYPE_COLORS.video ?? DEFAULT_COLOR, art: null };
+  return { label: "Video", color: TYPE_COLORS.video ?? DEFAULT_COLOR, art: null, isVideo: true };
 }

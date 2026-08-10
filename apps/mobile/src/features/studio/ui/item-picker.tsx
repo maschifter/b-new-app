@@ -1,8 +1,10 @@
 import { BouncablePress } from "@/components/bouncable-press";
+import { Image } from "expo-image";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { CATALOG } from "../data/catalog";
 import { fits } from "../domain/fits";
 import { useStudio } from "../state/studio-provider";
+import { artSource } from "./art";
 import { itemColor, itemLabel } from "./placeholder";
 
 // Bottom-sheet modal: tap a spot -> list only the catalog items that `fits()`
@@ -44,6 +46,7 @@ export function ItemPicker() {
 
           {compatible.map((item) => {
             const isCurrent = current?.source === "catalog" && current.id === item.id;
+            const art = artSource(item.id);
             return (
               <BouncablePress
                 key={item.id}
@@ -51,7 +54,17 @@ export function ItemPicker() {
                 onPress={() => spot && assign(spot.id, { source: "catalog", id: item.id })}
                 style={[styles.row, isCurrent && styles.rowSelected]}
               >
-                <View style={[styles.swatch, { backgroundColor: itemColor(item) }]} />
+                {/* Art thumbnail so visually-distinct variants (e.g. stage vs
+                    stage-2) are told apart; falls back to the type color chip. */}
+                {art ? (
+                  <Image
+                    source={art}
+                    style={[styles.swatch, { backgroundColor: itemColor(item) }]}
+                    contentFit="contain"
+                  />
+                ) : (
+                  <View style={[styles.swatch, { backgroundColor: itemColor(item) }]} />
+                )}
                 <Text style={styles.rowLabel}>{itemLabel(item.id)}</Text>
                 {isCurrent ? <Text style={styles.check}>✓</Text> : null}
               </BouncablePress>

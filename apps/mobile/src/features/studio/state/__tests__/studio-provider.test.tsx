@@ -1,5 +1,6 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react-native";
+import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { Provider, createStore } from "jotai";
+import { SAMPLE_DECORATION } from "../../data/templates";
 import { ItemPicker } from "../../ui/item-picker";
 import { StudioStage } from "../../ui/studio-stage";
 import { decorationAtom } from "../atoms";
@@ -61,8 +62,8 @@ describe("studio persistence (jotai + mmkv)", () => {
     // fresh store (relaunch) reading the same MMKV, and the room comes back.
     first.unmount();
     mountStudio(createStore(), ownerId);
-    const block = screen.getByTestId("spot-content-decor-1");
-    expect(within(block).getByText("Plant")).toBeTruthy();
+    expect(screen.getByTestId("spot-content-decor-1")).toBeTruthy();
+    expect(screen.queryByTestId("spot-empty-decor-1")).toBeNull();
   });
 
   it("does not write over another owner's room", () => {
@@ -100,7 +101,8 @@ describe("studio persistence (jotai + mmkv)", () => {
     );
 
     expect(screen.queryByText("Plant")).not.toBeOnTheScreen();
-    expect(store.get(decorationAtom("user-2")).map).toEqual({});
+    // A fresh owner opens onto the first-run SAMPLE room, not user-1's state.
+    expect(store.get(decorationAtom("user-2")).map).toEqual(SAMPLE_DECORATION.map);
   });
 
   it("ignores assign and clear outside edit mode", () => {

@@ -31,11 +31,13 @@ function StudioContent({
   const { state, template, selectSpot } = useStudio();
 
   return (
-    // The stage is inset below the status bar (top edge) so no spot hides behind
-    // the notch; the container shares the room background so that inset reads as
-    // the room, not a gap. The floating overlay carries its own insets too.
+    // The stage is full-bleed to the top: the painted room (ceiling + walls)
+    // runs under the status bar so there's no dark band cropping the ceiling.
+    // No spot is jammed against the notch because the ceiling frame is nudged
+    // down (see templates). The floating overlay keeps its own top inset so the
+    // avatar clears the status bar.
     <View style={styles.container}>
-      <SafeAreaView edges={["top", "left", "right"]} style={styles.stageArea}>
+      <SafeAreaView edges={["left", "right"]} style={styles.stageArea}>
         <StudioStage
           template={template}
           map={state.map}
