@@ -69,7 +69,7 @@ configuration:
 2. Supabase creates the `auth.users` row; a database trigger creates the matching
    `public.profiles` row (see the migration in `supabase/migrations/`).
 3. `AuthSessionProvider` (`src/lib/auth/session-provider.tsx`) hydrates and tracks the
-   session. Expo Router's `Stack.Protected` guards gate the `auth` vs `home` stacks on
+   session. Expo Router's `Stack.Protected` guards gate the `auth` vs authenticated-tab stacks on
    whether a session exists.
 4. Authenticated API calls send the Supabase access token as a bearer token to
    `GET /api/user/me`.
@@ -83,9 +83,9 @@ is disabled.
 src/
 ├── app/                      # Expo Router routes (file-based)
 │   ├── _layout.tsx           # providers + protected-stack navigator
-│   ├── index.tsx             # redirect to /home or /auth/sign-in
+│   ├── index.tsx             # redirect to /studio or /auth/sign-in
 │   ├── auth/                 # sign-in stack
-│   └── home.tsx              # authenticated home
+│   └── (tabs)/               # authenticated Crew, Studio, and Explore tabs
 ├── components/               # shared UI (screen, text-field, bouncable-press)
 ├── features/                 # feature screens (auth/sign-in-screen)
 └── lib/

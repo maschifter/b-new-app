@@ -4,7 +4,14 @@ import { TextField } from "@/components/text-field";
 import { supabase } from "@/lib/auth/supabase";
 import { router } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 type AuthMode = "sign-in" | "sign-up";
 
@@ -58,7 +65,7 @@ export function SignInScreen() {
       return;
     }
     if (result.data.session) {
-      router.replace("/home");
+      router.replace("/studio");
       return;
     }
     if (isSignUp && !result.data.session) {
@@ -135,8 +142,10 @@ export function SignInScreen() {
               onPress={submit}
               style={[styles.button, styles.primaryButton, isSubmitting && styles.disabledButton]}
             >
-              {isSubmitting ? <ActivityIndicator color="#121014" /> : null}
-              <Text style={styles.primaryButtonLabel}>{isSignUp ? "Create account" : "Sign in"}</Text>
+              {isSubmitting ? <ActivityIndicator color="#F8F7FC" /> : null}
+              <Text style={styles.primaryButtonLabel}>
+                {isSignUp ? "Create account" : "Sign in"}
+              </Text>
             </BouncablePress>
             <BouncablePress
               accessibilityRole="button"
@@ -159,7 +168,7 @@ const styles = StyleSheet.create({
   keyboard: { flex: 1 },
   content: { flex: 1, gap: 32, justifyContent: "center" },
   heading: { gap: 10 },
-  eyebrow: { color: "#D9FF72", fontSize: 12, fontWeight: "800", letterSpacing: 1.5 },
+  eyebrow: { color: "#A78BFA", fontSize: 12, fontWeight: "800", letterSpacing: 1.5 },
   title: { color: "#F8F7FC", fontSize: 32, fontWeight: "700", letterSpacing: -0.5 },
   copy: { color: "#C7C7D1", fontSize: 16, lineHeight: 24 },
   form: { gap: 18 },
@@ -173,11 +182,11 @@ const styles = StyleSheet.create({
     minHeight: 52,
     paddingHorizontal: 20,
   },
-  primaryButton: { backgroundColor: "#D9FF72" },
-  primaryButtonLabel: { color: "#121014", fontSize: 16, fontWeight: "700" },
+  primaryButton: { backgroundColor: "#8B5CF6" },
+  primaryButtonLabel: { color: "#F8F7FC", fontSize: 16, fontWeight: "700" },
   secondaryButton: { borderColor: "#4A4856", borderWidth: 1 },
   secondaryButtonLabel: { color: "#F8F7FC", fontSize: 16, fontWeight: "700" },
   disabledButton: { opacity: 0.55 },
   error: { color: "#FF8F8F", fontSize: 14, lineHeight: 20 },
-  notice: { color: "#D9FF72", fontSize: 14, lineHeight: 20 },
+  notice: { color: "#A78BFA", fontSize: 14, lineHeight: 20 },
 });
