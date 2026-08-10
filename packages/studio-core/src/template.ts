@@ -50,9 +50,11 @@ export const ROOM_TEMPLATE: RoomTemplate = {
     },
     // 3. Tall Module — left column standing on the floor (locker / trophies).
     // Bottom-anchored so its base meets the floor at the frame's bottom edge.
+    // Base pulled back to the wall/floor line (~0.75) so it reads as standing
+    // against the back-left wall, not out on the floor beside the mat.
     {
       id: "tall-module",
-      frame: { x: 0.04, y: 0.38, w: 0.24, h: 0.44 },
+      frame: { x: 0.04, y: 0.31, w: 0.24, h: 0.44 },
       layer: 22,
       anchor: "bottom",
       accept: { kind: "tags", require: { type: "tall", size: "L" } },
@@ -89,10 +91,12 @@ export const ROOM_TEMPLATE: RoomTemplate = {
       accept: { kind: "tags", require: { type: "preview", size: "S" } },
     },
     // 4. Low Module — under the hero, standing on the floor (DJ booth / sound
-    // system / storage). Bottom-anchored to sit on the floor.
+    // system / storage). Bottom-anchored to sit on the floor. Base pulled back to
+    // the wall/floor line (~0.72) so the console sits against the back wall
+    // behind the dance floor rather than overlapping its back edge.
     {
       id: "low-module",
-      frame: { x: 0.3, y: 0.48, w: 0.4, h: 0.3 },
+      frame: { x: 0.3, y: 0.42, w: 0.4, h: 0.3 },
       layer: 34,
       anchor: "bottom",
       accept: { kind: "tags", require: { type: "low", size: "M" } },
@@ -106,35 +110,43 @@ export const ROOM_TEMPLATE: RoomTemplate = {
       layer: 40,
       accept: { kind: "tags", require: { type: "ceiling" } },
     },
-    // 5. Lounge Kit — lower-left seating standing on the floor, drawn in front
-    // of the tall module. Bottom-anchored to the floor.
+    // 5. Lounge Kit — foreground seating on the right-hand wood, facing the dance
+    // floor. Sits low in the near foreground (drawn over the mat's front-right
+    // corner by its higher layer) so it reads as a lounge in front of the floor,
+    // not crammed beside it. Bottom-anchored to the floor.
     {
       id: "lounge-kit",
-      frame: { x: 0.04, y: 0.58, w: 0.4, h: 0.36 },
+      frame: { x: 0.58, y: 0.59, w: 0.4, h: 0.36 },
       layer: 50,
       anchor: "bottom",
       accept: { kind: "tags", require: { type: "lounge" } },
     },
     // 9. Small Decor — three scattered floor slots, drawn last (frontmost) and
-    // grounded to the floor.
+    // grounded to the floor. The dance floor (floor-main) covers the room's
+    // center, and the left side is taken by the tall module + lounge kit, so the
+    // decor slots live on the bare wood to the RIGHT of and BEHIND the mat — a
+    // plant must never sit on the glowing dance surface. The lounge kit now owns
+    // the right foreground, so the plants gather as a small cluster on the bare
+    // wood in the front-LEFT corner (in front of / beside the tall module),
+    // receding in depth: decor-1 back, decor-3 middle, decor-2 front.
     {
       id: "decor-1",
-      frame: { x: 0.8, y: 0.56, w: 0.17, h: 0.2 },
+      frame: { x: 0.06, y: 0.7, w: 0.11, h: 0.14 },
       layer: 60,
       anchor: "bottom",
       accept: { kind: "tags", require: { type: "decor", size: "S" } },
     },
     {
       id: "decor-2",
-      frame: { x: 0.62, y: 0.58, w: 0.2, h: 0.22 },
-      layer: 60,
+      frame: { x: 0.04, y: 0.75, w: 0.13, h: 0.17 },
+      layer: 62,
       anchor: "bottom",
       accept: { kind: "tags", require: { type: "decor", size: "S" } },
     },
     {
       id: "decor-3",
-      frame: { x: 0.44, y: 0.6, w: 0.16, h: 0.18 },
-      layer: 60,
+      frame: { x: 0.12, y: 0.73, w: 0.11, h: 0.15 },
+      layer: 61,
       anchor: "bottom",
       accept: { kind: "tags", require: { type: "decor", size: "S" } },
     },
