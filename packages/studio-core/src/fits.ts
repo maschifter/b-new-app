@@ -1,4 +1,4 @@
-import type { AcceptRule, CatalogItem, Spot, Tags } from "./types";
+import type { AcceptRule, CatalogItem, Spot, Tags } from "./types.ts";
 
 // The one compatibility policy: does this item fit this spot? Pure and UI-free
 // so the criterion can be tested and swapped without touching anything else

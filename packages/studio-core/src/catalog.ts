@@ -1,4 +1,4 @@
-import type { CatalogItem } from "../domain/types";
+import type { CatalogItem } from "./types.ts";
 
 // Seed catalog for the Foundation stage. Placeholder items only — items with a
 // bundled tile in ../ui/art render as their art; the rest render as a labelled

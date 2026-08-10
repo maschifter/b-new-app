@@ -1,17 +1,17 @@
 import { createAtomWithMMKV } from "@/lib/jotai/atom-with-mmkv";
+import {
+  CATALOG,
+  type DecorationSnapshot,
+  ROOM_TEMPLATE,
+  SAMPLE_DECORATION,
+  coerceSnapshot,
+  migrate,
+  reconcile,
+  templateById,
+} from "@bnewapp/studio-core";
 import { atom } from "jotai";
 import { atomFamily } from "jotai-family";
 import { MMKV } from "react-native-mmkv";
-import { CATALOG } from "../data/catalog";
-import {
-  ROOM_TEMPLATE,
-  SAMPLE_DECORATION,
-  emptyDecoration,
-  templateById,
-} from "../data/templates";
-import { migrate } from "../domain/migrate";
-import { reconcile } from "../domain/reconcile";
-import type { ContentRef, DecorationSnapshot } from "../domain/types";
 
 // State + persistence for the studio, jotai + MMKV (mirrors request-app's
 // atom-with-mmkv convention). MMKV is synchronous, so there is no async load
@@ -29,36 +29,8 @@ const atomWithMMKV = createAtomWithMMKV(mmkv);
 // AsyncStorage rooms do not carry over (the feature has not shipped).
 const KEY_PREFIX = "studio:v1:";
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isContentRef(value: unknown): value is ContentRef {
-  return (
-    isRecord(value) &&
-    (value.source === "catalog" || value.source === "video") &&
-    typeof value.id === "string"
-  );
-}
-
-// Defensive parse: corrupt or foreign data reads as "no room" rather than
-// crashing the derived read (reconcile assumes well-formed ContentRefs). This is
-// the structural guard the old repository's parseSnapshot did; malformed JSON is
-// already caught upstream by createJSONStorage, which falls back to the initial.
-export function coerceSnapshot(value: unknown): DecorationSnapshot {
-  if (!isRecord(value)) return emptyDecoration();
-  if (typeof value.version !== "number") return emptyDecoration();
-  if (!Number.isInteger(value.version) || value.version < 0) return emptyDecoration();
-  if (typeof value.templateId !== "string") return emptyDecoration();
-  if (!isRecord(value.map) || !Object.values(value.map).every(isContentRef)) {
-    return emptyDecoration();
-  }
-  return {
-    version: value.version,
-    templateId: value.templateId,
-    map: value.map as Record<string, ContentRef>,
-  };
-}
+// `coerceSnapshot` (defensive parse of corrupt/foreign data) now lives in the
+// shared domain package alongside migrate/reconcile — see @bnewapp/studio-core.
 
 // Raw persisted snapshot per owner. Keyed by ownerId from the start so visiting
 // another user's room is just `snapshotAtom(otherUserId)` with no API change.

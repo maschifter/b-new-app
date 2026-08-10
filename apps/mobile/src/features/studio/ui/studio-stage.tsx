@@ -1,8 +1,13 @@
+import {
+  type ContentRef,
+  DESIGN_CANVAS,
+  type RoomTemplate,
+  type StudioMode,
+} from "@bnewapp/studio-core";
 import { Image } from "expo-image";
 import { useState } from "react";
 import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
-import { DESIGN_CANVAS, THEME_BACKGROUND_IMAGES, THEME_BACKGROUNDS } from "../data/templates";
-import type { ContentRef, RoomTemplate, StudioMode } from "../domain/types";
+import { THEME_BACKGROUNDS, THEME_BACKGROUND_IMAGES } from "../data/templates";
 import { SpotLayer } from "./spot-layer";
 
 interface StudioStageProps {

@@ -1,6 +1,6 @@
+import { SAMPLE_DECORATION } from "@bnewapp/studio-core";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { Provider, createStore } from "jotai";
-import { SAMPLE_DECORATION } from "../../data/templates";
 import { ItemPicker } from "../../ui/item-picker";
 import { StudioStage } from "../../ui/studio-stage";
 import { decorationAtom } from "../atoms";

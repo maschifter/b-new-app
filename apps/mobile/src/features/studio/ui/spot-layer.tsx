@@ -1,8 +1,8 @@
 import { BouncablePress } from "@/components/bouncable-press";
+import type { ContentRef, Spot } from "@bnewapp/studio-core";
 import { Image } from "expo-image";
 import { StyleSheet, Text, View } from "react-native";
 import type { ArtHitBox } from "./art";
-import type { ContentRef, Spot } from "../domain/types";
 import { describeContent, itemLabel } from "./placeholder";
 
 export interface PixelFrame {
@@ -94,7 +94,11 @@ export function SpotLayer({ spot, frame, content, selected, showEmpty, onPress }
         accessibilityLabel={`Spot ${spot.id}`}
         bounce={false}
         onPress={() => onPress(spot.id)}
-        style={[styles.hitTarget, presentation?.artHitBox && hitTargetStyle(frame, presentation.artHitBox, presentation.artFit, spot.anchor)]}
+        style={[
+          styles.hitTarget,
+          presentation?.artHitBox &&
+            hitTargetStyle(frame, presentation.artHitBox, presentation.artFit, spot.anchor),
+        ]}
       />
     </View>
   );
@@ -128,7 +132,8 @@ function hitTargetStyle(
   const renderedWidth = hitBox.size.width * scale.x;
   const renderedHeight = hitBox.size.height * scale.y;
   const offsetX = (frame.width - renderedWidth) / 2;
-  const offsetY = anchor === "bottom" ? frame.height - renderedHeight : (frame.height - renderedHeight) / 2;
+  const offsetY =
+    anchor === "bottom" ? frame.height - renderedHeight : (frame.height - renderedHeight) / 2;
 
   return {
     left: offsetX + hitBox.opaqueBounds.x * scale.x,

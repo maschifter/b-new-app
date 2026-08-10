@@ -1,4 +1,4 @@
-import { CATALOG } from "../../data/catalog";
+import { CATALOG } from "@bnewapp/studio-core";
 import { describeContent, itemColor, itemLabel } from "../placeholder";
 
 describe("itemLabel", () => {

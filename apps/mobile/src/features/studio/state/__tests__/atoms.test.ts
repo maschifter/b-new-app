@@ -1,7 +1,6 @@
+import { SAMPLE_DECORATION } from "@bnewapp/studio-core";
 import { createStore } from "jotai";
-import { SAMPLE_DECORATION, emptyDecoration } from "../../data/templates";
-import type { DecorationSnapshot } from "../../domain/types";
-import { coerceSnapshot, decorationAtom } from "../atoms";
+import { decorationAtom } from "../atoms";
 
 type Store = ReturnType<typeof createStore>;
 
@@ -17,41 +16,8 @@ function withRoom<T>(store: Store, ownerId: string, run: () => T): T {
   }
 }
 
-// coerceSnapshot inherits the corrupt-data resilience the old AsyncStorage
-// repository's parseSnapshot used to own: anything that isn't a well-formed
-// snapshot reads as an empty room rather than crashing the reconcile step.
-describe("coerceSnapshot", () => {
-  it("passes a well-formed snapshot through unchanged", () => {
-    const snap: DecorationSnapshot = {
-      version: 1,
-      templateId: "studio-room-1",
-      map: { "floor-main": { source: "catalog", id: "rug" } },
-    };
-    expect(coerceSnapshot(snap)).toEqual(snap);
-  });
-
-  it("reads a non-object value as an empty room", () => {
-    expect(coerceSnapshot("nope")).toEqual(emptyDecoration());
-    expect(coerceSnapshot(null)).toEqual(emptyDecoration());
-    expect(coerceSnapshot(undefined)).toEqual(emptyDecoration());
-  });
-
-  it("rejects a structurally invalid object", () => {
-    expect(coerceSnapshot({ hello: "world" })).toEqual(emptyDecoration());
-  });
-
-  it("rejects an invalid snapshot version before migration can throw", () => {
-    expect(
-      coerceSnapshot({ version: -1, templateId: "studio-room-1", map: {} }),
-    ).toEqual(emptyDecoration());
-  });
-
-  it("rejects malformed map entries before reconciliation", () => {
-    expect(
-      coerceSnapshot({ version: 1, templateId: "studio-room-1", map: { "decor-1": null } }),
-    ).toEqual(emptyDecoration());
-  });
-});
+// coerceSnapshot's own unit tests moved with it into @bnewapp/studio-core; the
+// cases below exercise how the store composes coerce -> migrate -> reconcile.
 
 // The rendered decoration is the raw persisted snapshot reconciled against the
 // current template + catalog on every read (design §6, rule 8).

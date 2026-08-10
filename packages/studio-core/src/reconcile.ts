@@ -1,5 +1,5 @@
-import { fits } from "./fits";
-import type { CatalogItem, ContentRef, DecorationSnapshot, RoomTemplate } from "./types";
+import { fits } from "./fits.ts";
+import type { CatalogItem, ContentRef, DecorationSnapshot, RoomTemplate } from "./types.ts";
 
 // Reconcile before render (design §6, rule 8): a saved snapshot is validated
 // against the *current* template + catalog, because both are designer-owned and

@@ -1,8 +1,7 @@
 import { BouncablePress } from "@/components/bouncable-press";
+import { CATALOG, fits } from "@bnewapp/studio-core";
 import { Image } from "expo-image";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { CATALOG } from "../data/catalog";
-import { fits } from "../domain/fits";
 import { useStudio } from "../state/studio-provider";
 import { artSource } from "./art";
 import { itemColor, itemLabel } from "./placeholder";

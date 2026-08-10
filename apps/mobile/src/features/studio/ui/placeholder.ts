@@ -1,7 +1,6 @@
+import { type CatalogItem, type ContentRef, catalogItemById } from "@bnewapp/studio-core";
 import type { ImageSource } from "expo-image";
-import { catalogItemById } from "../data/catalog";
-import type { CatalogItem, ContentRef } from "../domain/types";
-import { artHitBox, artSource, type ArtHitBox } from "./art";
+import { type ArtHitBox, artHitBox, artSource } from "./art";
 
 // Presentation layer: turns a ContentRef into what a filled slot shows. Items
 // render as their bundled art (see ./art), falling back to a labelled colored

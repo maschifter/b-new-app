@@ -1,8 +1,13 @@
+import {
+  CURRENT_VERSION,
+  type ContentRef,
+  ROOM_TEMPLATE,
+  type RoomTemplate,
+  type StudioMode,
+  templateById,
+} from "@bnewapp/studio-core";
 import { useAtom } from "jotai";
 import { type PropsWithChildren, createContext, useCallback, useContext, useMemo } from "react";
-import { ROOM_TEMPLATE, templateById } from "../data/templates";
-import { CURRENT_VERSION } from "../domain/migrate";
-import type { ContentRef, RoomTemplate, StudioMode } from "../domain/types";
 import { decorationAtom, selectedSpotAtom } from "./atoms";
 
 // State now lives in jotai atoms (see ./atoms) persisted through MMKV. This

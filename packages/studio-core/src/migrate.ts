@@ -1,4 +1,4 @@
-import type { DecorationSnapshot } from "./types";
+import type { DecorationSnapshot } from "./types.ts";
 
 // The snapshot carries a version number so structural upgrades (e.g. single
 // room -> multiple rooms) can still read old data. Migration is explicit: on
