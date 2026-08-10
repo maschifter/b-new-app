@@ -12,6 +12,10 @@ const TYPE_COLORS: Record<string, string> = {
   floor: "#6D5D4B",
   wall: "#3E6D8E",
   video: "#7A3E8E",
+  preview: "#9B6DC9",
+  tall: "#B5651D",
+  low: "#455A64",
+  lounge: "#C77DA0",
   ceiling: "#C9A227",
   decor: "#3E8E5A",
 };

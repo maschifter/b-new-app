@@ -8,20 +8,45 @@ import type { ImageSource } from "expo-image";
 // An id with no entry falls back to the labelled colored block (see spot-layer).
 
 const ART: Record<string, ImageSource> = {
-  rug: require("../../../../assets/studio/rug.png"),
-  stage: require("../../../../assets/studio/stage.png"),
-  "dance-mat": require("../../../../assets/studio/dance-mat.png"),
-  poster: require("../../../../assets/studio/poster.png"),
-  mirror: require("../../../../assets/studio/mirror.png"),
+  // 1. Hero Video Zone
   "big-screen": require("../../../../assets/studio/big-screen.png"),
   "led-wall": require("../../../../assets/studio/led-wall.png"),
+  // 2. Preview Zone
+  "preview-screen": require("../../../../assets/studio/preview-screen.png"),
+  // 3. Tall Module
+  locker: require("../../../../assets/studio/locker.png"),
+  "shoe-rack": require("../../../../assets/studio/shoe-rack.png"),
+  "costume-rack": require("../../../../assets/studio/costume-rack.png"),
+  "snack-bar": require("../../../../assets/studio/snack-bar.png"),
+  trophy: require("../../../../assets/studio/trophy.png"),
+  // 4. Low Module
+  "dj-booth": require("../../../../assets/studio/dj-booth.png"),
+  speaker: require("../../../../assets/studio/speaker.png"),
+  boombox: require("../../../../assets/studio/boombox.png"),
+  storage: require("../../../../assets/studio/storage.png"),
+  // 5. Lounge Kit
+  sofa: require("../../../../assets/studio/sofa.png"),
+  "coffee-table": require("../../../../assets/studio/coffee-table.png"),
+  pouf: require("../../../../assets/studio/pouf.png"),
+  // 6. Ceiling
   spotlight: require("../../../../assets/studio/spotlight.png"),
   "disco-ball": require("../../../../assets/studio/disco-ball.png"),
   "neon-ring": require("../../../../assets/studio/neon-ring.png"),
+  // 7. Floor Module
+  rug: require("../../../../assets/studio/rug.png"),
+  stage: require("../../../../assets/studio/stage.png"),
+  "dance-mat": require("../../../../assets/studio/dance-mat.png"),
+  "neon-circle": require("../../../../assets/studio/neon-circle.png"),
+  // 8. Wall Art
+  poster: require("../../../../assets/studio/poster.png"),
+  mirror: require("../../../../assets/studio/mirror.png"),
+  "neon-sign": require("../../../../assets/studio/neon-sign.png"),
+  moodboard: require("../../../../assets/studio/moodboard.png"),
+  // 9. Small Decor
   plant: require("../../../../assets/studio/plant.png"),
-  trophy: require("../../../../assets/studio/trophy.png"),
-  speaker: require("../../../../assets/studio/speaker.png"),
-  boombox: require("../../../../assets/studio/boombox.png"),
+  skateboard: require("../../../../assets/studio/skateboard.png"),
+  basketball: require("../../../../assets/studio/basketball.png"),
+  "water-bottle": require("../../../../assets/studio/water-bottle.png"),
 };
 
 /** The bundled art for a catalog item, or null if it has none yet. */

@@ -3,7 +3,7 @@
 // These PNGs stand in for real artwork until a designer drops final assets into
 // `assets/studio/`. Each tile is a deterministic duotone diagonal gradient keyed
 // by the item's `type` (so the same colour family as the old block) with a small
-// per-id lightness shift so sibling items still read as distinct images once
+// per-id lightness shift plus an in-type variant so sibling items still read as distinct images once
 // rendered through expo-image (see ../src/features/studio/ui/art.ts).
 //
 // This is a dev-time tool, not shipped code. Run it from the mobile package:
@@ -25,26 +25,55 @@ const TYPE_COLORS = {
   floor: "#6D5D4B",
   wall: "#3E6D8E",
   video: "#7A3E8E",
+  preview: "#9B6DC9",
+  tall: "#B5651D",
+  low: "#455A64",
+  lounge: "#C77DA0",
   ceiling: "#C9A227",
   decor: "#3E8E5A",
 };
 
 // Mirrors CATALOG in ../src/features/studio/data/catalog.ts (id -> type).
 const ITEMS = [
-  ["rug", "floor"],
-  ["stage", "floor"],
-  ["dance-mat", "floor"],
-  ["poster", "wall"],
-  ["mirror", "wall"],
+  // 1. Hero Video Zone
   ["big-screen", "video"],
   ["led-wall", "video"],
+  // 2. Preview Zone
+  ["preview-screen", "preview"],
+  // 3. Tall Module
+  ["locker", "tall"],
+  ["shoe-rack", "tall"],
+  ["costume-rack", "tall"],
+  ["snack-bar", "tall"],
+  ["trophy", "tall"],
+  // 4. Low Module
+  ["dj-booth", "low"],
+  ["speaker", "low"],
+  ["boombox", "low"],
+  ["storage", "low"],
+  // 5. Lounge Kit
+  ["sofa", "lounge"],
+  ["coffee-table", "lounge"],
+  ["pouf", "lounge"],
+  // 6. Ceiling
   ["spotlight", "ceiling"],
   ["disco-ball", "ceiling"],
   ["neon-ring", "ceiling"],
+  // 7. Floor Module
+  ["rug", "floor"],
+  ["stage", "floor"],
+  ["dance-mat", "floor"],
+  ["neon-circle", "floor"],
+  // 8. Wall Art
+  ["poster", "wall"],
+  ["mirror", "wall"],
+  ["neon-sign", "wall"],
+  ["moodboard", "wall"],
+  // 9. Small Decor
   ["plant", "decor"],
-  ["trophy", "decor"],
-  ["speaker", "decor"],
-  ["boombox", "decor"],
+  ["skateboard", "decor"],
+  ["basketball", "decor"],
+  ["water-bottle", "decor"],
 ];
 
 function hexToRgb(hex) {
@@ -111,9 +140,9 @@ function encodePng(pixels, size) {
   ]);
 }
 
-function tile(id, type) {
+function tile(id, type, variant) {
   const base = hexToRgb(TYPE_COLORS[type] ?? "#4A4856");
-  const lift = ((idHash(id) % 24) - 8) / 100; // -0.08..+0.15 per-id lightness shift
+  const lift = ((idHash(id) % 24) - 8) / 100 + variant / 1000;
   const light = shade(base, 1.28 + lift);
   const dark = shade(base, 0.62 + lift);
   const pixels = new Uint8Array(SIZE * SIZE * 3);
@@ -128,7 +157,10 @@ function tile(id, type) {
 }
 
 mkdirSync(OUT_DIR, { recursive: true });
+const variantsByType = new Map();
 for (const [id, type] of ITEMS) {
-  writeFileSync(join(OUT_DIR, `${id}.png`), tile(id, type));
+  const variant = variantsByType.get(type) ?? 0;
+  variantsByType.set(type, variant + 1);
+  writeFileSync(join(OUT_DIR, `${id}.png`), tile(id, type, variant));
 }
 console.log(`Wrote ${ITEMS.length} tiles to ${OUT_DIR}`);

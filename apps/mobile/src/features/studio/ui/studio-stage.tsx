@@ -12,10 +12,11 @@ interface StudioStageProps {
   onSelectSpot?: (spotId: string) => void;
 }
 
-// Letterboxed, uniformly-scaled canvas (design §9.1). The fixed design canvas
-// is scaled to fit the measured container; normalized (0..1) spot frames map to
-// device pixels; layers draw back-to-front by `spot.layer`. This keeps one
-// layout correct across screen sizes without per-device coordinates.
+// Full-bleed, uniformly-scaled canvas (design §9.1). The fixed design canvas is
+// scaled to *cover* the measured container so the room reaches every edge with
+// no letterbox margins; normalized (0..1) spot frames map to device pixels;
+// layers draw back-to-front by `spot.layer`. This keeps one layout correct
+// across screen sizes without per-device coordinates.
 export function StudioStage({
   template,
   map,
@@ -30,14 +31,18 @@ export function StudioStage({
     setSize({ width, height });
   };
 
-  // Fit (letterbox): scale the canvas uniformly so every spot stays fully
-  // visible and un-cropped. The container is painted with the room background so
-  // the letterbox margins read as the room extending edge-to-edge, not as gaps.
-  const scale = Math.min(size.width / DESIGN_CANVAS.width, size.height / DESIGN_CANVAS.height);
+  // Cover (fill): scale the canvas uniformly so it fills the container on both
+  // axes — the larger of the two ratios wins, so there are never letterbox gaps.
+  // Any overflow bleeds off an edge instead of leaving margins. On a phone the
+  // width ratio dominates, so the width fills exactly and the surplus height
+  // bleeds off the bottom; we pin the top (offsetY = 0) so the ceiling is never
+  // cropped, and center any horizontal overflow. The template keeps its bottom
+  // edge (y > ~0.92) free of critical spots so that region is safe to bleed off.
+  const scale = Math.max(size.width / DESIGN_CANVAS.width, size.height / DESIGN_CANVAS.height);
   const stageWidth = DESIGN_CANVAS.width * scale;
   const stageHeight = DESIGN_CANVAS.height * scale;
   const offsetX = (size.width - stageWidth) / 2;
-  const offsetY = (size.height - stageHeight) / 2;
+  const offsetY = 0; // pin the top; surplus height (cover) bleeds off the bottom
 
   const background = THEME_BACKGROUNDS[template.themeId] ?? "#17171D";
   const showEmpty = mode === "edit";

@@ -1,36 +1,74 @@
 import type { CatalogItem } from "../domain/types";
 
-// Seed catalog for the Foundation stage. Placeholder items only — no art yet;
-// each renders as a labelled colored block (color derived from its `type` tag,
-// label from its id — see ../ui/placeholder.ts). Tags are the semantic matching
-// keys consumed by `fits()`; presentation is derived separately so the domain
-// stays art-free. `type=video` items are static screen placeholders here; real
+// Seed catalog for the Foundation stage. Placeholder items only — items with a
+// bundled tile in ../ui/art render as their art; the rest render as a labelled
+// colored block (color derived from its `type` tag, label from its id — see
+// ../ui/placeholder.ts). Tags are the semantic matching keys consumed by
+// `fits()`; presentation is derived separately so the domain stays art-free.
+//
+// The `type` taxonomy mirrors the design's nine studio modules (design §
+// "DANCE STUDIO" module legend):
+//   video   — Hero Video Zone   (big screen for the main video)
+//   preview — Preview Zone      (2–3 smaller screens for other videos)
+//   tall    — Tall Module       (locker / shoes / costumes / snack bar / trophies)
+//   low     — Low Module        (DJ booth / sound system / trophy display / storage)
+//   lounge  — Lounge Kit        (sofa / table / rug / pouf)
+//   ceiling — Ceiling           (lights / disco ball / LED strips)
+//   floor   — Floor Module      (rug / dance floor / mats / neon circle)
+//   wall    — Wall Art          (posters / neon signs / mirrors / moodboards)
+//   decor   — Small Decor       (plants / skateboard / basketball / bottles)
+//
+// `type=video`/`type=preview` items are static screen placeholders here; real
 // per-user video (source "video", UGC) is a later stage.
 
 export const CATALOG: CatalogItem[] = [
-  // floor — type=floor, size=L
-  { id: "rug", tags: { type: "floor", size: "L" } },
-  { id: "stage", tags: { type: "floor", size: "L" } },
-  { id: "dance-mat", tags: { type: "floor", size: "L" } },
-
-  // wall — type=wall, size=M
-  { id: "poster", tags: { type: "wall", size: "M" } },
-  { id: "mirror", tags: { type: "wall", size: "M" } },
-
-  // hero screen — type=video, size=L (placeholder for a screen)
+  // 1. Hero Video Zone — type=video, size=L
   { id: "big-screen", tags: { type: "video", size: "L" } },
   { id: "led-wall", tags: { type: "video", size: "L" } },
 
-  // ceiling — type=ceiling
+  // 2. Preview Zone — type=preview, size=S (smaller companion screens)
+  { id: "preview-screen", tags: { type: "preview", size: "S" } },
+
+  // 3. Tall Module — type=tall, size=L
+  { id: "locker", tags: { type: "tall", size: "L" } },
+  { id: "shoe-rack", tags: { type: "tall", size: "L" } },
+  { id: "costume-rack", tags: { type: "tall", size: "L" } },
+  { id: "snack-bar", tags: { type: "tall", size: "L" } },
+  { id: "trophy", tags: { type: "tall", size: "L" } },
+
+  // 4. Low Module — type=low, size=M (DJ booth / sound system / storage)
+  { id: "dj-booth", tags: { type: "low", size: "M" } },
+  { id: "speaker", tags: { type: "low", size: "M" } },
+  { id: "boombox", tags: { type: "low", size: "M" } },
+  { id: "storage", tags: { type: "low", size: "M" } },
+
+  // 5. Lounge Kit — type=lounge
+  { id: "sofa", tags: { type: "lounge" } },
+  { id: "coffee-table", tags: { type: "lounge" } },
+  { id: "pouf", tags: { type: "lounge" } },
+
+  // 6. Ceiling — type=ceiling
   { id: "spotlight", tags: { type: "ceiling" } },
   { id: "disco-ball", tags: { type: "ceiling" } },
   { id: "neon-ring", tags: { type: "ceiling" } },
 
-  // small decor — type=decor, size=S
+  // 7. Floor Module — type=floor, size=L
+  { id: "rug", tags: { type: "floor", size: "L" } },
+  { id: "stage", tags: { type: "floor", size: "L" } },
+  { id: "dance-mat", tags: { type: "floor", size: "L" } },
+  { id: "neon-circle", tags: { type: "floor", size: "L" } },
+
+  // 8. Wall Art — type=wall, size=M
+  { id: "poster", tags: { type: "wall", size: "M" } },
+  { id: "mirror", tags: { type: "wall", size: "M" } },
+  { id: "neon-sign", tags: { type: "wall", size: "M" } },
+  { id: "moodboard", tags: { type: "wall", size: "M" } },
+
+  // 9. Small Decor — type=decor, size=S
   { id: "plant", tags: { type: "decor", size: "S" } },
-  { id: "trophy", tags: { type: "decor", size: "S" } },
-  { id: "speaker", tags: { type: "decor", size: "S" } },
-  { id: "boombox", tags: { type: "decor", size: "S" } },
+  { id: "skateboard", tags: { type: "decor", size: "S" } },
+  { id: "basketball", tags: { type: "decor", size: "S" } },
+  { id: "water-bottle", tags: { type: "decor", size: "S" } },
 ];
 
 export function catalogItemById(id: string): CatalogItem | undefined {

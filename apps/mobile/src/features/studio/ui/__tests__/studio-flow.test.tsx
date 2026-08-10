@@ -69,7 +69,7 @@ describe("studio flow", () => {
     renderStudio();
 
     fireEvent.press(screen.getByLabelText("Spot decor-2"));
-    fireEvent.press(screen.getByText("Trophy"));
+    fireEvent.press(screen.getByText("Skateboard"));
     expect(screen.getByTestId("spot-content-decor-2")).toBeTruthy();
 
     // Reopen and remove.

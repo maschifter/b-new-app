@@ -6,7 +6,7 @@ import type { DecorationSnapshot } from "./types";
 // the shape *before* rendering (design §6). The chain is wired now so future
 // version bumps are a one-line addition, not a refactor.
 
-export const CURRENT_VERSION = 1;
+export const CURRENT_VERSION = 2;
 
 type Migrator = (input: DecorationSnapshot) => DecorationSnapshot;
 
@@ -14,6 +14,31 @@ type Migrator = (input: DecorationSnapshot) => DecorationSnapshot;
 // change today; it exists to prove and exercise the chain.
 const migrators: Record<number, Migrator> = {
   0: (input) => ({ ...input, version: 1 }),
+  // v1 classified trophies and audio equipment as small decor. v2 gives each
+  // a dedicated module, so retain a legacy assignment by moving it to that
+  // module. Multiple legacy items of the same kind collapse to the first one
+  // encountered because the new room has one slot per module.
+  1: (input) => {
+    const map = { ...input.map };
+
+    for (const spotId of ["decor-1", "decor-2", "decor-3"]) {
+      const ref = map[spotId];
+      if (ref?.source !== "catalog") continue;
+
+      const targetSpotId =
+        ref.id === "trophy"
+          ? "tall-module"
+          : ref.id === "speaker" || ref.id === "boombox"
+            ? "low-module"
+            : undefined;
+      if (!targetSpotId) continue;
+
+      if (!(targetSpotId in map)) map[targetSpotId] = ref;
+      delete map[spotId];
+    }
+
+    return { ...input, version: 2, map };
+  },
 };
 
 /**
