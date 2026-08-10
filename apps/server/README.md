@@ -77,6 +77,8 @@ missing or invalid tokens with `401`. The verified payload is available as
 | ------ | --------------- | ---- | ------------------------------------------------------- |
 | `GET`  | `/health`       | no   | Liveness check: `{ status, timestamp }`                 |
 | `GET`  | `/api/user/me`  | yes  | Current user's profile from `public.profiles`           |
+| `GET`  | `/api/studio/room` | yes | Current user's saved studio room, or `null`             |
+| `PUT`  | `/api/studio/room` | yes | Reconcile and upsert the current user's studio snapshot |
 
 Successful responses are wrapped as `{ data: ... }` (`ApiSuccess<T>` from
 `@bnewapp/types`). Errors flow through the handler in `src/lib/errors.ts` and return
@@ -93,6 +95,7 @@ src/
 │   └── errors.ts         # global error handler → { code, message }
 ├── modules/
 │   ├── health/routes.ts  # GET /health
+│   ├── studio/routes.ts  # GET/PUT /api/studio/room
 │   └── user/routes.ts    # GET /api/user/me
 └── plugins/
     ├── auth.ts           # authenticate decorator (JWT verify)

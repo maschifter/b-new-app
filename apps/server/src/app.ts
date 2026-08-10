@@ -8,6 +8,7 @@ import buildGetJwks from "get-jwks";
 import type { Env } from "./config.js";
 import { errorHandlerPlugin } from "./lib/errors.js";
 import { healthRoutes } from "./modules/health/routes.js";
+import { studioRoutes } from "./modules/studio/routes.js";
 import { userRoutes } from "./modules/user/routes.js";
 import { authPlugin } from "./plugins/auth.js";
 import { supabasePlugin } from "./plugins/supabase.js";
@@ -52,5 +53,6 @@ export async function buildApp(config: Env) {
   await app.register(errorHandlerPlugin);
   await app.register(healthRoutes);
   await app.register(userRoutes, { prefix: "/api/user" });
+  await app.register(studioRoutes, { prefix: "/api/studio" });
   return app;
 }
