@@ -1,17 +1,9 @@
 import { BouncablePress } from "@/components/bouncable-press";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import type { SaveStatus } from "../state/decoration-reducer";
 import { StudioProvider, useStudio } from "../state/studio-provider";
 import { ItemPicker } from "./item-picker";
 import { StudioStage } from "./studio-stage";
-
-const STATUS_LABELS: Partial<Record<SaveStatus, string>> = {
-  dirty: "Unsaved…",
-  saving: "Saving…",
-  saved: "Saved",
-  error: "Save failed",
-};
 
 interface StudioScreenProps {
   ownerId?: string;
@@ -36,16 +28,7 @@ function StudioContent({
   avatarLabel?: string;
   onOpenProfile?: () => void;
 }) {
-  const { state, template, hydrated, selectSpot } = useStudio();
-  const statusLabel = STATUS_LABELS[state.status];
-
-  if (!hydrated) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator color="#A78BFA" />
-      </View>
-    );
-  }
+  const { state, template, selectSpot } = useStudio();
 
   return (
     // The stage is inset below the status bar (top edge) so no spot hides behind
@@ -79,11 +62,6 @@ function StudioContent({
         ) : (
           <View />
         )}
-        {statusLabel ? (
-          <View style={styles.statusChip}>
-            <Text style={styles.status}>{statusLabel}</Text>
-          </View>
-        ) : null}
       </SafeAreaView>
 
       <ItemPicker />
@@ -94,7 +72,6 @@ function StudioContent({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#17171D" },
   stageArea: { flex: 1 },
-  loading: { alignItems: "center", backgroundColor: "#101014", flex: 1, justifyContent: "center" },
   overlay: {
     alignItems: "center",
     flexDirection: "row",
@@ -115,11 +92,4 @@ const styles = StyleSheet.create({
     width: 44,
   },
   avatarLabel: { color: "#F8F7FC", fontSize: 18, fontWeight: "800" },
-  statusChip: {
-    backgroundColor: "rgba(27,27,34,0.85)",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  status: { color: "#C7C7D1", fontSize: 12, fontWeight: "600" },
 });

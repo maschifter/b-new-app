@@ -1,0 +1,112 @@
+import { createStore } from "jotai";
+import { emptyDecoration } from "../../data/templates";
+import type { DecorationSnapshot } from "../../domain/types";
+import { coerceSnapshot, decorationAtom } from "../atoms";
+
+type Store = ReturnType<typeof createStore>;
+
+// atomWithStorage only syncs with MMKV while the atom is mounted (its onMount
+// reads storage; its writes flush to storage). Components mount atoms via
+// useAtom, so this mirrors real usage: subscribe, run, unsubscribe.
+function withRoom<T>(store: Store, ownerId: string, run: () => T): T {
+  const unsub = store.sub(decorationAtom(ownerId), () => {});
+  try {
+    return run();
+  } finally {
+    unsub();
+  }
+}
+
+// coerceSnapshot inherits the corrupt-data resilience the old AsyncStorage
+// repository's parseSnapshot used to own: anything that isn't a well-formed
+// snapshot reads as an empty room rather than crashing the reconcile step.
+describe("coerceSnapshot", () => {
+  it("passes a well-formed snapshot through unchanged", () => {
+    const snap: DecorationSnapshot = {
+      version: 1,
+      templateId: "studio-room-1",
+      map: { "floor-main": { source: "catalog", id: "rug" } },
+    };
+    expect(coerceSnapshot(snap)).toEqual(snap);
+  });
+
+  it("reads a non-object value as an empty room", () => {
+    expect(coerceSnapshot("nope")).toEqual(emptyDecoration());
+    expect(coerceSnapshot(null)).toEqual(emptyDecoration());
+    expect(coerceSnapshot(undefined)).toEqual(emptyDecoration());
+  });
+
+  it("rejects a structurally invalid object", () => {
+    expect(coerceSnapshot({ hello: "world" })).toEqual(emptyDecoration());
+  });
+
+  it("rejects an invalid snapshot version before migration can throw", () => {
+    expect(
+      coerceSnapshot({ version: -1, templateId: "studio-room-1", map: {} }),
+    ).toEqual(emptyDecoration());
+  });
+
+  it("rejects malformed map entries before reconciliation", () => {
+    expect(
+      coerceSnapshot({ version: 1, templateId: "studio-room-1", map: { "decor-1": null } }),
+    ).toEqual(emptyDecoration());
+  });
+});
+
+// The rendered decoration is the raw persisted snapshot reconciled against the
+// current template + catalog on every read (design §6, rule 8).
+describe("decorationAtom reconcile-on-load", () => {
+  it("drops an entry whose item no longer fits its spot", () => {
+    const store = createStore();
+    // poster is a wall item; floor-main only accepts floor items -> dropped.
+    store.set(decorationAtom("user-1"), {
+      version: 1,
+      templateId: "studio-room-1",
+      map: { "floor-main": { source: "catalog", id: "poster" } },
+    });
+    expect(store.get(decorationAtom("user-1")).map).toEqual({});
+  });
+
+  it("keeps a compatible entry", () => {
+    const store = createStore();
+    store.set(decorationAtom("user-1"), {
+      version: 1,
+      templateId: "studio-room-1",
+      map: { "decor-1": { source: "catalog", id: "plant" } },
+    });
+    expect(store.get(decorationAtom("user-1")).map).toEqual({
+      "decor-1": { source: "catalog", id: "plant" },
+    });
+  });
+});
+
+describe("decorationAtom persistence", () => {
+  it("persists a write so a fresh store restores it for the same owner", () => {
+    const writer = createStore();
+    withRoom(writer, "user-1", () =>
+      writer.set(decorationAtom("user-1"), {
+        version: 1,
+        templateId: "studio-room-1",
+        map: { "decor-1": { source: "catalog", id: "plant" } },
+      }),
+    );
+    // A new store (same underlying MMKV) reads the persisted room back.
+    const reader = createStore();
+    const restored = withRoom(reader, "user-1", () => reader.get(decorationAtom("user-1")).map);
+    expect(restored).toEqual({ "decor-1": { source: "catalog", id: "plant" } });
+  });
+
+  it("keeps rooms isolated by owner", () => {
+    const writer = createStore();
+    withRoom(writer, "user-1", () =>
+      writer.set(decorationAtom("user-1"), {
+        version: 1,
+        templateId: "studio-room-1",
+        map: { "decor-1": { source: "catalog", id: "plant" } },
+      }),
+    );
+    const reader = createStore();
+    const other = withRoom(reader, "user-2", () => reader.get(decorationAtom("user-2")).map);
+    expect(other).toEqual({});
+  });
+});

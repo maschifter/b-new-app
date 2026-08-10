@@ -1,7 +1,6 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react-native";
+import { fireEvent, render, screen, within } from "@testing-library/react-native";
+import { Provider, createStore } from "jotai";
 import { StudioProvider, useStudio } from "../../state/studio-provider";
-import { asyncStorageRepository } from "../../storage/async-storage-repository";
-import { createMemoryRepository } from "../../storage/memory-repository";
 import { ItemPicker } from "../item-picker";
 import { StudioScreen } from "../studio-screen";
 import { StudioStage } from "../studio-stage";
@@ -24,14 +23,14 @@ function Harness() {
   );
 }
 
-async function renderStudio() {
+function renderStudio() {
   render(
-    <StudioProvider repository={createMemoryRepository()}>
-      <Harness />
-    </StudioProvider>,
+    <Provider store={createStore()}>
+      <StudioProvider>
+        <Harness />
+      </StudioProvider>
+    </Provider>,
   );
-  // Flush the async load pipeline (HYDRATE) inside act before interacting.
-  await act(async () => {});
   // The stage only renders spots once it has measured a non-zero size.
   fireEvent(screen.getByTestId("studio-stage"), "layout", {
     nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 844 } },
@@ -39,40 +38,17 @@ async function renderStudio() {
 }
 
 describe("studio flow", () => {
-  it("does not expose editable Studio UI before persistence hydrates", async () => {
-    let resolveLoad: (value: null) => void = () => {};
-    const load = jest.spyOn(asyncStorageRepository, "load").mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          resolveLoad = resolve;
-        }),
+  it("renders the stage immediately (MMKV is synchronous, no hydrate gate)", () => {
+    render(
+      <Provider store={createStore()}>
+        <StudioScreen />
+      </Provider>,
     );
-
-    render(<StudioScreen />);
-    expect(screen.queryByTestId("studio-stage")).toBeNull();
-
-    await act(async () => {
-      resolveLoad(null);
-    });
-
     expect(screen.getByTestId("studio-stage")).toBeTruthy();
-    load.mockRestore();
   });
 
-  it("renders an empty Studio when persistence loading fails", async () => {
-    const load = jest
-      .spyOn(asyncStorageRepository, "load")
-      .mockRejectedValueOnce(new Error("storage"));
-
-    render(<StudioScreen />);
-    await act(async () => {});
-
-    expect(screen.getByTestId("studio-stage")).toBeTruthy();
-    load.mockRestore();
-  });
-
-  it("tap spot -> pick a compatible item -> block appears in the spot", async () => {
-    await renderStudio();
+  it("tap spot -> pick a compatible item -> block appears in the spot", () => {
+    renderStudio();
 
     // decor-1 starts empty.
     expect(screen.getByTestId("spot-empty-decor-1")).toBeTruthy();
@@ -89,8 +65,8 @@ describe("studio flow", () => {
     expect(within(block).getByText("Plant")).toBeTruthy();
   });
 
-  it("clearing a filled spot empties it again", async () => {
-    await renderStudio();
+  it("clearing a filled spot empties it again", () => {
+    renderStudio();
 
     fireEvent.press(screen.getByLabelText("Spot decor-2"));
     fireEvent.press(screen.getByText("Trophy"));
