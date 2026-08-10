@@ -1,4 +1,3 @@
-import { SAMPLE_DECORATION } from "@bnewapp/studio-core";
 import { createStore } from "jotai";
 import { decorationAtom } from "../atoms";
 
@@ -73,8 +72,8 @@ describe("decorationAtom persistence", () => {
     );
     const reader = createStore();
     const other = withRoom(reader, "user-2", () => reader.get(decorationAtom("user-2")).map);
-    // user-2 has nothing persisted, so it reads back the first-run SAMPLE default,
+    // user-2 has nothing persisted, so it reads back the first-run empty default,
     // not user-1's room — proving the two owners stay isolated.
-    expect(other).toEqual(SAMPLE_DECORATION.map);
+    expect(other).toEqual({});
   });
 });

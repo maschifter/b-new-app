@@ -1,4 +1,3 @@
-import { SAMPLE_DECORATION } from "@bnewapp/studio-core";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { Provider, createStore } from "jotai";
 import { ItemPicker } from "../../ui/item-picker";
@@ -101,8 +100,8 @@ describe("studio persistence (jotai + mmkv)", () => {
     );
 
     expect(screen.queryByText("Plant")).not.toBeOnTheScreen();
-    // A fresh owner opens onto the first-run SAMPLE room, not user-1's state.
-    expect(store.get(decorationAtom("user-2")).map).toEqual(SAMPLE_DECORATION.map);
+    // A fresh owner opens onto the first-run empty room, not user-1's state.
+    expect(store.get(decorationAtom("user-2")).map).toEqual({});
   });
 
   it("ignores assign and clear outside edit mode", () => {

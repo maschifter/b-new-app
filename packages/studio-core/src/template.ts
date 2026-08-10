@@ -157,32 +157,11 @@ export function templateById(id: string): RoomTemplate | undefined {
   return id === ROOM_TEMPLATE.id ? ROOM_TEMPLATE : undefined;
 }
 
-/** An empty starting decoration for a fresh room (open question §8 #4 parked). */
+/**
+ * An empty starting decoration for a fresh room. Used as the first-run default
+ * (see the mobile state/atoms) so a brand-new owner starts from scratch, and as
+ * the fallback for corrupt or foreign persisted data.
+ */
 export function emptyDecoration(templateId: string = DEFAULT_TEMPLATE_ID): DecorationSnapshot {
   return { version: CURRENT_VERSION, templateId, map: {} };
 }
-
-/**
- * A pre-decorated sample: one item per module, each mapped to an id that has real
- * bundled art (see the mobile app's ui/art). Used as the first-run default (see
- * the mobile state/atoms) so a brand-new owner opens onto the fully-illustrated
- * reference studio; the owner's first edit overwrites it. `emptyDecoration()`
- * remains the fallback for corrupt or foreign persisted data.
- */
-export const SAMPLE_DECORATION: DecorationSnapshot = {
-  version: CURRENT_VERSION,
-  templateId: DEFAULT_TEMPLATE_ID,
-  map: {
-    "floor-main": { source: "catalog", id: "stage" },
-    "hero-screen": { source: "catalog", id: "big-screen" },
-    "preview-1": { source: "catalog", id: "preview-screen" },
-    "preview-2": { source: "catalog", id: "preview-screen" },
-    "preview-3": { source: "catalog", id: "preview-screen" },
-    "tall-module": { source: "catalog", id: "trophy" },
-    "low-module": { source: "catalog", id: "boombox" },
-    "lounge-kit": { source: "catalog", id: "sofa" },
-    "ceiling-light": { source: "catalog", id: "spotlight" },
-    "wall-art": { source: "catalog", id: "mirror" },
-    "decor-2": { source: "catalog", id: "plant" },
-  },
-};

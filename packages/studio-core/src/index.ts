@@ -13,6 +13,5 @@ export {
   ROOM_TEMPLATE,
   templateById,
   emptyDecoration,
-  SAMPLE_DECORATION,
 } from "./template.ts";
 export { coerceSnapshot } from "./coerce.ts";

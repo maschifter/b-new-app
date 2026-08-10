@@ -1,4 +1,10 @@
-import type { ApiSuccess, HealthStatus, UserProfile } from "@bnewapp/types";
+import type {
+  ApiSuccess,
+  HealthStatus,
+  SaveStudioRoomBody,
+  StudioRoom,
+  UserProfile,
+} from "@bnewapp/types";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
@@ -46,5 +52,30 @@ export async function getCurrentUser(accessToken: string): Promise<UserProfile> 
   if (!response.ok) throw new Error("Unable to load your profile");
 
   const body = (await response.json()) as ApiSuccess<UserProfile>;
+  return body.data;
+}
+
+export async function getStudioRoom(accessToken: string): Promise<StudioRoom | null> {
+  const response = await fetch(`${apiUrl}/api/studio/room`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) throw new Error("Unable to load your studio room");
+
+  const body = (await response.json()) as ApiSuccess<StudioRoom | null>;
+  return body.data;
+}
+
+export async function saveStudioRoom(
+  accessToken: string,
+  snapshot: SaveStudioRoomBody,
+): Promise<StudioRoom> {
+  const response = await fetch(`${apiUrl}/api/studio/room`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(snapshot),
+  });
+  if (!response.ok) throw new Error("Unable to save your studio room");
+
+  const body = (await response.json()) as ApiSuccess<StudioRoom>;
   return body.data;
 }
