@@ -73,7 +73,7 @@ describe("studio flow", () => {
 
     // Reopen and remove.
     fireEvent.press(screen.getByLabelText("Spot decor-2"));
-    fireEvent.press(screen.getByText("Remove item"));
+    fireEvent.press(screen.getByLabelText("Remove item"));
     expect(screen.getByTestId("spot-empty-decor-2")).toBeTruthy();
   });
 });
