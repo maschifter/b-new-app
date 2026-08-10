@@ -30,6 +30,9 @@ export function StudioStage({
     setSize({ width, height });
   };
 
+  // Fit (letterbox): scale the canvas uniformly so every spot stays fully
+  // visible and un-cropped. The container is painted with the room background so
+  // the letterbox margins read as the room extending edge-to-edge, not as gaps.
   const scale = Math.min(size.width / DESIGN_CANVAS.width, size.height / DESIGN_CANVAS.height);
   const stageWidth = DESIGN_CANVAS.width * scale;
   const stageHeight = DESIGN_CANVAS.height * scale;
@@ -44,7 +47,11 @@ export function StudioStage({
   const spots = [...template.spots].sort((a, b) => a.layer - b.layer);
 
   return (
-    <View testID="studio-stage" style={styles.container} onLayout={onLayout}>
+    <View
+      testID="studio-stage"
+      style={[styles.container, { backgroundColor: background }]}
+      onLayout={onLayout}
+    >
       {scale > 0 ? (
         <View
           style={[
