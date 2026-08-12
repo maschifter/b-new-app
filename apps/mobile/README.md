@@ -5,9 +5,9 @@ authentication and talks to the [`@bnewapp/server`](../server/README.md) API.
 
 ## Stack
 
-- [Expo 54](https://expo.dev/) with [Expo Router 6](https://docs.expo.dev/router/introduction/)
+- [Expo 55](https://expo.dev/) with [Expo Router](https://docs.expo.dev/router/introduction/)
   (file-based routing, typed routes)
-- React Native 0.81 / React 19
+- React Native 0.83 / React 19.2
 - [Supabase JS](https://supabase.com/docs/reference/javascript) for auth (PKCE flow,
   session persisted in `AsyncStorage`)
 - [TanStack Query](https://tanstack.com/query) for server state
