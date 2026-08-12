@@ -1,3 +1,4 @@
+import { NativeAnimatedWarningGuard } from "@/lib/animation/native-animated-warning-guard";
 import { AuthSessionProvider, useAuthSession } from "@/lib/auth/session-provider";
 import { QueryProvider } from "@/lib/providers/query-provider";
 import { Stack } from "expo-router";
@@ -10,6 +11,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <QueryProvider>
         <AuthSessionProvider>
+          <NativeAnimatedWarningGuard />
           <RootNavigator />
           <StatusBar style="light" />
         </AuthSessionProvider>
