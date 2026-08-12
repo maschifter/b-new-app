@@ -1,0 +1,4 @@
+interface:
+  display_name: "BNewApp Mobile Feature"
+  short_description: "Build Expo mobile features using repo patterns"
+  default_prompt: "Use $bnewapp-mobile-feature to implement a mobile feature in this repository."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "BNewApp Server Feature"
+  short_description: "Build Fastify API features using repo patterns"
+  default_prompt: "Use $bnewapp-server-feature to implement a server API feature in this repository."

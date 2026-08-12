@@ -1,0 +1,4 @@
+interface:
+  display_name: "BNewApp Database Change"
+  short_description: "Safely evolve Supabase schema and shared types"
+  default_prompt: "Use $bnewapp-database-change to implement a Supabase schema change in this repository."
