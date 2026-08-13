@@ -7,7 +7,7 @@
 
 | Topic | Choice | Notes |
 |---|---|---|
-| Card thumbnail | **Mini-render of a scaled-down `StudioStage`** inside each card | Zero backend work; spots are normalized 0..1 so scaling is free. If it measurably lags, revisit server-side thumbnail images later |
+| List item | **Simple row** — username, item count, relative time (no per-item stage render) | Superseded the earlier mini-render-thumbnail decision (updated after Phase 4 review): a browse list only needs lightweight data, and dropping ~14 images/row removes the long-list perf risk. The full `StudioStage` is still rendered on the room **detail** screen (`mode="visit"`) |
 | Room owner info | Add a **`username`** column to `profiles` | Auto-generated as a neutral `dancer-NNNNNN` handle from a database sequence; a username-editing screen is out of scope for v1 |
 | Which rooms are listed | Only rooms with **≥1 item after reconcile** | Avoids a feed full of empty rooms or rooms containing only stale placements |
 | Sort order | `updated_at desc, id desc` | Recently decorated rooms first; `id` is the deterministic tie-breaker |
@@ -53,9 +53,9 @@ Visited rooms are **pure server data** (react-query cache); they never touch the
 | 0 — AI rules/skills | ✅ Done | `29c5e7a` — AGENTS.md tree + `.agents/skills/*` |
 | 1 — DB migration | ✅ Done | `870511a` — `20260813033848_add_profile_username.sql` pushed to linked project; `db:types` regenerated (`studio_rooms → profiles` relationship + `username: string` present). Preflight: `profiles` = 3 rows (lock window negligible), 0 orphan `owner_id` |
 | 2 — Shared DTOs | ✅ Done | `37344b9` — `ExploreRoom`, `ExploreRoomsCursor`, `ExploreRoomsPage` in `packages/types/src/index.ts` |
-| 3 — Server | ✅ Implemented (uncommitted, in review) | `routes.ts` + `studio.test.ts`; typecheck + 23/23 server tests + lint green. See Phase 3 impl notes below |
-| 4 — Mobile | ⬜ Not started | |
-| 5 — Verify | ⬜ Not started | |
+| 3 — Server | ✅ Done | `75c07a7` — `routes.ts` + `studio.test.ts`; 24 server studio tests. See Phase 3 impl notes below |
+| 4 — Mobile | ✅ Implemented (uncommitted, in review) | `jotai-tanstack-query@0.11` added; query-provider hydrator + `queryAuthAtom` + centralized `AuthSessionProvider` transitions; `features/explore/*`; routes wired. Workspace typecheck 7/7, tests green (mobile 42/42, server 28/28), `pnpm lint` clean. See Phase 4 impl notes below |
+| 5 — Verify | ◑ Static checks done (typecheck/test/lint); device walkthrough + `EXPLAIN` pending | |
 
 ---
 
@@ -337,6 +337,44 @@ features/explore/
     accessibility tree when its content is already summarized by the surrounding control.
   - Own the loading/not-found states. Never write to MMKV.
 
+### Phase 4 implementation notes (as built)
+
+- **Dependency**: `jotai-tanstack-query@0.11.0` added to `@bnewapp/mobile`. Its published entry is
+  ESM reached through its top-level symlink, so `jest.config.js` `transformIgnorePatterns` now
+  allowlists it alongside the jest-expo defaults (kept the reanimated entry).
+- **Query provider**: `query-provider.tsx` wraps children in a `HydrateQueryClient` that runs
+  `useHydrateAtoms([[queryClientAtom, client]])` on the default store, so React Query hooks and
+  jotai query atoms share one client/cache. Proven by `lib/providers/__tests__/query-provider.test.tsx`.
+- **Auth bridge**: `lib/auth/query-auth-atom.ts` exports `queryAuthAtom` (`{userId, accessToken}|null`).
+  `AuthSessionProvider` now injects `useQueryClient()` + `useSetAtom(queryAuthAtom)` and owns all
+  transitions: same-user refresh updates the token in place; any identity change nulls the atom,
+  cancels+removes **only the outgoing user's** cached queries (predicate on `queryKey.includes(userId)`),
+  then enables the next identity. `onAuthStateChange` is the serialized event stream; `getSession`
+  is ignored once a live event arrives (`receivedAuthEvent`). `SignOutButton` no longer calls
+  `queryClient.clear()`. Five transition tests cover initial hydration, same-user refresh, explicit
+  sign-out, non-interactive expiry, and A→B replacement.
+- **Feature**: `features/explore/{api.ts,_atoms/{queries,ui}.ts,ui/*,index.ts}`. Infinite atom uses
+  explicit generics (`TPageParam = ExploreRoomsCursor | null`) so `pageParam` is typed; `getNextPageParam`
+  reads `nextCursor` (never item counts). `exploreRoomsAtom` flatMaps pages. `apiUrl` is now exported
+  from `lib/api/client.ts` for feature-local fetch fns.
+- **Empty-page advancement** lives in `explore-screen.tsx`, keyed on the last page object: when the
+  newest page is empty with `hasNextPage`, it fires exactly one guarded `fetchNextPage()`. Tests assert
+  each cursor is requested exactly once across initial-empty→populated, populated→empty→populated, and
+  all-empty→terminal sequences.
+- **List UI (updated post-review)**: the feed is a single-column list of lightweight `RoomRow`s
+  (avatar initial, username, `N items · relative time`, chevron) — no per-row stage render. The
+  `EXPLORE`/"Explore studios" header was also removed. `StudioStage` is a public export of the studio
+  feature (`features/studio/index.ts`) and is now used **only** by the detail screen
+  (`ExploreRoomScreen`, `mode="visit"`), consumed via `@/features/studio` (no deep import).
+- **Routes**: `(tabs)/explore.tsx` re-exports `ExploreScreen`; `app/room/[ownerId].tsx` is a thin
+  validated entry rendering `ExploreRoomScreen`; `app/_layout.tsx` declares `room/[ownerId]` inside the
+  `session !== null` `Stack.Protected` block. `.expo/types/router.d.ts` already carries the new route
+  (regenerated by the running Metro), so typed-route usage type-checks. `room-route-guard.test.tsx`
+  proves the route is out of a signed-out tree and present when signed in.
+- **Test infra note**: jest-expo's `SafeAreaProvider` renders no children under the test renderer, so the
+  guard test mocks it passthrough; a11y-hidden nodes (skeleton root, visited stage) are queried with
+  `includeHiddenElements: true`.
+
 ## Phase 5 — Verify
 
 - Confirm `corepack pnpm --version` matches `package.json#packageManager`, then run typecheck
@@ -367,7 +405,7 @@ features/explore/
 
 | Risk | Level | Mitigation |
 |---|---|---|
-| Mini-render cost (~14 images/card) on long lists | Medium | `removeClippedSubviews` + `windowSize` in place; measure in Phase 5 before considering an upgrade |
+| Mini-render cost (~14 images/card) on long lists | Resolved | Superseded post-review: the feed is now a lightweight row list (no per-row stage render), so this risk no longer applies. Full render happens only on the single-room detail screen |
 | Pages shorter than `limit` due to empty-after-reconcile dropping | Low | Client advances through every newly received empty page one request at a time while `nextCursor` is non-null, including empty middle pages; tests cover initial-empty, populated→empty→populated, and terminal-empty outcomes |
 | Pagination drift or tied timestamps → duplicate rooms | High | Planned mitigation: keyset cursor uses `(updated_at, id)` and is computed from raw DB rows before reconcile filtering; Phase 5 adds regression coverage |
 | A not-yet-seen room is updated ahead of the cursor during traversal | Low | It appears on pull-to-refresh; the active traversal stays stable instead of injecting reordered data mid-scroll |

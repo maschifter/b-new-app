@@ -63,6 +63,9 @@ importers:
       jotai-family:
         specifier: ^1.1.0
         version: 1.1.0(jotai@2.20.2(@babel/core@7.29.7)(@babel/template@7.29.7)(@types/react@19.1.17)(react@19.1.0))
+      jotai-tanstack-query:
+        specifier: ^0.11.0
+        version: 0.11.0(@tanstack/query-core@5.101.4)(@tanstack/react-query@5.101.4(react@19.1.0))(jotai@2.20.2(@babel/core@7.29.7)(@babel/template@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       react:
         specifier: 19.1.0
         version: 19.1.0
@@ -3253,6 +3256,19 @@ packages:
     engines: {node: '>=12.20.0'}
     peerDependencies:
       jotai: '>=2.9.0'
+
+  jotai-tanstack-query@0.11.0:
+    resolution: {integrity: sha512-Ys0u0IuuS6/okUJOulFTdCVfVaeKbm1+lKVSN9zHhIxtrAXl9FM4yu7fNvxM6fSz/NCE9tZOKR0MQ3hvplaH8A==}
+    peerDependencies:
+      '@tanstack/query-core': '*'
+      '@tanstack/react-query': '*'
+      jotai: '>=2.0.0'
+      react: 19.1.0
+    peerDependenciesMeta:
+      '@tanstack/react-query':
+        optional: true
+      react:
+        optional: true
 
   jotai@2.20.2:
     resolution: {integrity: sha512-aHB4CNb9qRcyf0mwSB6EO5bCGAjx8cTwFgOFCE2leOnTzqACbnSWG8XoWB3LxCT1Qoj03I1OWAHszDmN4uHb/w==}
@@ -8730,6 +8746,14 @@ snapshots:
   jotai-family@1.1.0(jotai@2.20.2(@babel/core@7.29.7)(@babel/template@7.29.7)(@types/react@19.1.17)(react@19.1.0)):
     dependencies:
       jotai: 2.20.2(@babel/core@7.29.7)(@babel/template@7.29.7)(@types/react@19.1.17)(react@19.1.0)
+
+  jotai-tanstack-query@0.11.0(@tanstack/query-core@5.101.4)(@tanstack/react-query@5.101.4(react@19.1.0))(jotai@2.20.2(@babel/core@7.29.7)(@babel/template@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0):
+    dependencies:
+      '@tanstack/query-core': 5.101.4
+      jotai: 2.20.2(@babel/core@7.29.7)(@babel/template@7.29.7)(@types/react@19.1.17)(react@19.1.0)
+    optionalDependencies:
+      '@tanstack/react-query': 5.101.4(react@19.1.0)
+      react: 19.1.0
 
   jotai@2.20.2(@babel/core@7.29.7)(@babel/template@7.29.7)(@types/react@19.1.17)(react@19.1.0):
     optionalDependencies:

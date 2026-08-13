@@ -35,7 +35,9 @@ function resolveApiUrl(): string {
   return metroHost ? rewriteAndroidLocalhost(`http://${metroHost}:${API_PORT}`) : defaultApiUrl;
 }
 
-const apiUrl = resolveApiUrl();
+// Resolved once at module load. Exported so feature-local api modules build their
+// request URLs off the same base without re-resolving the Metro/env host.
+export const apiUrl = resolveApiUrl();
 
 export async function getHealth(): Promise<HealthStatus> {
   const response = await fetch(`${apiUrl}/health`);

@@ -1,15 +1,14 @@
 import { supabase } from "@/lib/auth/supabase";
-import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { StyleSheet, Text } from "react-native";
 import { BouncablePress } from "./bouncable-press";
 
 export function SignOutButton() {
-  const queryClient = useQueryClient();
-
+  // Query-cache cleanup is owned by AuthSessionProvider, which reacts to the
+  // resulting SIGNED_OUT event — so explicit sign-out, session expiry, and
+  // account replacement all follow the same cleanup path.
   const signOut = async () => {
     await supabase?.auth.signOut();
-    queryClient.clear();
     router.replace("/auth/sign-in");
   };
 
