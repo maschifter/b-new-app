@@ -1,19 +1,23 @@
 import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
+import { queryErrorResetVersionAtom } from "@/lib/react-query/query-error-reset";
 import type { ExploreRoomsCursor, ExploreRoomsPage } from "@bnewapp/types";
 import type { InfiniteData } from "@tanstack/react-query";
 import { atomFamily } from "jotai-family";
-import { atomWithInfiniteQuery, atomWithQuery } from "jotai-tanstack-query";
+import {
+  atomWithSuspenseInfiniteQuery,
+  atomWithSuspenseQuery,
+} from "jotai-tanstack-query";
 import { getExploreRoom, getExploreRooms } from "../api";
 
 const EXPLORE_PAGE_LIMIT = 20;
 
 type ExploreCursor = ExploreRoomsCursor | null;
 
-// The Explore feed. The query key carries the authenticated `userId` so cache
-// identity never leaks across accounts; queries stay disabled until the auth
-// projection is present. The cursor is the raw server keyset boundary, so the
-// next page param comes straight from `nextCursor`, never from item counts.
-export const exploreRoomsInfiniteAtom = atomWithInfiniteQuery<
+// The Explore feed. The protected route mounts only after the auth projection
+// is present, and the query key carries `userId` so cache identity never leaks
+// across accounts. The cursor is the raw server keyset boundary, so the next
+// page param comes straight from `nextCursor`, never from item counts.
+export const exploreRoomsInfiniteAtom = atomWithSuspenseInfiniteQuery<
   ExploreRoomsPage,
   Error,
   InfiniteData<ExploreRoomsPage>,
@@ -21,9 +25,9 @@ export const exploreRoomsInfiniteAtom = atomWithInfiniteQuery<
   ExploreCursor
 >((get) => {
   const auth = get(queryAuthAtom);
+  get(queryErrorResetVersionAtom);
   return {
     queryKey: ["explore-rooms", auth?.userId ?? null],
-    enabled: auth !== null,
     initialPageParam: null,
     queryFn: async ({ pageParam }) => {
       if (!auth) throw new Error("Not authenticated");
@@ -36,11 +40,11 @@ export const exploreRoomsInfiniteAtom = atomWithInfiniteQuery<
 // A single visited room. Server state like the feed: same auth-scoped query-atom
 // standard, one atom per owner. Detail data is cached per authenticated viewer.
 export const exploreRoomQueryAtomFamily = atomFamily((ownerId: string) =>
-  atomWithQuery((get) => {
+  atomWithSuspenseQuery((get) => {
     const auth = get(queryAuthAtom);
+    get(queryErrorResetVersionAtom);
     return {
       queryKey: ["explore-room", auth?.userId ?? null, ownerId],
-      enabled: auth !== null,
       queryFn: async () => {
         if (!auth) throw new Error("Not authenticated");
         return getExploreRoom(auth.accessToken, ownerId);

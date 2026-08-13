@@ -1,7 +1,7 @@
 import { CURRENT_VERSION, DEFAULT_TEMPLATE_ID } from "@bnewapp/studio-core";
 import type { ExploreRoom } from "@bnewapp/types";
-import { QueryClient } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, renderAsync, screen } from "@testing-library/react-native";
 import { router } from "expo-router";
 import { Provider, createStore } from "jotai";
 import { queryClientAtom } from "jotai-tanstack-query";
@@ -25,19 +25,19 @@ function room(): ExploreRoom {
   };
 }
 
-function mountRoom(ownerId = "owner-1") {
+async function mountRoom(ownerId = "owner-1") {
   const store = createStore();
-  store.set(
-    queryClientAtom,
-    new QueryClient({
-      defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY, retry: false } },
-    }),
-  );
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY, retry: false } },
+  });
+  store.set(queryClientAtom, queryClient);
   store.set(queryAuthAtom, { userId: "viewer", accessToken: "token" });
-  render(
-    <Provider store={store}>
-      <ExploreRoomScreen ownerId={ownerId} />
-    </Provider>,
+  await renderAsync(
+    <QueryClientProvider client={queryClient}>
+      <Provider store={store}>
+        <ExploreRoomScreen ownerId={ownerId} />
+      </Provider>
+    </QueryClientProvider>,
   );
 }
 
@@ -48,7 +48,7 @@ beforeEach(() => {
 
 it("renders the visited room and a working back control on success", async () => {
   mockedGetRoom.mockResolvedValue(room());
-  mountRoom();
+  await mountRoom();
 
   await screen.findByText("dancer-neo");
   // The stage is hidden from assistive tech (the card summarizes it), so query
@@ -61,15 +61,20 @@ it("renders the visited room and a working back control on success", async () =>
 
 it("shows a not-found state when the owner has no room", async () => {
   mockedGetRoom.mockResolvedValue(null);
-  mountRoom();
+  await mountRoom();
 
   await screen.findByText("Studio not found");
 });
 
 it("shows an error state with a retry when the request fails", async () => {
-  mockedGetRoom.mockRejectedValue(new Error("boom"));
-  mountRoom();
+  const consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    mockedGetRoom.mockRejectedValue(new Error("boom"));
+    await mountRoom();
 
-  await screen.findByText("Couldn't load this studio");
-  expect(screen.getByLabelText("Retry loading this studio")).toBeTruthy();
+    await screen.findByText("Couldn't load this studio");
+    expect(screen.getByLabelText("Retry loading this studio")).toBeTruthy();
+  } finally {
+    consoleError.mockRestore();
+  }
 });

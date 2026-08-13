@@ -203,6 +203,25 @@ const snapshotAtom = atomFamily((ownerId: string) =>
 
 ## 7. List screen composition
 
+Before changing anything under `apps/mobile`, read `apps/mobile/AGENTS.md`. For mobile
+feature implementation or refactoring, also load the `bnewapp-mobile-feature` skill from
+`.claude/skills/bnewapp-mobile-feature/SKILL.md`. The canonical, detailed workflow lives in
+`.agents/skills/bnewapp-mobile-feature/SKILL.md` and its `references/current-patterns.md`.
+
+Key UI rules:
+
+- Expo Router files are route composition only. Feature screens and components belong under
+  `src/features/<feature>/ui`; move code to `src/components` only when it is a truly shared,
+  domain-neutral primitive with multiple actual feature consumers.
+- Use selective Suspense for the initial read of query-backed screen content. Pair it with the
+  shared mobile query error boundary and an accessible retry action. Keep auth/parameter guards
+  above the boundary so suspense query atoms remain unconditionally enabled where mounted.
+- Keep explicit loading UI for pull-to-refresh, pagination, background refetches, mutations, and
+  form submissions. Suspense does not replace those states.
+- Use `StyleSheet` for new UI. NativeWind is not part of the current mobile build contract; do not
+  copy CardNexus `className` patterns unless an explicit migration also adds and verifies the
+  dependency, Babel/Metro/CSS configuration, typing, tests, and updates these rules.
+
 Compose feeds as **screen → list → item card**:
 
 - `FlatList` (grid via `numColumns`), `keyExtractor` = a stable id (e.g. `ownerId`).

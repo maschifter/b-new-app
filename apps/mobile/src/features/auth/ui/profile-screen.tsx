@@ -1,9 +1,9 @@
 import { BouncablePress } from "@/components/bouncable-press";
 import { Screen } from "@/components/screen";
-import { SignOutButton } from "@/components/sign-out-button";
 import { useAuthSession } from "@/lib/auth/session-provider";
 import { router } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
+import { SignOutButton } from "./sign-out-button";
 
 export function ProfileScreen() {
   const { session } = useAuthSession();

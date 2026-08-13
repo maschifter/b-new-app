@@ -1,6 +1,6 @@
 ---
 name: bnewapp-mobile-feature
-description: Implement or refactor BNewApp Expo/React Native features using concern-based `_atoms`, jotai-tanstack-query server state, plain Jotai client state, thin Expo Router routes, shared domain packages, tests, accessibility, and device verification. Use for work under apps/mobile, including screens, navigation, state, API integration, persistence, lists, gestures, animations, and visible mobile behavior.
+description: Implement or refactor BNewApp Expo/React Native features using feature-owned UI, thin Expo Router routes, selective Suspense query boundaries, concern-based `_atoms`, Jotai/TanStack Query state, shared domain packages, tests, accessibility, and device verification. Use for work under apps/mobile, including screens, components, loading and error states, navigation, state, API integration, persistence, lists, gestures, animations, and visible mobile behavior.
 ---
 
 # BNewApp Mobile Feature
@@ -27,6 +27,8 @@ Implement mobile work without breaking the repository's ownership boundaries or 
 
 Use the smallest structure that fits. Add `_atoms/queries.ts`, `mutations.ts`, `ui.ts`,
 `effects.ts`, or `forms.ts` only when the feature needs that concern. Do not create placeholder files.
+Keep nested UI out of route files. Keep a component feature-local until it is a genuine primitive or
+has real consumers in multiple features; do not promote components based only on visual similarity.
 
 ## Implement the Vertical Slice
 
@@ -46,13 +48,33 @@ Use the smallest structure that fits. Add `_atoms/queries.ts`, `mutations.ts`, `
 8. Validate and reconcile data at the appropriate boundary. Never rely on the client for authorization.
 9. Add accessibility semantics and account for safe areas, keyboards, loading, empty, error, and offline states that apply to the request.
 
+## Compose UI and Loading Boundaries
+
+1. Make the route import a feature screen through the feature's public `index.ts`.
+2. Split a growing screen into named feature-owned files under `ui/` by responsibility, such as
+   list feedback, row rendering, screen layout, skeleton, or header. Do not extract tiny markup that
+   has no independent responsibility.
+3. Use `StyleSheet.create` and existing React Native primitives. Do not copy CardNexus NativeWind
+   `className` usage until BNewApp has an approved NativeWind migration and updated scoped rules.
+4. For a query-backed initial load, use Suspense only when the entire bounded content cannot render
+   meaningfully without the query. Place a layout-matched skeleton in the nearest useful `Suspense` fallback.
+5. Put a query-aware error boundary outside that Suspense boundary and provide an accessible retry.
+   Ensure retry clears TanStack error state and invalidates a cached rejected Jotai suspense promise.
+6. Use suspense query atoms only below guards that guarantee required auth/params exist; suspense query
+   atoms are always enabled. Keep non-suspense queries with `enabled` when inputs may be absent.
+7. Keep explicit `isPending`/`isFetching` UI for mutations, submissions, refresh, background fetching,
+   and next-page loading so existing content remains mounted.
+8. Test initial skeleton, success, empty/not-found, error, and successful retry. Use RNTL's async render
+   APIs for React 19 components that suspend.
+
 ## Keep Rendering Efficient
 
 - Keep render paths pure and list-item work small.
 - Use stable keys and stable layout dimensions.
 - Avoid memoization by default; add it for measured work or required stable identities.
 - Use Reanimated for per-frame or gesture-driven animation work.
-- For feeds, use `atomWithInfiniteQuery`, server cursors, and a derived flattened-items atom.
+- For feeds, use the appropriate `atomWithInfiniteQuery` variant, server cursors, and a derived
+  flattened-items atom. Suspense may own the first page; pagination remains explicit incremental loading.
 
 ## Test and Verify
 

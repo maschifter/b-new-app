@@ -1,7 +1,14 @@
 import { CURRENT_VERSION, DEFAULT_TEMPLATE_ID } from "@bnewapp/studio-core";
 import type { ExploreRoom, ExploreRoomsPage } from "@bnewapp/types";
-import { QueryClient } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  act,
+  fireEvent,
+  fireEventAsync,
+  renderAsync,
+  screen,
+  waitFor,
+} from "@testing-library/react-native";
 import { Provider, createStore } from "jotai";
 import { queryClientAtom } from "jotai-tanstack-query";
 
@@ -44,19 +51,19 @@ function serve(pages: Record<string, ExploreRoomsPage>): string[] {
   return requested;
 }
 
-function mountExplore() {
+async function mountExplore() {
   const store = createStore();
-  store.set(
-    queryClientAtom,
-    new QueryClient({
-      defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY, retry: false } },
-    }),
-  );
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY, retry: false } },
+  });
+  store.set(queryClientAtom, queryClient);
   store.set(queryAuthAtom, { userId: "viewer", accessToken: "token" });
-  render(
-    <Provider store={store}>
-      <ExploreScreen />
-    </Provider>,
+  await renderAsync(
+    <QueryClientProvider client={queryClient}>
+      <Provider store={store}>
+        <ExploreScreen />
+      </Provider>
+    </QueryClientProvider>,
   );
 }
 
@@ -68,15 +75,15 @@ beforeEach(() => {
   mockedGetRooms.mockReset();
 });
 
-it("shows the skeleton while the first page is loading", () => {
+it("shows the skeleton while the first page is loading", async () => {
   mockedGetRooms.mockReturnValue(new Promise(() => {}));
-  mountExplore();
+  await mountExplore();
   expect(screen.getByTestId("explore-skeleton", { includeHiddenElements: true })).toBeTruthy();
 });
 
 it("renders a card per room once the first page resolves", async () => {
   const requested = serve({ start: page([room("a"), room("b")], null) });
-  mountExplore();
+  await mountExplore();
 
   await screen.findByLabelText(label("a"));
   expect(screen.getByLabelText(label("b"))).toBeTruthy();
@@ -89,7 +96,7 @@ it("shows the empty state and stops when every page reconciles to nothing", asyn
     c1: page([], "c2"),
     c2: page([], null),
   });
-  mountExplore();
+  await mountExplore();
 
   await screen.findByText("No studios yet");
   await waitFor(() => expect(requested).toEqual(["start", "c1", "c2"]));
@@ -97,7 +104,7 @@ it("shows the empty state and stops when every page reconciles to nothing", asyn
 
 it("advances past an initial empty page to the first page with items", async () => {
   const requested = serve({ start: page([], "c1"), c1: page([room("z")], null) });
-  mountExplore();
+  await mountExplore();
 
   await screen.findByLabelText(label("z"));
   expect(screen.queryByText("No studios yet")).toBeNull();
@@ -113,11 +120,11 @@ it("does not show the empty state while advancing past an empty page", async () 
       return key === "start" ? Promise.resolve(page([], "c1")) : new Promise(() => {});
     },
   );
-  mountExplore();
+  await mountExplore();
 
   await waitFor(() => expect(requested).toEqual(["start", "c1"]));
   expect(screen.queryByText("No studios yet")).not.toBeOnTheScreen();
-  expect(screen.getByTestId("explore-footer")).toBeOnTheScreen();
+  expect(await screen.findByTestId("explore-footer")).toBeOnTheScreen();
 });
 
 it("advances through an empty middle page after loading more, without re-requesting a cursor", async () => {
@@ -126,7 +133,7 @@ it("advances through an empty middle page after loading more, without re-request
     c1: page([], "c2"),
     c2: page([room("b")], null),
   });
-  mountExplore();
+  await mountExplore();
 
   await screen.findByLabelText(label("a"));
   expect(requested).toEqual(["start"]);
@@ -148,7 +155,7 @@ it("shows the footer spinner while the next page is in flight", async () => {
       resolveNext = resolve;
     });
   });
-  mountExplore();
+  await mountExplore();
 
   await screen.findByLabelText(label("a"));
   act(() => {
@@ -172,7 +179,7 @@ it("stops auto-advancing after a next-page error and retries only on request", a
       ? Promise.reject(new Error("boom"))
       : Promise.resolve(page([room("recovered")], null));
   });
-  mountExplore();
+  await mountExplore();
 
   const retry = await screen.findByLabelText("Retry loading more studios");
   expect(requested).toEqual(["start", "c1"]);
@@ -184,9 +191,17 @@ it("stops auto-advancing after a next-page error and retries only on request", a
 });
 
 it("shows an error state with a retry when the first page fails", async () => {
-  mockedGetRooms.mockRejectedValue(new Error("boom"));
-  mountExplore();
+  const consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    mockedGetRooms
+      .mockRejectedValueOnce(new Error("boom"))
+      .mockResolvedValueOnce(page([room("recovered")], null));
+    await mountExplore();
 
-  await screen.findByText("Couldn't load studios");
-  expect(screen.getByLabelText("Retry loading studios")).toBeTruthy();
+    await screen.findByText("Couldn't load studios");
+    await fireEventAsync.press(screen.getByLabelText("Retry loading studios"));
+    expect(await screen.findByLabelText(label("recovered"))).toBeTruthy();
+  } finally {
+    consoleError.mockRestore();
+  }
 });

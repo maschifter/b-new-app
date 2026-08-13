@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/auth/supabase";
 import { router } from "expo-router";
 import { StyleSheet, Text } from "react-native";
-import { BouncablePress } from "./bouncable-press";
+import { BouncablePress } from "@/components/bouncable-press";
 
 export function SignOutButton() {
   // Query-cache cleanup is owned by AuthSessionProvider, which reacts to the

@@ -30,10 +30,16 @@ src/features/<feature>/
 - Inside `_atoms/`, use concern-based files such as `queries.ts`, `mutations.ts`, `ui.ts`,
   `effects.ts`, or `forms.ts`; add only the files the feature actually uses.
 - Keep Expo Router files thin: parse route params, enforce navigation concerns, and render a feature screen.
+- Do not declare screen UI, placeholders, list feedback, or feature controls inside route files.
+  Move them to the owning feature's `ui/` folder and import the feature through its public `index.ts`.
 - Declare authenticated routes outside the protected tabs inside the `session !== null`
   `Stack.Protected` block in `src/app/_layout.tsx`; filesystem discovery is not an auth guard.
 - Export a narrow public surface from the feature `index.ts`; do not let unrelated features deep-import internals.
 - Keep route/navigation objects out of reusable feature components. Pass callbacks or typed values at the boundary.
+- Keep components feature-owned by default. Promote a component to `src/components/` only when it
+  is a genuine app-wide primitive or is already needed by more than one feature. Similar appearance
+  alone is not a shared abstraction. Move a shared component back into a feature when it only serves
+  that feature, such as an auth-only sign-out control.
 
 ## State Ownership
 
@@ -49,6 +55,23 @@ src/features/<feature>/
 - Put pure transforms and invariants in a platform-neutral shared package when both mobile and server must agree.
 - Use effects only for synchronization with external systems. Derive values during render or in atoms when possible.
 
+## Loading and Error Boundaries
+
+- Use Suspense selectively for an initial query read when the whole bounded content depends on that
+  query and a layout-matched skeleton is available. Prefer a boundary around the smallest meaningful
+  content region instead of suspending a navigator or the whole application.
+- Pair every suspense query region with `MobileQueryErrorBoundary` or an equivalent query-aware
+  error boundary. The boundary must expose an accessible retry action, clear errored query state,
+  and invalidate cached rejected Jotai suspense promises before remounting its children.
+- Use `atomWithSuspenseQuery` or `atomWithSuspenseInfiniteQuery` only when the component is guaranteed
+  to mount after required inputs such as authenticated identity exist. These APIs force queries enabled;
+  do not use them as a replacement for an auth-dependent `enabled` query.
+- Keep explicit query or mutation states for refresh, pagination, background fetching, form submission,
+  and mutations. These operations should preserve already rendered content instead of suspending it.
+- Derived atoms that consume suspense query atoms must await the query result rather than copying its
+  data into separate client state.
+- Test the skeleton, success, empty/not-found, error, and retry-recovery paths for suspense-backed UI.
+
 ## Lists and Feeds
 
 - Use `atomWithInfiniteQuery` with server-provided cursor pagination for paginated feeds.
@@ -63,6 +86,9 @@ src/features/<feature>/
 ## UI and Performance
 
 - Use React Native components and `StyleSheet.create` consistently with neighboring code.
+- NativeWind is not part of the current mobile styling contract. Do not copy CardNexus `className`
+  patterns or assume NativeWind support unless the dependency, Metro/CSS setup, and this rule are
+  updated in the same approved migration.
 - Provide accessibility roles, labels, states, and reasonable touch targets for interactive controls.
 - Respect safe areas and keyboard behavior; do not hardcode device-specific offsets.
 - Keep render paths pure. Memoize only when measurement or stable identity requirements justify it.
