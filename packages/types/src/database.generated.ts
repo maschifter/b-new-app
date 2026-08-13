@@ -44,16 +44,19 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          username: string
         }
         Insert: {
           created_at?: string
           email: string
           id: string
+          username?: string
         }
         Update: {
           created_at?: string
           email?: string
           id?: string
+          username?: string
         }
         Relationships: []
       }
@@ -85,7 +88,15 @@ export type Database = {
           updated_at?: string
           version?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "studio_rooms_owner_profile_fk"
+            columns: ["owner_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
