@@ -4,9 +4,10 @@ import { ROOM_TEMPLATE, templateById } from "@bnewapp/studio-core";
 import { router } from "expo-router";
 import { useAtomValue } from "jotai";
 import type { ReactNode } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { exploreRoomQueryAtomFamily } from "../_atoms/queries";
+import { ExploreRoomSkeleton } from "./explore-room-skeleton";
 
 // Read-only view of another dancer's room. The query is scoped to the signed-in
 // viewer's cache; this screen owns its loading / not-found / error states and
@@ -20,13 +21,7 @@ export function ExploreRoomScreen({ ownerId }: { ownerId: string }) {
   } = useAtomValue(exploreRoomQueryAtomFamily(ownerId));
 
   if (isPending) {
-    return (
-      <Shell>
-        <View style={styles.centered}>
-          <ActivityIndicator color="#8B5CF6" />
-        </View>
-      </Shell>
-    );
+    return <ExploreRoomSkeleton />;
   }
 
   if (isError) {
