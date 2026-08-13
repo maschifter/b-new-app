@@ -46,6 +46,17 @@ Visited rooms are **pure server data** (react-query cache); they never touch the
 
 **Execution order:** Phase 0 → 1 → 2 → 3 → 4 → 5, one commit per phase.
 
+## Progress
+
+| Phase | Status | Commit / notes |
+|---|---|---|
+| 0 — AI rules/skills | ✅ Done | `29c5e7a` — AGENTS.md tree + `.agents/skills/*` |
+| 1 — DB migration | ✅ Done | `870511a` — `20260813033848_add_profile_username.sql` pushed to linked project; `db:types` regenerated (`studio_rooms → profiles` relationship + `username: string` present). Preflight: `profiles` = 3 rows (lock window negligible), 0 orphan `owner_id` |
+| 2 — Shared DTOs | ✅ Done | `37344b9` — `ExploreRoom`, `ExploreRoomsCursor`, `ExploreRoomsPage` in `packages/types/src/index.ts` |
+| 3 — Server | ✅ Implemented (uncommitted, in review) | `routes.ts` + `studio.test.ts`; typecheck + 23/23 server tests + lint green. See Phase 3 impl notes below |
+| 4 — Mobile | ⬜ Not started | |
+| 5 — Verify | ⬜ Not started | |
+
 ---
 
 ## Phase 0 — AI rules/skills for this app (before any feature code)
@@ -209,6 +220,24 @@ dropping, caller exclusion, `nextCursor` pagination, tied `updated_at` values us
 tie-breaker, and an already-returned room updated between page requests. Also cover missing or
 invalid auth, invalid `limit`, a half-specified/invalid cursor pair, invalid detail `ownerId`,
 Supabase list/detail failures, and missing room → `data: null`.
+
+### Phase 3 implementation notes (as built)
+
+- **Embed typing needs no cast.** `EXPLORE_COLUMNS` uses the constraint-name hint
+  `profiles!studio_rooms_owner_profile_fk(username)`; because the relationship is `isOneToOne`,
+  supabase-js infers `profiles: { username: string }` cleanly. A `RawExploreRow` structural type
+  + `embeddedUsername()` helper (tolerates object/array/null) keeps it strict — no `any`/`as`.
+- **Cursor `id` is `studio_rooms.id`** (the room PK), not `owner_id`, even though `ExploreRoom`
+  omits `id`. The cursor is opaque to the client; `EXPLORE_COLUMNS` selects `id` solely to build it.
+- **`cursorUpdatedAt` validated with `z.string().datetime({ offset: true })`** so both `Z` and
+  `+00:00` timestamptz forms round-trip. Confirm against real Supabase output in Phase 5.
+- **`map <> '{}'` filter is `.neq("map", "{}")`.** Verified only at the unit level (mocked
+  Supabase); the real jsonb semantics + partial-index usage are a Phase 5 `EXPLAIN` check.
+- **Detail endpoint does not exclude the caller and does not drop empty-after-reconcile rooms**
+  (per plan): the client reaches it from the feed, and a reconciled-empty room still renders as a
+  bare stage. Missing row → `data: null`.
+- **Server test mock** adds a chainable, awaitable query-builder (`queryableRooms`) mirroring
+  `PostgrestFilterBuilder` (thenable via a `biome-ignore`d `then`); 12 new tests, 23/23 total green.
 
 ## Phase 4 — Mobile (`apps/mobile/src/features/explore/`)
 

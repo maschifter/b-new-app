@@ -73,12 +73,14 @@ missing or invalid tokens with `401`. The verified payload is available as
 
 ## Endpoints
 
-| Method | Path            | Auth | Description                                             |
-| ------ | --------------- | ---- | ------------------------------------------------------- |
-| `GET`  | `/health`       | no   | Liveness check: `{ status, timestamp }`                 |
-| `GET`  | `/api/user/me`  | yes  | Current user's profile from `public.profiles`           |
-| `GET`  | `/api/studio/room` | yes | Current user's saved studio room, or `null`             |
-| `PUT`  | `/api/studio/room` | yes | Reconcile and upsert the current user's studio snapshot |
+| Method | Path                       | Auth | Description                                             |
+| ------ | -------------------------- | ---- | ------------------------------------------------------- |
+| `GET`  | `/health`                  | no   | Liveness check: `{ status, timestamp }`                 |
+| `GET`  | `/api/user/me`             | yes  | Current user's profile from `public.profiles`           |
+| `GET`  | `/api/studio/room`         | yes  | Current user's saved studio room, or `null`             |
+| `PUT`  | `/api/studio/room`         | yes  | Reconcile and upsert the current user's studio snapshot |
+| `GET`  | `/api/studio/rooms`        | yes  | Cursor-paginated Explore feed of other users' rooms     |
+| `GET`  | `/api/studio/rooms/:ownerId` | yes | A user's room for read-only Explore detail              |
 
 Successful responses are wrapped as `{ data: ... }` (`ApiSuccess<T>` from
 `@bnewapp/types`). Errors flow through the handler in `src/lib/errors.ts` and return
@@ -95,7 +97,7 @@ src/
 │   └── errors.ts         # global error handler → { code, message }
 ├── modules/
 │   ├── health/routes.ts  # GET /health
-│   ├── studio/routes.ts  # GET/PUT /api/studio/room
+│   ├── studio/routes.ts  # Studio room persistence and Explore reads
 │   └── user/routes.ts    # GET /api/user/me
 └── plugins/
     ├── auth.ts           # authenticate decorator (JWT verify)
