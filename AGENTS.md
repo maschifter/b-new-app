@@ -43,6 +43,7 @@ supabase migrations ──> generated database types ──> apps/packages
 
 ## Coding Standards
 
+- Use English for code, comments, commit messages, and pull-request descriptions.
 - Use strict TypeScript. Do not introduce `any`, unchecked casts, or non-null assertions to silence errors.
 - Validate untrusted input at boundaries. Keep internal code strongly typed after validation.
 - Prefer small, named functions and explicit data flow over clever abstractions.

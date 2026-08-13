@@ -4,6 +4,8 @@ These rules apply to `apps/server`. Also follow the root `AGENTS.md`.
 
 ## Module Boundaries
 
+- Preserve the current Fastify, Supabase, and Zod stack. Do not introduce oRPC, Drizzle,
+  TSyringe, neverthrow, or another parallel application stack unless a separate task adopts it.
 - Group endpoints by feature in `src/modules/<feature>/routes.ts` and register them explicitly in `src/app.ts` under a clear prefix.
 - Keep `src/index.ts` limited to configuration, app construction, startup, and fatal startup handling.
 - Keep reusable Fastify capabilities in `src/plugins/`; decorate the app or request with typed declarations.

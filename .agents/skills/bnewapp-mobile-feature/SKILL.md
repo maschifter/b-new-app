@@ -1,6 +1,6 @@
 ---
 name: bnewapp-mobile-feature
-description: Implement or refactor BNewApp Expo/React Native features using the repository's feature folders, thin Expo Router routes, Jotai client state, TanStack Query server state, shared domain packages, tests, accessibility, and device verification. Use for work under apps/mobile, including screens, navigation, state, API integration, persistence, lists, gestures, animations, and visible mobile behavior.
+description: Implement or refactor BNewApp Expo/React Native features using concern-based `_atoms`, jotai-tanstack-query server state, plain Jotai client state, thin Expo Router routes, shared domain packages, tests, accessibility, and device verification. Use for work under apps/mobile, including screens, navigation, state, API integration, persistence, lists, gestures, animations, and visible mobile behavior.
 ---
 
 # BNewApp Mobile Feature
@@ -18,12 +18,15 @@ Implement mobile work without breaking the repository's ownership boundaries or 
 
 - Keep route parsing and navigation composition in `src/app`.
 - Keep feature-specific screen, state, data, and UI code in `src/features/<feature>`.
+- Keep feature endpoint functions in `src/features/<feature>/api.ts` over the shared transport in
+  `src/lib/api/client.ts`.
 - Keep reusable mobile primitives in `src/components` only after more than one feature needs the same concept.
 - Keep mobile infrastructure in `src/lib`.
 - Put rules that mobile and server must enforce identically in a pure `@bnewapp/*` package.
 - Put wire types in `@bnewapp/types`; do not import server implementation into mobile.
 
-Use the smallest structure that fits. Do not create `data`, `state`, or `ui` folders with placeholder files.
+Use the smallest structure that fits. Add `_atoms/queries.ts`, `mutations.ts`, `ui.ts`,
+`effects.ts`, or `forms.ts` only when the feature needs that concern. Do not create placeholder files.
 
 ## Implement the Vertical Slice
 
@@ -31,12 +34,17 @@ Use the smallest structure that fits. Do not create `data`, `state`, or `ui` fol
 2. Keep the Expo Router file thin and render a feature-owned screen.
 3. Choose state deliberately:
    - local React state for one component subtree;
-   - Jotai for shared, persistent, or selectively subscribed client state;
-   - TanStack Query for server state, retries, invalidation, and mutations.
+   - plain Jotai atoms for shared, persistent, or selectively subscribed client state;
+   - `jotai-tanstack-query` atoms for server reads, retries, invalidation, pagination, and mutations.
 4. Separate persistent domain state from transient UI state. Version persisted keys and preserve migration/coercion paths.
-5. Subscribe components only to values they render. Split a growing atom module by concern rather than wrapping all behavior in one monolithic hook.
-6. Validate and reconcile data at the appropriate boundary. Never rely on the client for authorization.
-7. Add accessibility semantics and account for safe areas, keyboards, loading, empty, error, and offline states that apply to the request.
+5. Use the root provider's exact stable `QueryClient` for hooks and query atoms. Scope every
+   authenticated query key by `userId` and preserve the centralized auth-transition cleanup.
+6. Subscribe components only to values they render. Split atoms by concern under `_atoms/`
+   rather than wrapping all behavior in one monolithic hook.
+7. Keep query results in the query cache. Use derived atoms for transformed views instead of
+   copying remote data into a second plain Jotai atom.
+8. Validate and reconcile data at the appropriate boundary. Never rely on the client for authorization.
+9. Add accessibility semantics and account for safe areas, keyboards, loading, empty, error, and offline states that apply to the request.
 
 ## Keep Rendering Efficient
 
@@ -44,7 +52,7 @@ Use the smallest structure that fits. Do not create `data`, `state`, or `ui` fol
 - Use stable keys and stable layout dimensions.
 - Avoid memoization by default; add it for measured work or required stable identities.
 - Use Reanimated for per-frame or gesture-driven animation work.
-- Do not mirror query data into Jotai without a concrete offline, editing, or persistence requirement.
+- For feeds, use `atomWithInfiniteQuery`, server cursors, and a derived flattened-items atom.
 
 ## Test and Verify
 
