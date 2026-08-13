@@ -1,7 +1,7 @@
+import { BouncablePress } from "@/components/bouncable-press";
 import { supabase } from "@/lib/auth/supabase";
 import { router } from "expo-router";
-import { StyleSheet, Text } from "react-native";
-import { BouncablePress } from "@/components/bouncable-press";
+import { Text } from "react-native";
 
 export function SignOutButton() {
   // Query-cache cleanup is owned by AuthSessionProvider, which reacts to the
@@ -13,19 +13,12 @@ export function SignOutButton() {
   };
 
   return (
-    <BouncablePress accessibilityRole="button" onPress={signOut} style={styles.button}>
-      <Text style={styles.label}>Sign out</Text>
+    <BouncablePress
+      accessibilityRole="button"
+      onPress={signOut}
+      className="rounded-[10px] border border-border px-[14px] py-2"
+    >
+      <Text className="text-sm font-bold text-foreground">Sign out</Text>
     </BouncablePress>
   );
 }
-
-const styles = StyleSheet.create({
-  button: {
-    borderColor: "#4A4856",
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  label: { color: "#F8F7FC", fontSize: 14, fontWeight: "700" },
-});

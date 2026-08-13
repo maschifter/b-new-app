@@ -4,14 +4,7 @@ import { TextField } from "@/components/text-field";
 import { supabase } from "@/lib/auth/supabase";
 import { router } from "expo-router";
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Text, View } from "react-native";
 
 type AuthMode = "sign-in" | "sign-up";
 
@@ -77,20 +70,22 @@ export function SignInScreen() {
     <Screen>
       <KeyboardAvoidingView
         behavior={Platform.select({ ios: "padding", default: undefined })}
-        style={styles.keyboard}
+        className="flex-1"
       >
-        <View style={styles.content}>
-          <View style={styles.heading}>
-            <Text style={styles.eyebrow}>BNEWAPP</Text>
-            <Text style={styles.title}>{isSignUp ? "Create your account" : "Welcome back"}</Text>
-            <Text style={styles.copy}>
+        <View className="flex-1 justify-center gap-8">
+          <View className="gap-[10px]">
+            <Text className="text-xs font-extrabold tracking-[1.5px] text-neon">BNEWAPP</Text>
+            <Text className="text-[32px] font-bold tracking-[-0.5px] text-foreground">
+              {isSignUp ? "Create your account" : "Welcome back"}
+            </Text>
+            <Text className="text-base leading-6 text-copy">
               {isSignUp
                 ? "Start with an email and password."
                 : "Sign in to continue your dance journey."}
             </Text>
           </View>
 
-          <View style={styles.form}>
+          <View className="gap-[18px]">
             <TextField
               autoCapitalize="none"
               autoComplete="email"
@@ -125,25 +120,25 @@ export function SignInScreen() {
           </View>
 
           {errorMessage ? (
-            <Text accessibilityRole="alert" style={styles.error}>
+            <Text accessibilityRole="alert" className="text-sm leading-5 text-danger">
               {errorMessage}
             </Text>
           ) : null}
           {notice ? (
-            <Text accessibilityRole="alert" style={styles.notice}>
+            <Text accessibilityRole="alert" className="text-sm leading-5 text-neon">
               {notice}
             </Text>
           ) : null}
 
-          <View style={styles.actions}>
+          <View className="gap-3">
             <BouncablePress
               accessibilityRole="button"
               disabled={isSubmitting}
               onPress={submit}
-              style={[styles.button, styles.primaryButton, isSubmitting && styles.disabledButton]}
+              className={`min-h-[52px] flex-row items-center justify-center gap-2 rounded-xl bg-primary px-5 ${isSubmitting ? "opacity-[0.55]" : ""}`}
             >
               {isSubmitting ? <ActivityIndicator color="#F8F7FC" /> : null}
-              <Text style={styles.primaryButtonLabel}>
+              <Text className="text-base font-bold text-foreground">
                 {isSignUp ? "Create account" : "Sign in"}
               </Text>
             </BouncablePress>
@@ -151,9 +146,9 @@ export function SignInScreen() {
               accessibilityRole="button"
               disabled={isSubmitting}
               onPress={switchMode}
-              style={[styles.button, styles.secondaryButton, isSubmitting && styles.disabledButton]}
+              className={`min-h-[52px] flex-row items-center justify-center gap-2 rounded-xl border border-border px-5 ${isSubmitting ? "opacity-[0.55]" : ""}`}
             >
-              <Text style={styles.secondaryButtonLabel}>
+              <Text className="text-base font-bold text-foreground">
                 {isSignUp ? "I already have an account" : "Create an account"}
               </Text>
             </BouncablePress>
@@ -163,30 +158,3 @@ export function SignInScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  keyboard: { flex: 1 },
-  content: { flex: 1, gap: 32, justifyContent: "center" },
-  heading: { gap: 10 },
-  eyebrow: { color: "#A78BFA", fontSize: 12, fontWeight: "800", letterSpacing: 1.5 },
-  title: { color: "#F8F7FC", fontSize: 32, fontWeight: "700", letterSpacing: -0.5 },
-  copy: { color: "#C7C7D1", fontSize: 16, lineHeight: 24 },
-  form: { gap: 18 },
-  actions: { gap: 12 },
-  button: {
-    alignItems: "center",
-    borderRadius: 12,
-    flexDirection: "row",
-    gap: 8,
-    justifyContent: "center",
-    minHeight: 52,
-    paddingHorizontal: 20,
-  },
-  primaryButton: { backgroundColor: "#8B5CF6" },
-  primaryButtonLabel: { color: "#F8F7FC", fontSize: 16, fontWeight: "700" },
-  secondaryButton: { borderColor: "#4A4856", borderWidth: 1 },
-  secondaryButtonLabel: { color: "#F8F7FC", fontSize: 16, fontWeight: "700" },
-  disabledButton: { opacity: 0.55 },
-  error: { color: "#FF8F8F", fontSize: 14, lineHeight: 20 },
-  notice: { color: "#A78BFA", fontSize: 14, lineHeight: 20 },
-});

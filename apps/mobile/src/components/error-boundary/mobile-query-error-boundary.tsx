@@ -3,7 +3,7 @@ import { queryErrorResetVersionAtom } from "@/lib/react-query/query-error-reset"
 import { QueryErrorResetBoundary, useQueryClient } from "@tanstack/react-query";
 import { useSetAtom } from "jotai";
 import { Component, type ReactNode } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 interface MobileQueryErrorBoundaryProps {
   children: ReactNode;
@@ -58,24 +58,23 @@ export function MobileQueryErrorBoundary({
           onReset={async () => {
             reset();
             const errorFilter = {
-              predicate: (query: { state: { status: string } }) =>
-                query.state.status === "error",
+              predicate: (query: { state: { status: string } }) => query.state.status === "error",
             };
             await queryClient.cancelQueries(errorFilter);
             queryClient.removeQueries(errorFilter);
             bumpResetVersion((version) => version + 1);
           }}
           fallback={(_error, retry) => (
-            <View style={styles.container}>
-              <Text style={styles.title}>{title}</Text>
-              <Text style={styles.copy}>{copy}</Text>
+            <View className="flex-1 items-center justify-center gap-2 bg-app px-8">
+              <Text className="text-lg font-bold text-foreground">{title}</Text>
+              <Text className="text-center text-sm leading-5 text-muted">{copy}</Text>
               <BouncablePress
                 accessibilityRole="button"
                 accessibilityLabel={retryLabel}
                 onPress={retry}
-                style={styles.retry}
+                className="mt-2 rounded-[10px] border border-border px-[18px] py-[10px]"
               >
-                <Text style={styles.retryLabel}>{retryLabel}</Text>
+                <Text className="text-sm font-bold text-foreground">{retryLabel}</Text>
               </BouncablePress>
             </View>
           )}
@@ -86,25 +85,3 @@ export function MobileQueryErrorBoundary({
     </QueryErrorResetBoundary>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: "center",
-    backgroundColor: "#101014",
-    flex: 1,
-    gap: 8,
-    justifyContent: "center",
-    paddingHorizontal: 32,
-  },
-  title: { color: "#F8F7FC", fontSize: 18, fontWeight: "700" },
-  copy: { color: "#898995", fontSize: 14, lineHeight: 20, textAlign: "center" },
-  retry: {
-    borderColor: "#4A4856",
-    borderRadius: 10,
-    borderWidth: 1,
-    marginTop: 8,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-  },
-  retryLabel: { color: "#F8F7FC", fontSize: 14, fontWeight: "700" },
-});

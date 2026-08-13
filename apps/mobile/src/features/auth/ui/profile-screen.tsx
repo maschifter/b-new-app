@@ -2,7 +2,7 @@ import { BouncablePress } from "@/components/bouncable-press";
 import { Screen } from "@/components/screen";
 import { useAuthSession } from "@/lib/auth/session-provider";
 import { router } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { SignOutButton } from "./sign-out-button";
 
 export function ProfileScreen() {
@@ -13,27 +13,29 @@ export function ProfileScreen() {
 
   return (
     <Screen>
-      <View style={styles.header}>
-        <Text style={styles.eyebrow}>PROFILE</Text>
+      <View className="flex-row items-center justify-between">
+        <Text className="text-xs font-extrabold tracking-[1.5px] text-neon">PROFILE</Text>
         <BouncablePress
           accessibilityRole="button"
           accessibilityLabel="Go back"
           onPress={() => router.back()}
-          style={styles.close}
+          className="rounded-[10px] border border-border px-[14px] py-2"
         >
-          <Text style={styles.closeLabel}>Back</Text>
+          <Text className="text-sm font-bold text-foreground">Back</Text>
         </BouncablePress>
       </View>
 
-      <View style={styles.identity}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarLabel}>{initial}</Text>
+      <View className="mt-12 items-center gap-3">
+        <View className="size-20 items-center justify-center rounded-full bg-primary">
+          <Text className="text-[34px] font-extrabold text-foreground">{initial}</Text>
         </View>
-        <Text style={styles.email}>{email}</Text>
-        {createdAt ? <Text style={styles.meta}>Member since {formatDate(createdAt)}</Text> : null}
+        <Text className="text-xl font-bold text-foreground">{email}</Text>
+        {createdAt ? (
+          <Text className="text-sm text-muted">Member since {formatDate(createdAt)}</Text>
+        ) : null}
       </View>
 
-      <View style={styles.actions}>
+      <View className="mt-auto">
         <SignOutButton />
       </View>
     </Screen>
@@ -45,33 +47,3 @@ function formatDate(iso: string): string {
   if (Number.isNaN(date.getTime())) return iso;
   return date.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
 }
-
-const styles = StyleSheet.create({
-  header: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  eyebrow: { color: "#A78BFA", fontSize: 12, fontWeight: "800", letterSpacing: 1.5 },
-  close: {
-    borderColor: "#4A4856",
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  closeLabel: { color: "#F8F7FC", fontSize: 14, fontWeight: "700" },
-  identity: { alignItems: "center", gap: 12, marginTop: 48 },
-  avatar: {
-    alignItems: "center",
-    backgroundColor: "#8B5CF6",
-    borderRadius: 40,
-    height: 80,
-    justifyContent: "center",
-    width: 80,
-  },
-  avatarLabel: { color: "#F8F7FC", fontSize: 34, fontWeight: "800" },
-  email: { color: "#F8F7FC", fontSize: 20, fontWeight: "700" },
-  meta: { color: "#898995", fontSize: 14 },
-  actions: { marginTop: "auto" },
-});

@@ -54,8 +54,8 @@ has real consumers in multiple features; do not promote components based only on
 2. Split a growing screen into named feature-owned files under `ui/` by responsibility, such as
    list feedback, row rendering, screen layout, skeleton, or header. Do not extract tiny markup that
    has no independent responsibility.
-3. Use `StyleSheet.create` and existing React Native primitives. Do not copy CardNexus NativeWind
-   `className` usage until BNewApp has an approved NativeWind migration and updated scoped rules.
+3. Use NativeWind `className` for static styling and existing React Native primitives. Reserve
+   `style` for runtime-computed or animated values and components without NativeWind interop.
 4. For a query-backed initial load, use Suspense only when the entire bounded content cannot render
    meaningfully without the query. Place a layout-matched skeleton in the nearest useful `Suspense` fallback.
 5. Put a query-aware error boundary outside that Suspense boundary and provide an accessible retry.

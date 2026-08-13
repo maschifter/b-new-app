@@ -2,7 +2,7 @@
 
 ## Project Environment
 
-- BNewApp is an Expo 54 / React Native 0.81 development-build app with Expo Router.
+- BNewApp is an Expo 55 / React Native 0.83 development-build app with Expo Router.
 - Mobile supports iOS and Android; generated native projects are present and gitignored.
 - Use `corepack pnpm@10.13.1` from the repository root.
 - Metro uses port 8081. Run `corepack pnpm mobile`, `mobile:ios`, or `mobile:android`.

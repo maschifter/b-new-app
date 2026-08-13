@@ -1,18 +1,12 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 export function ExploreEmpty() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>No studios yet</Text>
-      <Text style={styles.copy}>
+    <View className="items-center gap-2 px-8 py-16">
+      <Text className="text-lg font-bold text-foreground">No studios yet</Text>
+      <Text className="text-center text-sm leading-5 text-muted">
         Once other dancers decorate their rooms, they'll show up here to explore.
       </Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { alignItems: "center", gap: 8, paddingHorizontal: 32, paddingVertical: 64 },
-  title: { color: "#F8F7FC", fontSize: 18, fontWeight: "700" },
-  copy: { color: "#898995", fontSize: 14, lineHeight: 20, textAlign: "center" },
-});

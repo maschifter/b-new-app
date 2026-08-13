@@ -1,15 +1,7 @@
 import { BouncablePress } from "@/components/bouncable-press";
 import { CATALOG, fits } from "@bnewapp/studio-core";
 import { Image } from "expo-image";
-import {
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from "react-native";
+import { Modal, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { useStudio } from "../state/studio-provider";
 import { artSource } from "./art";
 import { itemColor, itemLabel } from "./placeholder";
@@ -47,33 +39,55 @@ export function ItemPicker() {
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
-      <Pressable style={styles.backdrop} onPress={close} accessibilityLabel="Close picker" />
-      <View style={styles.sheet}>
+      <Pressable
+        className="flex-1 bg-[#060410]/55"
+        onPress={close}
+        accessibilityLabel="Close picker"
+      />
+      <View
+        className="max-h-[72%] rounded-t-3xl border border-neon/35 bg-[#160E29] px-5 pb-8 pt-[10px]"
+        style={{
+          shadowColor: NEON,
+          shadowOffset: { width: 0, height: -6 },
+          shadowOpacity: 0.6,
+          shadowRadius: 20,
+          elevation: 24,
+        }}
+      >
         {/* Neon accent line + grabber echo the room's glowing light strips. */}
-        <View style={styles.glowLine} />
-        <View style={styles.grabber} />
+        <View
+          className="mb-[6px] h-[3px] w-[120px] self-center rounded-sm bg-neon opacity-90"
+          style={{ shadowColor: NEON, shadowOpacity: 1, shadowRadius: 8 }}
+        />
+        <View className="mb-3 h-[5px] w-11 self-center rounded-[3px] bg-white/20" />
 
-        <View style={styles.header}>
-          <Text style={styles.title}>{spot ? itemLabel(spot.id) : "Choose an item"}</Text>
-          <View style={styles.headerActions}>
+        <View className="mb-4 flex-row items-center justify-between">
+          <Text className="flex-1 text-xl font-extrabold text-foreground">
+            {spot ? itemLabel(spot.id) : "Choose an item"}
+          </Text>
+          <View className="flex-row items-center gap-[10px]">
             {current ? (
               <BouncablePress
                 accessibilityRole="button"
                 accessibilityLabel="Remove item"
                 onPress={() => spot && clear(spot.id)}
-                style={styles.removeButton}
+                className="h-[38px] w-11 items-center justify-center rounded-[10px] border border-danger/50 bg-danger/10"
               >
-                <Text style={styles.removeGlyph}>🗑</Text>
+                <Text className="text-base">🗑</Text>
               </BouncablePress>
             ) : null}
-            <BouncablePress accessibilityRole="button" onPress={close} style={styles.close}>
-              <Text style={styles.closeLabel}>Done</Text>
+            <BouncablePress
+              accessibilityRole="button"
+              onPress={close}
+              className="rounded-[10px] border border-neon bg-neon/15 px-4 py-[9px]"
+            >
+              <Text className="text-sm font-extrabold text-foreground">Done</Text>
             </BouncablePress>
           </View>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scroll}>
-          <View style={styles.grid}>
+        <ScrollView contentContainerClassName="pb-2">
+          <View className="flex-row flex-wrap gap-3">
             {compatible.map((item) => {
               const isCurrent = current?.source === "catalog" && current.id === item.id;
               const art = artSource(item.id);
@@ -83,28 +97,40 @@ export function ItemPicker() {
                   accessibilityRole="button"
                   accessibilityState={{ selected: isCurrent }}
                   onPress={() => spot && assign(spot.id, { source: "catalog", id: item.id })}
-                  style={[styles.card, { width: cardWidth }]}
+                  className="items-center gap-[6px]"
+                  style={{ width: cardWidth }}
                 >
                   {/* Large art tile so visually-distinct variants (e.g. stage vs
                       stage-2) read at a glance; falls back to the type color. */}
                   <View
-                    style={[
-                      styles.tile,
-                      { backgroundColor: itemColor(item) },
-                      isCurrent && styles.tileSelected,
-                    ]}
+                    className={`aspect-square w-full items-center justify-center overflow-hidden rounded-2xl border ${isCurrent ? "border-2 border-neon" : "border-white/10"}`}
+                    style={{
+                      backgroundColor: itemColor(item),
+                      ...(isCurrent
+                        ? {
+                            shadowColor: NEON,
+                            shadowOpacity: 0.95,
+                            shadowRadius: 12,
+                            elevation: 12,
+                          }
+                        : undefined),
+                    }}
                   >
                     {art ? (
-                      <Image source={art} style={styles.art} contentFit="contain" />
+                      <Image
+                        source={art}
+                        style={{ height: "88%", width: "88%" }}
+                        contentFit="contain"
+                      />
                     ) : null}
                     {isCurrent ? (
-                      <View style={styles.badge}>
-                        <Text style={styles.badgeCheck}>✓</Text>
+                      <View className="absolute right-[6px] top-[6px] size-[22px] items-center justify-center rounded-full bg-neon">
+                        <Text className="text-[13px] font-black text-[#160E29]">✓</Text>
                       </View>
                     ) : null}
                   </View>
                   <Text
-                    style={[styles.cardLabel, isCurrent && styles.cardLabelSelected]}
+                    className={`text-center text-xs ${isCurrent ? "font-extrabold text-foreground" : "font-semibold text-[#C9C6D6]"}`}
                     numberOfLines={1}
                   >
                     {itemLabel(item.id)}
@@ -115,7 +141,7 @@ export function ItemPicker() {
           </View>
 
           {compatible.length === 0 ? (
-            <Text style={styles.empty}>No compatible items yet.</Text>
+            <Text className="py-6 text-center text-sm text-muted">No compatible items yet.</Text>
           ) : null}
         </ScrollView>
       </View>
@@ -124,121 +150,3 @@ export function ItemPicker() {
 }
 
 const NEON = "#A78BFA";
-
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: "rgba(6,4,16,0.55)" },
-  sheet: {
-    backgroundColor: "#160E29",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderColor: "rgba(167,139,250,0.35)",
-    borderWidth: SHEET_BORDER,
-    maxHeight: "72%",
-    paddingBottom: 32,
-    paddingHorizontal: SHEET_PADDING,
-    paddingTop: 10,
-    // Purple glow rising off the top edge, matching the room's neon lighting.
-    shadowColor: NEON,
-    shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.6,
-    shadowRadius: 20,
-    elevation: 24,
-  },
-  glowLine: {
-    alignSelf: "center",
-    backgroundColor: NEON,
-    borderRadius: 2,
-    height: 3,
-    marginBottom: 6,
-    opacity: 0.9,
-    shadowColor: NEON,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    width: 120,
-  },
-  grabber: {
-    alignSelf: "center",
-    backgroundColor: "rgba(255,255,255,0.18)",
-    borderRadius: 3,
-    height: 5,
-    marginBottom: 12,
-    width: 44,
-  },
-  header: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 16,
-  },
-  title: { color: "#F8F7FC", flex: 1, fontSize: 20, fontWeight: "800" },
-  headerActions: { alignItems: "center", flexDirection: "row", gap: 10 },
-  removeButton: {
-    alignItems: "center",
-    backgroundColor: "rgba(255,143,143,0.12)",
-    borderColor: "rgba(255,143,143,0.5)",
-    borderRadius: 10,
-    borderWidth: 1,
-    height: 38,
-    justifyContent: "center",
-    width: 44,
-  },
-  removeGlyph: { fontSize: 16 },
-  close: {
-    backgroundColor: "rgba(167,139,250,0.16)",
-    borderColor: NEON,
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-  },
-  closeLabel: { color: "#F8F7FC", fontSize: 14, fontWeight: "800" },
-  scroll: { paddingBottom: 8 },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: GRID_GAP,
-  },
-  card: { alignItems: "center", gap: 6 },
-  tile: {
-    alignItems: "center",
-    aspectRatio: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    borderRadius: 16,
-    borderWidth: 1,
-    justifyContent: "center",
-    overflow: "hidden",
-    width: "100%",
-  },
-  tileSelected: {
-    borderColor: NEON,
-    borderWidth: 2,
-    // Neon halo around the chosen tile — the core "juice" of the selection.
-    shadowColor: NEON,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.95,
-    shadowRadius: 12,
-    elevation: 12,
-  },
-  art: { height: "88%", width: "88%" },
-  badge: {
-    alignItems: "center",
-    backgroundColor: NEON,
-    borderRadius: 11,
-    height: 22,
-    justifyContent: "center",
-    position: "absolute",
-    right: 6,
-    top: 6,
-    width: 22,
-  },
-  badgeCheck: { color: "#160E29", fontSize: 13, fontWeight: "900" },
-  cardLabel: {
-    color: "#C9C6D6",
-    fontSize: 12,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  cardLabelSelected: { color: "#F8F7FC", fontWeight: "800" },
-  empty: { color: "#898995", fontSize: 14, paddingVertical: 24, textAlign: "center" },
-});

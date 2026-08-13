@@ -2,7 +2,7 @@ import { BouncablePress } from "@/components/bouncable-press";
 import type { ExploreRoom } from "@bnewapp/types";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 // A compact list row: just the owner's handle plus a little context (how many
 // items they've placed and when they last decorated). No stage mini-render — the
@@ -18,16 +18,16 @@ export function RoomRow({ room }: { room: ExploreRoom }) {
       onPress={() =>
         router.push({ pathname: "/room/[ownerId]", params: { ownerId: room.ownerId } })
       }
-      style={styles.row}
+      className="flex-row items-center gap-3 rounded-[14px] bg-panel px-[14px] py-3"
     >
-      <View style={styles.avatar}>
-        <Text style={styles.avatarLabel}>{initial}</Text>
+      <View className="size-11 items-center justify-center rounded-full bg-primary">
+        <Text className="text-lg font-extrabold text-foreground">{initial}</Text>
       </View>
-      <View style={styles.body}>
-        <Text style={styles.username} numberOfLines={1}>
+      <View className="flex-1 gap-0.5">
+        <Text className="text-base font-bold text-foreground" numberOfLines={1}>
           {room.username}
         </Text>
-        <Text style={styles.meta} numberOfLines={1}>
+        <Text className="text-[13px] text-muted" numberOfLines={1}>
           {itemCount} {itemCount === 1 ? "item" : "items"} · {formatRelativeTime(room.updatedAt)}
         </Text>
       </View>
@@ -52,27 +52,3 @@ function formatRelativeTime(iso: string): string {
   if (months < 12) return `${months}mo ago`;
   return `${Math.floor(days / 365)}y ago`;
 }
-
-const styles = StyleSheet.create({
-  row: {
-    alignItems: "center",
-    backgroundColor: "#17171D",
-    borderRadius: 14,
-    flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  avatar: {
-    alignItems: "center",
-    backgroundColor: "#8B5CF6",
-    borderRadius: 22,
-    height: 44,
-    justifyContent: "center",
-    width: 44,
-  },
-  avatarLabel: { color: "#F8F7FC", fontSize: 18, fontWeight: "800" },
-  body: { flex: 1, gap: 2 },
-  username: { color: "#F8F7FC", fontSize: 16, fontWeight: "700" },
-  meta: { color: "#898995", fontSize: 13 },
-});

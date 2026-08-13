@@ -7,6 +7,7 @@ module.exports = {
   // transforms it (the file sits outside node_modules, so jest-expo's
   // transformIgnorePatterns won't skip it) — no dist build needed for tests.
   moduleNameMapper: {
+    "\\.css$": "<rootDir>/jest.style-mock.js",
     "^@bnewapp/studio-core$": "<rootDir>/../../packages/studio-core/src/index.ts",
   },
   // Mirrors jest-expo's default allowlist plus jotai-tanstack-query, whose

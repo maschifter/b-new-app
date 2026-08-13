@@ -1,9 +1,10 @@
-import { forwardRef, type ComponentRef } from "react";
+import { type ComponentRef, forwardRef } from "react";
 import type { PressableProps, StyleProp, ViewStyle } from "react-native";
 import { Pressable } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 
 export interface BouncablePressProps extends Omit<PressableProps, "style"> {
+  className?: string;
   bounce?: boolean;
   scaleIn?: number;
   scaleOut?: number;
@@ -15,7 +16,19 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 type BouncablePressRef = ComponentRef<typeof AnimatedPressable>;
 
 const AnimatedBouncablePress = forwardRef<BouncablePressRef, BouncablePressProps>(
-  ({ bounce: _bounce, scaleIn = 0.96, scaleOut = 1, style, onPressIn, onPressOut, ...props }, ref) => {
+  (
+    {
+      bounce: _bounce,
+      className,
+      scaleIn = 0.96,
+      scaleOut = 1,
+      style,
+      onPressIn,
+      onPressOut,
+      ...props
+    },
+    ref,
+  ) => {
     const scale = useSharedValue(1);
 
     const animatedStyle = useAnimatedStyle(() => ({
@@ -25,6 +38,7 @@ const AnimatedBouncablePress = forwardRef<BouncablePressRef, BouncablePressProps
     return (
       <AnimatedPressable
         ref={ref}
+        className={className}
         onPressIn={(event) => {
           scale.value = withSpring(scaleIn);
           onPressIn?.(event);
@@ -52,7 +66,11 @@ PlainBouncablePress.displayName = "PlainBouncablePress";
 
 export const BouncablePress = forwardRef<BouncablePressRef, BouncablePressProps>(
   ({ bounce = true, ...props }, ref) =>
-    bounce ? <AnimatedBouncablePress ref={ref} {...props} /> : <PlainBouncablePress ref={ref} {...props} />,
+    bounce ? (
+      <AnimatedBouncablePress ref={ref} {...props} />
+    ) : (
+      <PlainBouncablePress ref={ref} {...props} />
+    ),
 );
 
 BouncablePress.displayName = "BouncablePress";

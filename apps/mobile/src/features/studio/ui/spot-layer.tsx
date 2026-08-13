@@ -1,7 +1,7 @@
 import { BouncablePress } from "@/components/bouncable-press";
 import type { ContentRef, Spot } from "@bnewapp/studio-core";
 import { Image } from "expo-image";
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import type { ArtHitBox } from "./art";
 import { describeContent, itemLabel } from "./placeholder";
 
@@ -46,11 +46,11 @@ export function SpotLayer({ spot, frame, content, selected, showEmpty, onPress }
       // frame's bottom edge (the floor line); wall/ceiling art stays centered.
       <View
         testID={`spot-content-${spot.id}`}
-        style={[styles.sprite, selected && styles.selectedSprite]}
+        className={`flex-1 ${selected ? "rounded-[10px] border-2 border-neon" : ""}`}
       >
         <Image
           source={presentation.art}
-          style={StyleSheet.absoluteFill}
+          style={{ position: "absolute", inset: 0 }}
           contentFit={presentation.artFit ?? "contain"}
           contentPosition={spot.anchor === "bottom" ? "bottom" : "center"}
           transition={200}
@@ -61,32 +61,40 @@ export function SpotLayer({ spot, frame, content, selected, showEmpty, onPress }
       // Fallback for items without art yet: the labelled colored block.
       <View
         testID={`spot-content-${spot.id}`}
-        style={[styles.block, { backgroundColor: presentation.color }, selected && styles.selected]}
+        className={`flex-1 items-center justify-center overflow-hidden rounded-[10px] p-[6px] ${selected ? "border-2 border-neon" : ""}`}
+        style={{ backgroundColor: presentation.color }}
       >
-        <Text numberOfLines={2} style={styles.blockLabel}>
+        <Text numberOfLines={2} className="text-center text-[13px] font-bold text-foreground">
           {presentation.label}
         </Text>
       </View>
     )
   ) : (
-    <View testID={`spot-empty-${spot.id}`} style={[styles.empty, selected && styles.selected]}>
-      <Text style={styles.emptyPlus}>+</Text>
-      <Text numberOfLines={1} style={styles.emptyLabel}>
+    <View
+      testID={`spot-empty-${spot.id}`}
+      className={`flex-1 items-center justify-center rounded-[10px] border-[1.5px] border-dashed p-1 ${selected ? "border-2 border-solid border-neon" : "border-[#4A4856]"}`}
+    >
+      <Text className="text-xl font-bold text-[#6C6C7A]">+</Text>
+      <Text numberOfLines={1} className="text-center text-[10px] text-[#6C6C7A]">
         {itemLabel(spot.id)}
       </Text>
     </View>
   );
 
   if (!onPress) {
-    return <View style={[styles.layer, layout]}>{body}</View>;
+    return (
+      <View className="absolute" style={layout}>
+        {body}
+      </View>
+    );
   }
 
   return (
     // The layer spans the designer's full frame, but only the smaller
     // BouncablePress is interactive. `box-none` lets a tap in the transparent
     // remainder reach a lower item instead of the frame swallowing it.
-    <View pointerEvents="box-none" style={[styles.layer, layout]}>
-      <View pointerEvents="none" style={styles.visual}>
+    <View pointerEvents="box-none" className="absolute" style={layout}>
+      <View pointerEvents="none" className="absolute inset-0">
         {body}
       </View>
       <BouncablePress
@@ -94,11 +102,12 @@ export function SpotLayer({ spot, frame, content, selected, showEmpty, onPress }
         accessibilityLabel={`Spot ${spot.id}`}
         bounce={false}
         onPress={() => onPress(spot.id)}
-        style={[
-          styles.hitTarget,
-          presentation?.artHitBox &&
-            hitTargetStyle(frame, presentation.artHitBox, presentation.artFit, spot.anchor),
-        ]}
+        className="absolute inset-0"
+        style={
+          presentation?.artHitBox
+            ? hitTargetStyle(frame, presentation.artHitBox, presentation.artFit, spot.anchor)
+            : undefined
+        }
       />
     </View>
   );
@@ -149,79 +158,21 @@ function hitTargetStyle(
 function PlayBadge({ size }: { size: number }) {
   const tri = Math.round(size * 0.4);
   return (
-    <View pointerEvents="none" style={styles.badgeWrap}>
-      <View style={[styles.badge, { width: size, height: size, borderRadius: size / 2 }]}>
+    <View pointerEvents="none" className="absolute inset-0 items-center justify-center">
+      <View
+        className="items-center justify-center border-2 border-white/90 bg-[#140A20]/45"
+        style={{ width: size, height: size, borderRadius: size / 2 }}
+      >
         <View
-          style={[
-            styles.triangle,
-            {
-              borderTopWidth: tri / 2,
-              borderBottomWidth: tri / 2,
-              borderLeftWidth: tri,
-              marginLeft: tri * 0.18, // optical-center the triangle in the circle
-            },
-          ]}
+          className="size-0 border-solid border-y-transparent border-l-white bg-transparent"
+          style={{
+            borderTopWidth: tri / 2,
+            borderBottomWidth: tri / 2,
+            borderLeftWidth: tri,
+            marginLeft: tri * 0.18,
+          }}
         />
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  layer: { position: "absolute" },
-  visual: { ...StyleSheet.absoluteFillObject },
-  hitTarget: { ...StyleSheet.absoluteFillObject },
-  badgeWrap: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center" },
-  badge: {
-    alignItems: "center",
-    backgroundColor: "rgba(20,10,32,0.45)",
-    borderColor: "rgba(255,255,255,0.92)",
-    borderWidth: 2,
-    justifyContent: "center",
-  },
-  triangle: {
-    backgroundColor: "transparent",
-    borderBottomColor: "transparent",
-    borderLeftColor: "#FFFFFF",
-    borderStyle: "solid",
-    borderTopColor: "transparent",
-    height: 0,
-    width: 0,
-  },
-  // A bare frame for transparent sprite art — no fill, no radius; the sprite's
-  // own shape and baked shadow carry the look.
-  sprite: { flex: 1 },
-  selectedSprite: {
-    borderColor: "#A78BFA",
-    borderRadius: 10,
-    borderStyle: "solid",
-    borderWidth: 2,
-  },
-  block: {
-    alignItems: "center",
-    borderRadius: 10,
-    flex: 1,
-    justifyContent: "center",
-    overflow: "hidden",
-    padding: 6,
-  },
-  blockLabel: {
-    color: "#F8F7FC",
-    fontSize: 13,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  empty: {
-    alignItems: "center",
-    borderColor: "#4A4856",
-    borderRadius: 10,
-    borderStyle: "dashed",
-    borderWidth: 1.5,
-    flex: 1,
-    justifyContent: "center",
-    padding: 4,
-  },
-  emptyPlus: { color: "#6C6C7A", fontSize: 20, fontWeight: "700" },
-  emptyLabel: { color: "#6C6C7A", fontSize: 10, textAlign: "center" },
-  selected: { borderColor: "#A78BFA", borderWidth: 2, borderStyle: "solid" },
-});

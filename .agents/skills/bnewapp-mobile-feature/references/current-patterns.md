@@ -48,9 +48,9 @@ only mount after the protected route and auth projection are ready because suspe
 
 ## Styling Contract
 
-BNewApp currently uses React Native components with `StyleSheet.create`. CardNexus uses NativeWind, but
-its `className` patterns are not portable until BNewApp adds the dependency and Metro/CSS configuration
-and updates `apps/mobile/AGENTS.md`. Treat that as a deliberate migration, not an incidental feature edit.
+BNewApp uses NativeWind for static component styling. Keep `style` for runtime-computed values,
+animated styles, and components without NativeWind interop. Shared colors belong in
+`apps/mobile/tailwind.config.js`; use semantic token classes instead of repeating raw values.
 
 ## Legacy Studio State and Synchronization
 

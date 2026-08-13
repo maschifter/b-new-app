@@ -1,12 +1,12 @@
 import { BouncablePress } from "@/components/bouncable-press";
 import { router } from "expo-router";
 import type { ReactNode } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export function ExploreRoomShell({ children }: { children: ReactNode }) {
   return (
-    <View style={styles.container}>
+    <View className="flex-1 bg-panel">
       {children}
       <ExploreRoomHeader />
     </View>
@@ -15,19 +15,23 @@ export function ExploreRoomShell({ children }: { children: ReactNode }) {
 
 export function ExploreRoomHeader({ username }: { username?: string }) {
   return (
-    <SafeAreaView edges={["top", "left", "right"]} pointerEvents="box-none" style={styles.overlay}>
+    <SafeAreaView
+      edges={["top", "left", "right"]}
+      pointerEvents="box-none"
+      className="absolute inset-x-0 top-0 flex-row items-center gap-3 px-4 pt-2"
+    >
       <BouncablePress
         accessibilityRole="button"
         accessibilityLabel="Go back"
         onPress={() => router.back()}
         hitSlop={12}
-        style={styles.back}
+        className="h-11 min-w-11 items-center justify-center rounded-full bg-panel/70 px-[14px]"
       >
-        <Text style={styles.backLabel}>Back</Text>
+        <Text className="text-sm font-bold text-foreground">Back</Text>
       </BouncablePress>
       {username ? (
-        <View style={styles.usernamePill}>
-          <Text style={styles.username} numberOfLines={1}>
+        <View className="shrink rounded-[18px] bg-panel/70 px-[14px] py-2">
+          <Text className="text-[15px] font-bold text-foreground" numberOfLines={1}>
             {username}
           </Text>
         </View>
@@ -38,51 +42,9 @@ export function ExploreRoomHeader({ username }: { username?: string }) {
 
 export function ExploreRoomMessage({ title, copy }: { title: string; copy: string }) {
   return (
-    <View style={styles.centered}>
-      <Text style={styles.messageTitle}>{title}</Text>
-      <Text style={styles.messageCopy}>{copy}</Text>
+    <View className="flex-1 items-center justify-center gap-2 px-8">
+      <Text className="text-lg font-bold text-foreground">{title}</Text>
+      <Text className="text-center text-sm leading-5 text-muted">{copy}</Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { backgroundColor: "#17171D", flex: 1 },
-  centered: {
-    alignItems: "center",
-    flex: 1,
-    gap: 8,
-    justifyContent: "center",
-    paddingHorizontal: 32,
-  },
-  overlay: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 12,
-    left: 0,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    position: "absolute",
-    right: 0,
-    top: 0,
-  },
-  back: {
-    alignItems: "center",
-    backgroundColor: "rgba(23,23,29,0.72)",
-    borderRadius: 22,
-    height: 44,
-    justifyContent: "center",
-    minWidth: 44,
-    paddingHorizontal: 14,
-  },
-  backLabel: { color: "#F8F7FC", fontSize: 14, fontWeight: "700" },
-  usernamePill: {
-    backgroundColor: "rgba(23,23,29,0.72)",
-    borderRadius: 18,
-    flexShrink: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  username: { color: "#F8F7FC", fontSize: 15, fontWeight: "700" },
-  messageTitle: { color: "#F8F7FC", fontSize: 18, fontWeight: "700" },
-  messageCopy: { color: "#898995", fontSize: 14, lineHeight: 20, textAlign: "center" },
-});

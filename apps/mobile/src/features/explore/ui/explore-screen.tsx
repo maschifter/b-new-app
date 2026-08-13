@@ -2,7 +2,7 @@ import { MobileQueryErrorBoundary } from "@/components/error-boundary";
 import type { ExploreRoom } from "@bnewapp/types";
 import { useAtomValue } from "jotai";
 import { Suspense, useEffect } from "react";
-import { FlatList, RefreshControl, StyleSheet } from "react-native";
+import { FlatList, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { exploreRoomsInfiniteAtom } from "../_atoms/queries";
 import { exploreRoomsAtom } from "../_atoms/ui";
@@ -13,11 +13,8 @@ import { RoomRow } from "./room-row";
 
 export function ExploreScreen() {
   return (
-    <SafeAreaView style={styles.screen} edges={["top", "left", "right"]}>
-      <MobileQueryErrorBoundary
-        title="Couldn't load studios"
-        retryLabel="Retry loading studios"
-      >
+    <SafeAreaView className="flex-1 bg-app" edges={["top", "left", "right"]}>
+      <MobileQueryErrorBoundary title="Couldn't load studios" retryLabel="Retry loading studios">
         <Suspense fallback={<ExploreSkeleton />}>
           <ExploreContent />
         </Suspense>
@@ -68,7 +65,7 @@ function ExploreContent() {
       data={rooms}
       keyExtractor={keyExtractor}
       renderItem={renderRoom}
-      contentContainerStyle={styles.content}
+      contentContainerClassName="gap-[10px] px-4 pb-6 pt-3"
       ListEmptyComponent={hasNextPage || isFetchingNextPage ? null : ExploreEmpty}
       ListFooterComponent={
         isFetchingNextPage ? (
@@ -99,8 +96,3 @@ function keyExtractor(room: ExploreRoom): string {
 function renderRoom({ item }: { item: ExploreRoom }) {
   return <RoomRow room={item} />;
 }
-
-const styles = StyleSheet.create({
-  screen: { backgroundColor: "#101014", flex: 1 },
-  content: { gap: 10, paddingBottom: 24, paddingHorizontal: 16, paddingTop: 12 },
-});

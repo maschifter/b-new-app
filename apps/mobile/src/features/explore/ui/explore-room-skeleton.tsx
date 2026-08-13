@@ -1,4 +1,4 @@
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // Placeholder shown while a visited room loads. The real room is a full-bleed
@@ -9,33 +9,18 @@ export function ExploreRoomSkeleton() {
   return (
     <View
       testID="explore-room-skeleton"
-      style={styles.container}
+      className="flex-1 bg-panel"
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      <View style={[StyleSheet.absoluteFill, styles.stage]} />
-      <SafeAreaView edges={["top", "left", "right"]} style={styles.overlay}>
-        <View style={styles.back} />
-        <View style={styles.usernamePill} />
+      <View className="absolute inset-0 bg-panel-raised" />
+      <SafeAreaView
+        edges={["top", "left", "right"]}
+        className="absolute inset-x-0 top-0 flex-row items-center gap-3 px-4 pt-2"
+      >
+        <View className="size-11 rounded-full bg-panel-muted" />
+        <View className="h-[34px] w-[120px] rounded-[18px] bg-panel-muted" />
       </SafeAreaView>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { backgroundColor: "#17171D", flex: 1 },
-  stage: { backgroundColor: "#1F1F27" },
-  overlay: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 12,
-    left: 0,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    position: "absolute",
-    right: 0,
-    top: 0,
-  },
-  back: { backgroundColor: "#26262F", borderRadius: 22, height: 44, width: 44 },
-  usernamePill: { backgroundColor: "#26262F", borderRadius: 18, height: 34, width: 120 },
-});

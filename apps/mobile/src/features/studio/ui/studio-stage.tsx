@@ -6,7 +6,7 @@ import {
 } from "@bnewapp/studio-core";
 import { Image } from "expo-image";
 import { useState } from "react";
-import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
+import { type LayoutChangeEvent, View } from "react-native";
 import { THEME_BACKGROUNDS, THEME_BACKGROUND_IMAGES } from "../data/templates";
 import { SpotLayer } from "./spot-layer";
 
@@ -61,14 +61,16 @@ export function StudioStage({
   return (
     <View
       testID="studio-stage"
-      style={[styles.container, { backgroundColor: background }]}
+      className="flex-1 overflow-hidden"
+      style={{ backgroundColor: background }}
       onLayout={onLayout}
     >
       {scale > 0 ? (
         <View
           style={[
-            styles.stage,
             {
+              position: "absolute",
+              overflow: "hidden",
               left: offsetX,
               top: offsetY,
               width: stageWidth,
@@ -81,7 +83,7 @@ export function StudioStage({
             <Image
               testID="studio-stage-background"
               source={backgroundImage}
-              style={StyleSheet.absoluteFill}
+              style={{ position: "absolute", inset: 0 }}
               contentFit="cover"
               transition={200}
             />
@@ -107,8 +109,3 @@ export function StudioStage({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, overflow: "hidden" },
-  stage: { position: "absolute", overflow: "hidden" },
-});

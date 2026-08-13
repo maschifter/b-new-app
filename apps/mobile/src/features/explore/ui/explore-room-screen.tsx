@@ -3,7 +3,7 @@ import { StudioStage } from "@/features/studio";
 import { ROOM_TEMPLATE, templateById } from "@bnewapp/studio-core";
 import { useAtomValue } from "jotai";
 import { Suspense } from "react";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 import { exploreRoomQueryAtomFamily } from "../_atoms/queries";
 import { ExploreRoomHeader, ExploreRoomMessage, ExploreRoomShell } from "./explore-room-layout";
 import { ExploreRoomSkeleton } from "./explore-room-skeleton";
@@ -38,9 +38,9 @@ function ExploreRoomContent({ ownerId }: { ownerId: string }) {
   const template = templateById(room.snapshot.templateId) ?? ROOM_TEMPLATE;
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1 bg-panel">
       <View
-        style={StyleSheet.absoluteFill}
+        className="absolute inset-0"
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       >
@@ -50,7 +50,3 @@ function ExploreRoomContent({ ownerId }: { ownerId: string }) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { backgroundColor: "#17171D", flex: 1 },
-});

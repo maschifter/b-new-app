@@ -85,10 +85,12 @@ src/features/<feature>/
 
 ## UI and Performance
 
-- Use React Native components and `StyleSheet.create` consistently with neighboring code.
-- NativeWind is not part of the current mobile styling contract. Do not copy CardNexus `className`
-  patterns or assume NativeWind support unless the dependency, Metro/CSS setup, and this rule are
-  updated in the same approved migration.
+- Use NativeWind `className` for static component styling. Keep React Native `style` only for values
+  that are computed at runtime, animated styles, or third-party components that do not support
+  NativeWind interop.
+- Define reusable design tokens in `tailwind.config.js`; prefer semantic token classes over repeating
+  raw color values. When conditional classes are needed, keep complete class names visible to the
+  NativeWind content scanner.
 - Provide accessibility roles, labels, states, and reasonable touch targets for interactive controls.
 - Respect safe areas and keyboard behavior; do not hardcode device-specific offsets.
 - Keep render paths pure. Memoize only when measurement or stable identity requirements justify it.

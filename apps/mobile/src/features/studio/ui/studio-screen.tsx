@@ -1,5 +1,5 @@
 import { BouncablePress } from "@/components/bouncable-press";
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StudioProvider, useStudio } from "../state/studio-provider";
 import { ItemPicker } from "./item-picker";
@@ -36,8 +36,8 @@ function StudioContent({
     // No spot is jammed against the notch because the ceiling frame is nudged
     // down (see templates). The floating overlay keeps its own top inset so the
     // avatar clears the status bar.
-    <View style={styles.container}>
-      <SafeAreaView edges={["left", "right"]} style={styles.stageArea}>
+    <View className="flex-1 bg-panel">
+      <SafeAreaView edges={["left", "right"]} className="flex-1">
         <StudioStage
           template={template}
           map={state.map}
@@ -50,16 +50,16 @@ function StudioContent({
       <SafeAreaView
         edges={["top", "left", "right"]}
         pointerEvents="box-none"
-        style={styles.overlay}
+        className="absolute inset-x-0 top-0 flex-row items-center justify-between px-4 pt-2"
       >
         {onOpenProfile ? (
           <BouncablePress
             accessibilityRole="button"
             accessibilityLabel="Open profile"
             onPress={onOpenProfile}
-            style={styles.avatar}
+            className="size-11 items-center justify-center rounded-full bg-primary"
           >
-            <Text style={styles.avatarLabel}>{avatarLabel ?? "?"}</Text>
+            <Text className="text-lg font-extrabold text-foreground">{avatarLabel ?? "?"}</Text>
           </BouncablePress>
         ) : (
           <View />
@@ -70,28 +70,3 @@ function StudioContent({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#17171D" },
-  stageArea: { flex: 1 },
-  overlay: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    left: 0,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    position: "absolute",
-    right: 0,
-    top: 0,
-  },
-  avatar: {
-    alignItems: "center",
-    backgroundColor: "#8B5CF6",
-    borderRadius: 22,
-    height: 44,
-    justifyContent: "center",
-    width: 44,
-  },
-  avatarLabel: { color: "#F8F7FC", fontSize: 18, fontWeight: "800" },
-});

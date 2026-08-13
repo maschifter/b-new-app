@@ -1,3 +1,4 @@
+import "@/global.css";
 import { NativeAnimatedWarningGuard } from "@/lib/animation/native-animated-warning-guard";
 import { AuthSessionProvider, useAuthSession } from "@/lib/auth/session-provider";
 import { QueryProvider } from "@/lib/providers/query-provider";
@@ -25,7 +26,7 @@ function RootNavigator() {
 
   if (!hydrated) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+      <View className="flex-1 items-center justify-center">
         <ActivityIndicator color="#FFFFFF" />
       </View>
     );
