@@ -39,8 +39,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     package: `com.bnewapp.mobile${BUNDLE_ID_SUFFIX}`,
-    edgeToEdgeEnabled: true,
   },
-  plugins: ["expo-router"],
+  // SDK 55 requires an explicit config-plugin entry for expo-image; edge-to-edge
+  // is mandatory from this SDK on, so the former `android.edgeToEdgeEnabled` key
+  // no longer exists in the config schema.
+  plugins: ["expo-router", "expo-image"],
   experiments: { typedRoutes: true },
 });
