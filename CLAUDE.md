@@ -219,7 +219,7 @@ Key UI rules:
 - Keep explicit loading UI for pull-to-refresh, pagination, background refetches, mutations, and
   form submissions. Suspense does not replace those states.
 - Use `StyleSheet` for new UI. NativeWind is not part of the current mobile build contract; do not
-  copy CardNexus `className` patterns unless an explicit migration also adds and verifies the
+  introduce `className` patterns unless an explicit migration also adds and verifies the
   dependency, Babel/Metro/CSS configuration, typing, tests, and updates these rules.
 
 Compose feeds as **screen → list → item card**:

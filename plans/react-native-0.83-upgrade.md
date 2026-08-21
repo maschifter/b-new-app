@@ -1,10 +1,9 @@
 # Upgrade `apps/mobile` to React Native 0.83 (Expo SDK 54 → 55)
 
 **Status:** stages 0–1 and 4 done · **Date:** 2026-08-12 · **Branch:** `chore/rn-0.83`
-**Reference:** the same upgrade executed on `request-app`
-(`D:\works\amrou\request\request-app\plans\2026-08-11\react-native-0.83-upgrade.md`).
-That plan's version table, pitfalls and staging were used as the blueprint; this
-document records what actually applied to **this** codebase and what differed.
+
+This document records the version changes, migration pitfalls, and validation that applied to
+BNewApp during the upgrade.
 
 ---
 
@@ -82,12 +81,12 @@ Every row was checked against this codebase rather than assumed.
 | `expo-blur` `experimentalBlurMethod` → `blurMethod` | Not installed. |
 | `expo-video` `allowsFullscreen` → `fullscreenOptions.enable` | Not installed. No `useVideoPlayer` call sites, so the reference plan's **P6 logout crash does not apply to this app**. |
 | `notification` key removed from the app.json schema | No such key. |
-| `app.config.ts` now evaluated with the project's own TypeScript | Config is static (no `node:fs` gate as in request-app). `expo config --type prebuild` evaluates cleanly. |
+| `app.config.ts` now evaluated with the project's own TypeScript | Config is static and has no `node:fs` gate. `expo config --type prebuild` evaluates cleanly. |
 | Min Node `^20.19.4` | Local Node v24.14.1 ✅. Root `engines.node` raised to match. |
 
 ---
 
-## Pitfalls from the reference plan, as they landed here
+## Migration pitfalls and outcomes
 
 **P1 — root override fights React 19.2. → Applied.** The root `package.json`
 `pnpm.overrides` hard-pinned `react`/`react-dom` to `19.1.0`. RN 0.83 peers
@@ -95,8 +94,8 @@ Every row was checked against this codebase rather than assumed.
 tree. Moved both to `19.2.0` in the same commit as the SDK bump.
 
 **P2 — babel plugin rename. → Not applicable, verified rather than assumed.**
-The reference app had an explicit `"react-native-reanimated/plugin"` entry to
-rename. This app's `babel.config.js` has no `plugins` array at all and relies on
+BNewApp's `babel.config.js` has no explicit `"react-native-reanimated/plugin"` entry or
+`plugins` array and relies on
 `babel-preset-expo` auto-injecting the worklets plugin. Confirmed that
 `babel-preset-expo@55.0.24` still does so — `build/index.js:315` prefers
 `react-native-worklets/plugin` whenever `react-native-worklets` is installed,

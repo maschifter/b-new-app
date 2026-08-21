@@ -38,5 +38,5 @@ them, follow the canonical files and update this wrapper in the same change.
   the canonical rules.
 - Run focused tests and typecheck, then verify visible behavior on a simulator or emulator.
 
-Do not copy CardNexus structures mechanically. Use CardNexus as a reference for intent, then
-adapt the implementation to BNewApp's current dependencies and canonical mobile architecture.
+Do not copy structures from unrelated codebases mechanically. Design against BNewApp's current
+dependencies and canonical mobile architecture.

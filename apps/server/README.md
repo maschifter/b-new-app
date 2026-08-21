@@ -56,6 +56,7 @@ Validated by `src/config.ts`; the process exits on startup if any value is inval
 | `RATE_LIMIT_MAX`      | no       | `120`           | Requests per minute per client                                     |
 | `SUPABASE_URL`        | **yes**  | —               | Supabase project URL                                               |
 | `SUPABASE_SECRET_KEY` | **yes**  | —               | Supabase secret key — server-side only, never ship it to a client |
+| `DEV_ADMIN_SECRET`    | no       | —               | Enables `/dev` routes in development; minimum 32 characters        |
 
 CORS is fully open in `development`. In every other environment it uses
 `ALLOWED_ORIGINS`, and rejects all origins when the list is empty.
@@ -71,20 +72,34 @@ state; instead `@fastify/jwt` verifies each token against Supabase's JWKS
 missing or invalid tokens with `401`. The verified payload is available as
 `request.user` (`sub`, `email`).
 
+Admin endpoints additionally use `app.requireAdmin`, which requires the verified token's
+`app_metadata.role` claim to equal `admin` and rejects other authenticated users with `403`.
+
 ## Endpoints
 
-| Method | Path                       | Auth | Description                                             |
-| ------ | -------------------------- | ---- | ------------------------------------------------------- |
-| `GET`  | `/health`                  | no   | Liveness check: `{ status, timestamp }`                 |
-| `GET`  | `/api/user/me`             | yes  | Current user's profile from `public.profiles`           |
-| `GET`  | `/api/studio/room`         | yes  | Current user's saved studio room, or `null`             |
-| `PUT`  | `/api/studio/room`         | yes  | Reconcile and upsert the current user's studio snapshot |
-| `GET`  | `/api/studio/rooms`        | yes  | Cursor-paginated Explore feed of other users' rooms     |
-| `GET`  | `/api/studio/rooms/:ownerId` | yes | A user's room for read-only Explore detail              |
+| Method         | Path                           | Auth       | Description                                             |
+| -------------- | ------------------------------ | ---------- | ------------------------------------------------------- |
+| `GET`          | `/health`                      | no         | Liveness check: `{ status, timestamp }`                 |
+| `GET`          | `/api/user/me`                 | user       | Current user's profile from `public.profiles`           |
+| `GET`          | `/api/studio/room`             | user       | Current user's saved studio room, or `null`             |
+| `PUT`          | `/api/studio/room`             | user       | Reconcile and upsert the current user's studio snapshot |
+| `GET`          | `/api/studio/rooms`            | user       | Cursor-paginated Explore feed of other users' rooms     |
+| `GET`          | `/api/studio/rooms/:ownerId`   | user       | A user's room for read-only Explore detail              |
+| `GET`          | `/api/admin/users`             | admin      | Paginated, searchable user list                         |
+| `GET`          | `/api/admin/users/:id`         | admin      | User, auth, and studio-room details                      |
+| `PUT`, `PATCH` | `/api/admin/users/:id`         | admin      | Update allowlisted user fields                          |
+| `DELETE`       | `/api/admin/users/:id`         | admin      | Delete the auth user and dependent records              |
+| `GET`          | `/api/admin/dashboard/summary` | admin      | User and studio-room activity counts                    |
+| `POST`         | `/dev/create-user`             | dev secret | Create a confirmed development user                     |
+| `POST`         | `/dev/grant-admin`             | dev secret | Grant or revoke the admin role by email                  |
 
 Successful responses are wrapped as `{ data: ... }` (`ApiSuccess<T>` from
-`@bnewapp/types`). Errors flow through the handler in `src/lib/errors.ts` and return
-`{ code, message }`; 5xx messages are masked to avoid leaking internals.
+`@bnewapp/types`) for the mobile-facing API. Admin resource endpoints follow react-admin's
+simple-rest protocol instead: lists return a raw array with `Content-Range`, and record endpoints
+return raw records. Errors flow through the handler in `src/lib/errors.ts` and return
+`{ code, message }`; 5xx messages are masked to avoid leaking internals. The `/dev` routes are
+registered only in development when `DEV_ADMIN_SECRET` is configured, and require the matching
+`x-admin-secret` header. Staging and production never register them.
 
 ## Project structure
 
@@ -94,13 +109,16 @@ src/
 ├── app.ts                # buildApp(): register plugins and routes
 ├── config.ts             # Zod-validated environment (Env type)
 ├── lib/
-│   └── errors.ts         # global error handler → { code, message }
+│   ├── errors.ts         # global error handler → { code, message }
+│   └── react-admin.ts    # simple-rest list query and Content-Range helpers
 ├── modules/
+│   ├── admin/            # Admin users and dashboard endpoints
+│   ├── dev/routes.ts     # Non-production account bootstrap endpoints
 │   ├── health/routes.ts  # GET /health
 │   ├── studio/routes.ts  # Studio room persistence and Explore reads
 │   └── user/routes.ts    # GET /api/user/me
 └── plugins/
-    ├── auth.ts           # authenticate decorator (JWT verify)
+    ├── auth.ts           # User and admin JWT guards
     └── supabase.ts       # supabase client decorator
 ```
 

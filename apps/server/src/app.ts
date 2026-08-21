@@ -7,6 +7,8 @@ import Fastify from "fastify";
 import buildGetJwks from "get-jwks";
 import type { Env } from "./config.js";
 import { errorHandlerPlugin } from "./lib/errors.js";
+import { adminRoutes } from "./modules/admin/routes.js";
+import { devRoutes } from "./modules/dev/routes.js";
 import { healthRoutes } from "./modules/health/routes.js";
 import { studioRoutes } from "./modules/studio/routes.js";
 import { userRoutes } from "./modules/user/routes.js";
@@ -31,6 +33,8 @@ export async function buildApp(config: Env) {
         : allowedOrigins && allowedOrigins.length > 0
           ? allowedOrigins
           : false,
+    exposedHeaders: ["Content-Range"],
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   });
   await app.register(rateLimit, { max: config.RATE_LIMIT_MAX, timeWindow: "1 minute" });
   const getJwks = buildGetJwks();
@@ -54,5 +58,12 @@ export async function buildApp(config: Env) {
   await app.register(healthRoutes);
   await app.register(userRoutes, { prefix: "/api/user" });
   await app.register(studioRoutes, { prefix: "/api/studio" });
+  await app.register(adminRoutes, { prefix: "/api/admin" });
+  if (config.NODE_ENV === "development" && config.DEV_ADMIN_SECRET) {
+    await app.register(devRoutes, {
+      prefix: "/dev",
+      adminSecret: config.DEV_ADMIN_SECRET,
+    });
+  }
   return app;
 }

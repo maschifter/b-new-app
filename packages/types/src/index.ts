@@ -22,6 +22,40 @@ export interface UserProfile {
   email: string;
 }
 
+/** A profile row enriched with the auth fields needed by the admin user list. */
+export interface AdminUserRow {
+  id: string;
+  email: string;
+  username: string;
+  created_at: string;
+  last_sign_in_at: string | null;
+  app_metadata_role: string | null;
+}
+
+/** Full user record returned by the admin user-detail endpoint. */
+export interface AdminUserDetail extends AdminUserRow {
+  email_confirmed_at: string | null;
+  studio_room: {
+    template_id: string;
+    item_count: number;
+    updated_at: string;
+  } | null;
+}
+
+/** Aggregate metrics displayed on the internal admin dashboard. */
+export interface DashboardSummary {
+  users: {
+    total: number;
+    last24h: number;
+    last7d: number;
+    last30d: number;
+  };
+  rooms: {
+    total: number;
+    updatedLast7d: number;
+  };
+}
+
 /** A user's persisted studio room as returned by the API. */
 export interface StudioRoom {
   id: string;

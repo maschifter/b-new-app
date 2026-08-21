@@ -12,6 +12,8 @@
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "server:dev": "pnpm --filter @bnewapp/server dev",
+    "admin": "pnpm --filter @bnewapp/admin dev",
+    "admin:build": "pnpm --filter @bnewapp/admin build",
     "mobile": "pnpm --filter @bnewapp/mobile start",
     "mobile:fresh": "pnpm --filter @bnewapp/mobile start:fresh",
     "mobile:clear-cache": "pnpm --filter @bnewapp/mobile clear-cache",

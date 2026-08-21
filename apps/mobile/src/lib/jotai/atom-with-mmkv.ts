@@ -8,10 +8,9 @@ type SyncSetter<T> = T | ((prev: T) => T);
 // don't have to deal with the `T | Promise<T>` union that atomWithStorage
 // returns when it can't statically tell the storage is sync.
 //
-// Ported from request-app (src/lib/jotai/atom-with-mmkv.ts). One deliberate
-// addition: `getOnInit: true`. Because MMKV reads are synchronous, this lets the
-// atom read its persisted value on the very first render instead of one frame
-// later — so a hydrated screen never flashes its default first.
+// `getOnInit: true` lets the atom read its persisted value on the first render.
+// Because MMKV reads are synchronous, a hydrated screen never flashes its
+// default value for one frame.
 export function createAtomWithMMKV(mmkv: MMKV) {
   const storage = {
     getItem: (key: string) => mmkv.getString(key) ?? null,

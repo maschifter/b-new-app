@@ -9,6 +9,7 @@ const envSchema = z.object({
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
   SUPABASE_URL: z.string().url(),
   SUPABASE_SECRET_KEY: z.string().min(1),
+  DEV_ADMIN_SECRET: z.string().min(32).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

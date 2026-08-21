@@ -13,13 +13,12 @@ import { atom } from "jotai";
 import { atomFamily } from "jotai-family";
 import { MMKV } from "react-native-mmkv";
 
-// State + persistence for the studio, jotai + MMKV (mirrors request-app's
-// atom-with-mmkv convention). MMKV is synchronous, so there is no async load
-// pipeline, no `hydrated` gate, and no save-status machine: a write persists
-// immediately. The load-time invariants the old repository owned still hold —
-// they just run inside the derived read below (coerce -> migrate -> reconcile).
+// Studio state and persistence use Jotai with synchronous MMKV storage. There
+// is no async load pipeline, `hydrated` gate, or save-status machine: writes
+// persist immediately. Load-time invariants run inside the derived read below
+// (coerce -> migrate -> reconcile).
 
-// One MMKV instance per feature, keyed by `id`, exactly like request-app.
+// Use one MMKV instance for the feature, keyed by `id`.
 const mmkv = new MMKV({ id: "studio" });
 const atomWithMMKV = createAtomWithMMKV(mmkv);
 
