@@ -1,7 +1,8 @@
-import { CURRENT_VERSION, DEFAULT_TEMPLATE_ID } from "@bnewapp/studio-core";
+import { CATALOG, CURRENT_VERSION, DEFAULT_TEMPLATE_ID } from "@bnewapp/studio-core";
 import { describe, expect, it, vi } from "vitest";
 
 import { buildApp } from "../src/app.js";
+import { CatalogUnavailableError } from "../src/modules/catalog/service.js";
 import { studioRoutes } from "../src/modules/studio/routes.js";
 
 const testConfig = {
@@ -66,7 +67,14 @@ const EMPTY_AFTER_RECONCILE = {
   profiles: { username: "dancer-000003" },
 };
 
-function registerStudio(supabase: unknown) {
+function registerStudio(
+  supabase: unknown,
+  catalogService = {
+    getForRead: vi.fn().mockResolvedValue({ version: 0, items: CATALOG }),
+    getAuthoritative: vi.fn().mockResolvedValue({ version: 0, items: CATALOG }),
+    getForWrite: vi.fn().mockResolvedValue(CATALOG),
+  },
+) {
   const handlers: Record<string, Handler> = {};
   const capture = (method: string) =>
     vi.fn((path: string, _options: unknown, routeHandler: Handler) => {
@@ -80,7 +88,10 @@ function registerStudio(supabase: unknown) {
       badRequest: (message: string) => Object.assign(new Error(message), { statusCode: 400 }),
       internalServerError: (message: string) =>
         Object.assign(new Error(message), { statusCode: 500 }),
+      serviceUnavailable: (message: string) =>
+        Object.assign(new Error(message), { statusCode: 503 }),
     },
+    catalogService,
     supabase,
   };
   return { app, handlers };
@@ -92,9 +103,11 @@ describe("studio room endpoints", () => {
 
     const read = await app.inject({ method: "GET", url: "/api/studio/room" });
     const write = await app.inject({ method: "PUT", url: "/api/studio/room", payload: {} });
+    const catalog = await app.inject({ method: "GET", url: "/api/studio/catalog" });
 
     expect(read.statusCode).toBe(401);
     expect(write.statusCode).toBe(401);
+    expect(catalog.statusCode).toBe(401);
     await app.close();
   });
 
@@ -142,6 +155,36 @@ describe("studio room endpoints", () => {
     expect(response.data.updatedAt).toBe("2026-08-10T00:00:00.000Z");
     expect(response.data.snapshot.map).toHaveProperty("floor-main");
     expect(response.data.snapshot.map).not.toHaveProperty("ghost-spot");
+  });
+
+  it("returns 503 instead of reconciling a synced room against fallback catalog data", async () => {
+    const maybeSingle = vi.fn().mockResolvedValue({
+      data: {
+        id: "room-1",
+        owner_id: "user-1",
+        version: CURRENT_VERSION,
+        template_id: DEFAULT_TEMPLATE_ID,
+        map: { "decor-1": { source: "catalog", id: "admin-plant" } },
+        updated_at: "2026-08-10T00:00:00.000Z",
+      },
+      error: null,
+    });
+    const eq = vi.fn().mockReturnValue({ maybeSingle });
+    const select = vi.fn().mockReturnValue({ eq });
+    const catalogService = {
+      getForRead: vi.fn(),
+      getAuthoritative: vi.fn().mockRejectedValue(new CatalogUnavailableError()),
+      getForWrite: vi.fn(),
+    };
+    const { app, handlers } = registerStudio(
+      { from: vi.fn().mockReturnValue({ select }) },
+      catalogService,
+    );
+    await studioRoutes(app as never);
+
+    await expect(
+      getHandler(handlers, "GET /room")({ user: { sub: "user-1" } }),
+    ).rejects.toMatchObject({ statusCode: 503 });
   });
 
   it("reconciles the snapshot before upserting it", async () => {
@@ -220,6 +263,25 @@ describe("studio room endpoints", () => {
     await expect(
       getHandler(handlers, "PUT /room")({ user: { sub: "user-1" }, body: {} }),
     ).rejects.toMatchObject({ statusCode: 400 });
+    expect(supabase.from).not.toHaveBeenCalled();
+  });
+
+  it("returns 503 instead of persisting against an unavailable catalog", async () => {
+    const supabase = { from: vi.fn() };
+    const catalogService = {
+      getForRead: vi.fn(),
+      getAuthoritative: vi.fn(),
+      getForWrite: vi.fn().mockRejectedValue(new CatalogUnavailableError()),
+    };
+    const { app, handlers } = registerStudio(supabase, catalogService);
+    await studioRoutes(app as never);
+
+    await expect(
+      getHandler(handlers, "PUT /room")({
+        user: { sub: "user-1" },
+        body: { version: CURRENT_VERSION, templateId: DEFAULT_TEMPLATE_ID, map: {} },
+      }),
+    ).rejects.toMatchObject({ statusCode: 503 });
     expect(supabase.from).not.toHaveBeenCalled();
   });
 });

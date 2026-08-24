@@ -1,11 +1,39 @@
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { StudioCatalog } from "@bnewapp/types";
 import { Provider, createStore } from "jotai";
+import { queryClientAtom } from "jotai-tanstack-query";
 import { ItemPicker } from "../../ui/item-picker";
 import { StudioStage } from "../../ui/studio-stage";
 import { decorationAtom } from "../atoms";
 import { type StudioApi, StudioProvider, useStudio } from "../studio-provider";
 
 type Store = ReturnType<typeof createStore>;
+
+const UPLOADED_CATALOG: StudioCatalog = {
+  version: 1,
+  items: [
+    {
+      id: "plant",
+      tags: { type: "decor", size: "S" },
+      name: "Plant",
+      status: "published",
+      access: "free",
+      art: { url: "https://example.com/plant.webp" },
+    },
+  ],
+};
+
+function testStore(): Store {
+  const store = createStore();
+  store.set(
+    queryClientAtom,
+    new QueryClient({
+      defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY, retry: false } },
+    }),
+  );
+  return store;
+}
 
 // atomWithStorage only syncs with MMKV while mounted, so seed/read the raw room
 // through a subscription — the same way components mount the atom in the app.
@@ -35,38 +63,48 @@ function Harness() {
 }
 
 function mountStudio(store: ReturnType<typeof createStore>, ownerId: string) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY, retry: false } },
+  });
+  queryClient.setQueryData(["studio-catalog", null], UPLOADED_CATALOG);
+  store.set(queryClientAtom, queryClient);
+  const tree = (nextOwnerId: string) => (
+    <QueryClientProvider client={queryClient}>
+      <Provider store={store}>
+        <StudioProvider ownerId={nextOwnerId}>
+          <Harness />
+        </StudioProvider>
+      </Provider>
+    </QueryClientProvider>
+  );
   const view = render(
-    <Provider store={store}>
-      <StudioProvider ownerId={ownerId}>
-        <Harness />
-      </StudioProvider>
-    </Provider>,
+    tree(ownerId),
   );
   // The stage only renders spots once it has measured a non-zero size.
   fireEvent(screen.getByTestId("studio-stage"), "layout", {
     nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 844 } },
   });
-  return view;
+  return { ...view, rerenderOwner: (nextOwnerId: string) => view.rerender(tree(nextOwnerId)) };
 }
 
 describe("studio persistence (jotai + mmkv)", () => {
   it("persists an edit synchronously and restores it when remounted for the same owner", () => {
     const ownerId = "user-1";
 
-    const first = mountStudio(createStore(), ownerId);
+    const first = mountStudio(testStore(), ownerId);
     fireEvent.press(screen.getByLabelText("Spot decor-1"));
     fireEvent.press(screen.getByText("Plant"));
 
     // MMKV writes are synchronous — the room is already saved. Remount with a
     // fresh store (relaunch) reading the same MMKV, and the room comes back.
     first.unmount();
-    mountStudio(createStore(), ownerId);
+    mountStudio(testStore(), ownerId);
     expect(screen.getByTestId("spot-content-decor-1")).toBeTruthy();
     expect(screen.queryByTestId("spot-empty-decor-1")).toBeNull();
   });
 
   it("does not write over another owner's room", () => {
-    const seed = createStore();
+    const seed = testStore();
     withRoom(seed, "user-1", () =>
       seed.set(decorationAtom("user-1"), {
         version: 1,
@@ -76,28 +114,22 @@ describe("studio persistence (jotai + mmkv)", () => {
     );
 
     // A different owner starts empty and must not clobber user-1.
-    mountStudio(createStore(), "user-2");
+    mountStudio(testStore(), "user-2");
     expect(screen.getByTestId("spot-empty-decor-1")).toBeTruthy();
 
-    const check = createStore();
+    const check = testStore();
     const user1 = withRoom(check, "user-1", () => check.get(decorationAtom("user-1")).map);
     expect(user1).toEqual({ "decor-1": { source: "catalog", id: "plant" } });
   });
 
   it("closes the picker when the owner changes", () => {
-    const store = createStore();
+    const store = testStore();
     const view = mountStudio(store, "user-1");
 
     fireEvent.press(screen.getByLabelText("Spot decor-1"));
     expect(screen.getByText("Plant")).toBeOnTheScreen();
 
-    view.rerender(
-      <Provider store={store}>
-        <StudioProvider ownerId="user-2">
-          <Harness />
-        </StudioProvider>
-      </Provider>,
-    );
+    view.rerenderOwner("user-2");
 
     expect(screen.queryByText("Plant")).not.toBeOnTheScreen();
     // A fresh owner opens onto the first-run empty room, not user-1's state.
@@ -111,7 +143,7 @@ describe("studio persistence (jotai + mmkv)", () => {
       return null;
     }
 
-    const seed = createStore();
+    const seed = testStore();
     withRoom(seed, "user-x", () =>
       seed.set(decorationAtom("user-x"), {
         version: 1,
@@ -120,7 +152,7 @@ describe("studio persistence (jotai + mmkv)", () => {
       }),
     );
 
-    const store = createStore();
+    const store = testStore();
     render(
       <Provider store={store}>
         <StudioProvider ownerId="user-x" mode="visit">

@@ -39,6 +39,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      catalog_items: {
+        Row: {
+          access: string
+          art_hitbox: Json | null
+          art_url: string | null
+          blurhash: string | null
+          created_at: string
+          display_name: string
+          id: string
+          price: number | null
+          sort_order: number
+          status: string
+          tags: Json
+          updated_at: string
+        }
+        Insert: {
+          access?: string
+          art_hitbox?: Json | null
+          art_url?: string | null
+          blurhash?: string | null
+          created_at?: string
+          display_name: string
+          id: string
+          price?: number | null
+          sort_order?: number
+          status?: string
+          tags: Json
+          updated_at?: string
+        }
+        Update: {
+          access?: string
+          art_hitbox?: Json | null
+          art_url?: string | null
+          blurhash?: string | null
+          created_at?: string
+          display_name?: string
+          id?: string
+          price?: number | null
+          sort_order?: number
+          status?: string
+          tags?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      catalog_meta: {
+        Row: {
+          id: number
+          version: number
+        }
+        Insert: {
+          id?: number
+          version?: number
+        }
+        Update: {
+          id?: number
+          version?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

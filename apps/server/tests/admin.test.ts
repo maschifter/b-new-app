@@ -5,6 +5,7 @@ import { buildApp } from "../src/app.js";
 import { loadConfig } from "../src/config.js";
 import { contentRange, parseListQuery } from "../src/lib/react-admin.js";
 import { UpdateUserRequest } from "../src/modules/admin/schemas.js";
+import { CreateCatalogItemRequest } from "../src/modules/admin/catalog-schemas.js";
 import { createAdminService } from "../src/modules/admin/service.js";
 import { devRoutes } from "../src/modules/dev/routes.js";
 import { authPlugin, isAdmin } from "../src/plugins/auth.js";
@@ -62,8 +63,12 @@ async function buildDevTestApp(admin: object) {
 describe("admin authorization", () => {
   it("guards the registered admin routes", async () => {
     const app = await buildApp(testConfig);
-    const response = await app.inject({ method: "GET", url: "/api/admin/users" });
-    expect(response.statusCode).toBe(401);
+    const users = await app.inject({ method: "GET", url: "/api/admin/users" });
+    const catalog = await app.inject({ method: "GET", url: "/api/admin/catalog" });
+    const upload = await app.inject({ method: "POST", url: "/api/admin/catalog/plant/art" });
+    expect(users.statusCode).toBe(401);
+    expect(catalog.statusCode).toBe(401);
+    expect(upload.statusCode).toBe(401);
     await app.close();
   });
 
@@ -95,6 +100,25 @@ describe("admin authorization", () => {
       } as never),
     ).resolves.toBeUndefined();
     await app.close();
+  });
+});
+
+describe("admin catalog validation", () => {
+  it("accepts kebab-case ids and rejects invalid ids or tag values", () => {
+    const valid = {
+      id: "new-floor-light",
+      tags: { type: "floor", size: ["M", "L"] },
+      display_name: "New Floor Light",
+      status: "draft",
+      access: "free",
+      sort_order: 40,
+    };
+
+    expect(CreateCatalogItemRequest.safeParse(valid).success).toBe(true);
+    expect(CreateCatalogItemRequest.safeParse({ ...valid, id: "New Floor Light" }).success).toBe(
+      false,
+    );
+    expect(CreateCatalogItemRequest.safeParse({ ...valid, tags: { type: [] } }).success).toBe(false);
   });
 });
 

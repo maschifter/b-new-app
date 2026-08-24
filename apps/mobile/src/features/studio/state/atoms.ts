@@ -1,6 +1,6 @@
 import { createAtomWithMMKV } from "@/lib/jotai/atom-with-mmkv";
+import { catalogAtom } from "@/features/catalog";
 import {
-  CATALOG,
   type DecorationSnapshot,
   ROOM_TEMPLATE,
   coerceSnapshot,
@@ -41,6 +41,19 @@ const snapshotAtom = atomFamily((ownerId: string) =>
   atomWithMMKV<DecorationSnapshot>(`${KEY_PREFIX}${ownerId}`, emptyDecoration()),
 );
 
+// The persisted snapshot is coerced and migrated, but deliberately not reconciled
+// against the catalog. Cloud sync must compare and preserve this source snapshot:
+// the catalog query can temporarily expose its bundled fallback while a fresh
+// remote catalog is still loading, and that temporary view must never become a
+// destructive server write.
+export const persistedDecorationAtom = atomFamily((ownerId: string) => {
+  const base = snapshotAtom(ownerId);
+  return atom(
+    (get) => migrate(coerceSnapshot(get(base))),
+    (_get, set, next: DecorationSnapshot) => set(base, next),
+  );
+});
+
 // True once this device has actually persisted a room for `ownerId` (i.e. the
 // user edited, or a server room was applied). MMKV only writes the key on the
 // first real write, so an absent key means the atom is still on its untouched
@@ -61,16 +74,15 @@ export const syncedSnapshotAtom = atomFamily((ownerId: string) =>
 // template + catalog every time the raw value changes (design §6, rule 8).
 // Writes persist a full snapshot straight through to MMKV.
 export const decorationAtom = atomFamily((ownerId: string) => {
-  const base = snapshotAtom(ownerId);
+  const persisted = persistedDecorationAtom(ownerId);
   return atom(
     (get) => {
-      const raw = coerceSnapshot(get(base));
-      const migrated = migrate(raw);
+      const migrated = get(persisted);
       const template = templateById(migrated.templateId) ?? ROOM_TEMPLATE;
-      return reconcile(migrated, template, CATALOG);
+      return reconcile(migrated, template, get(catalogAtom).data.items);
     },
     (_get, set, next: DecorationSnapshot) => {
-      set(base, next);
+      set(persisted, next);
     },
   );
 });

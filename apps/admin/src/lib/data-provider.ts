@@ -46,7 +46,7 @@ export const httpClient = async (url: string, options: fetchUtils.Options = {}) 
   return authenticatedFetch(url, options, true);
 };
 
-const adminApiUrl = `${apiUrl}/api/admin`;
+export const adminApiUrl = `${apiUrl}/api/admin`;
 
 export const dataProvider = simpleRestProvider(adminApiUrl, httpClient);
 

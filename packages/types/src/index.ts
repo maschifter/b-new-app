@@ -1,4 +1,4 @@
-import type { DecorationSnapshot } from "@bnewapp/studio-core";
+import type { CatalogItem, DecorationSnapshot } from "@bnewapp/studio-core";
 
 export type { Database } from "./database.generated.js";
 
@@ -10,6 +10,24 @@ export interface ApiError {
   code: string;
   message: string;
 }
+
+export type CatalogItemStatus = "draft" | "published";
+export type CatalogItemAccess = "free" | "premium";
+
+/** Published catalog item returned by the server to authenticated clients. */
+export interface CatalogItemDTO extends CatalogItem {
+  name: string;
+  status: CatalogItemStatus;
+  access: CatalogItemAccess;
+  price?: number;
+}
+
+export interface StudioCatalog {
+  version: number;
+  items: CatalogItemDTO[];
+}
+
+export type StudioCatalogResponse = ApiSuccess<StudioCatalog>;
 
 export interface HealthStatus {
   status: "ok";

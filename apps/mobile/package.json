@@ -25,6 +25,7 @@
     "@tanstack/react-query": "^5.74.4",
     "expo": "55.0.28",
     "expo-constants": "55.0.17",
+    "expo-dev-client": "~55.0.38",
     "expo-image": "~55.0.11",
     "expo-linking": "~55.0.16",
     "expo-router": "55.0.17",

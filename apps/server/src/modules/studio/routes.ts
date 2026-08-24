@@ -1,5 +1,5 @@
 import {
-  CATALOG,
+  type CatalogItem,
   CURRENT_VERSION,
   coerceSnapshot,
   migrate,
@@ -10,6 +10,7 @@ import {
 import type { ApiSuccess, ExploreRoom, ExploreRoomsPage, StudioRoom } from "@bnewapp/types";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { CatalogUnavailableError } from "../catalog/service.js";
 
 const ROOM_COLUMNS = "id, owner_id, version, template_id, map, updated_at";
 
@@ -59,14 +60,14 @@ function embeddedUsername(profiles: ProfileEmbed): string | null {
 // Run the shared coerce -> migrate -> reconcile pipeline on a raw row and attach
 // the owner's handle. Returns null when the row has no resolvable username, so it
 // can never yield an ExploreRoom that violates the non-null username contract.
-function buildExploreRoom(row: RawExploreRow): ExploreRoom | null {
+function buildExploreRoom(row: RawExploreRow, catalog: CatalogItem[]): ExploreRoom | null {
   const username = embeddedUsername(row.profiles);
   if (!username) return null;
   const migrated = migrate(
     coerceSnapshot({ version: row.version, templateId: row.template_id, map: row.map }),
   );
   const template = templateById(migrated.templateId) ?? ROOM_TEMPLATE;
-  const snapshot = reconcile(migrated, template, CATALOG);
+  const snapshot = reconcile(migrated, template, catalog);
   return { ownerId: row.owner_id, snapshot, updatedAt: row.updated_at, username };
 }
 
@@ -90,7 +91,16 @@ export async function studioRoutes(app: FastifyInstance) {
         coerceSnapshot({ version: row.version, templateId: row.template_id, map: row.map }),
       );
       const template = templateById(migrated.templateId) ?? ROOM_TEMPLATE;
-      const snapshot = reconcile(migrated, template, CATALOG);
+      let catalog: CatalogItem[];
+      try {
+        catalog = (await app.catalogService.getAuthoritative()).items;
+      } catch (error) {
+        if (error instanceof CatalogUnavailableError) {
+          throw app.httpErrors.serviceUnavailable("Studio catalog is temporarily unavailable");
+        }
+        throw error;
+      }
+      const snapshot = reconcile(migrated, template, catalog);
 
       return {
         data: { id: row.id, ownerId: row.owner_id, snapshot, updatedAt: row.updated_at },
@@ -111,7 +121,16 @@ export async function studioRoutes(app: FastifyInstance) {
       const migrated = migrate(body.data);
       const template = templateById(migrated.templateId);
       if (!template) throw app.httpErrors.badRequest("Unknown studio template");
-      const snapshot = reconcile(migrated, template, CATALOG);
+      let catalog: CatalogItem[];
+      try {
+        catalog = await app.catalogService.getForWrite();
+      } catch (error) {
+        if (error instanceof CatalogUnavailableError) {
+          throw app.httpErrors.serviceUnavailable("Studio catalog is temporarily unavailable");
+        }
+        throw error;
+      }
+      const snapshot = reconcile(migrated, template, catalog);
 
       const { data: row, error } = await app.supabase
         .from("studio_rooms")
@@ -166,6 +185,7 @@ export async function studioRoutes(app: FastifyInstance) {
       if (error) throw app.httpErrors.internalServerError("Could not load explore rooms");
 
       const rows = data ?? [];
+      const { items: catalog } = await app.catalogService.getForRead();
       // The extra row only proves more data exists; the cursor comes from the last
       // raw row we keep, computed before reconcile filtering so pagination never
       // depends on how many rooms survive as items.
@@ -177,7 +197,7 @@ export async function studioRoutes(app: FastifyInstance) {
 
       const items: ExploreRoom[] = [];
       for (const row of consumed) {
-        const room = buildExploreRoom(row);
+        const room = buildExploreRoom(row, catalog);
         // Drop rooms left empty after reconcile (only stale placements remained).
         if (room && Object.keys(room.snapshot.map).length > 0) items.push(room);
       }
@@ -204,7 +224,8 @@ export async function studioRoutes(app: FastifyInstance) {
       if (error) throw app.httpErrors.internalServerError("Could not load the room");
       if (!data) return { data: null };
 
-      return { data: buildExploreRoom(data) };
+      const { items: catalog } = await app.catalogService.getForRead();
+      return { data: buildExploreRoom(data, catalog) };
     },
   );
 }

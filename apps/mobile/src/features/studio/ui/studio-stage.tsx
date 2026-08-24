@@ -1,3 +1,4 @@
+import { catalogItemByIdAtom } from "@/features/catalog";
 import {
   type ContentRef,
   DESIGN_CANVAS,
@@ -5,6 +6,7 @@ import {
   type StudioMode,
 } from "@bnewapp/studio-core";
 import { Image } from "expo-image";
+import { useAtomValue } from "jotai";
 import { useState } from "react";
 import { type LayoutChangeEvent, View } from "react-native";
 import { THEME_BACKGROUNDS, THEME_BACKGROUND_IMAGES } from "../data/templates";
@@ -31,6 +33,7 @@ export function StudioStage({
   onSelectSpot,
 }: StudioStageProps) {
   const [size, setSize] = useState({ width: 0, height: 0 });
+  const catalogById = useAtomValue(catalogItemByIdAtom);
 
   const onLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
@@ -88,22 +91,27 @@ export function StudioStage({
               transition={200}
             />
           ) : null}
-          {spots.map((spot) => (
-            <SpotLayer
-              key={spot.id}
-              spot={spot}
-              frame={{
-                left: spot.frame.x * stageWidth,
-                top: spot.frame.y * stageHeight,
-                width: spot.frame.w * stageWidth,
-                height: spot.frame.h * stageHeight,
-              }}
-              content={map[spot.id]}
-              selected={selectedSpotId === spot.id}
-              showEmpty={showEmpty}
-              onPress={handleSelect}
-            />
-          ))}
+          {spots.map((spot) => {
+            const content = map[spot.id];
+            const item = content?.source === "catalog" ? catalogById.get(content.id) : undefined;
+            return (
+              <SpotLayer
+                key={spot.id}
+                spot={spot}
+                frame={{
+                  left: spot.frame.x * stageWidth,
+                  top: spot.frame.y * stageHeight,
+                  width: spot.frame.w * stageWidth,
+                  height: spot.frame.h * stageHeight,
+                }}
+                content={content}
+                item={item}
+                selected={selectedSpotId === spot.id}
+                showEmpty={showEmpty}
+                onPress={handleSelect}
+              />
+            );
+          })}
         </View>
       ) : null}
     </View>

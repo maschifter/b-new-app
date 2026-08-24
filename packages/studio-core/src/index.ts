@@ -6,7 +6,7 @@ export * from "./types.ts";
 export { fits } from "./fits.ts";
 export { CURRENT_VERSION, migrate } from "./migrate.ts";
 export { reconcile } from "./reconcile.ts";
-export { CATALOG, catalogItemById } from "./catalog.ts";
+export { CATALOG, catalogItemById, defaultItemLabel } from "./catalog.ts";
 export {
   DESIGN_CANVAS,
   DEFAULT_TEMPLATE_ID,

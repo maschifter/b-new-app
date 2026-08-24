@@ -4,7 +4,7 @@ These rules apply to `apps/mobile`. Also follow the root `AGENTS.md`.
 
 ## Scope and Workflow
 
-- This is an Expo 54 / React Native 0.81 app using Expo Router and generated native projects.
+- This is an Expo SDK 55 / React Native 0.83 app using Expo Router and generated native projects.
 - Treat `src/app` as routing composition, not the feature implementation layer.
 - Put feature code in `src/features/<feature>/`; put truly shared primitives in `src/components/` and infrastructure in `src/lib/`.
 - Native folders are generated and gitignored. Prefer `app.config.ts`, Expo config plugins, or package configuration; do not rely on hand edits that `prebuild --clean` will erase.

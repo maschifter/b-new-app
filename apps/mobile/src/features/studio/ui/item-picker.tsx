@@ -1,10 +1,21 @@
 import { BouncablePress } from "@/components/bouncable-press";
-import { CATALOG, fits } from "@bnewapp/studio-core";
+import { MobileQueryErrorBoundary } from "@/components/error-boundary";
+import { catalogAtom } from "@/features/catalog";
+import { type ContentRef, type Spot, fits } from "@bnewapp/studio-core";
 import { Image } from "expo-image";
-import { Modal, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { useAtomValue } from "jotai";
+import {
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { useStudio } from "../state/studio-provider";
 import { artSource } from "./art";
-import { itemColor, itemLabel } from "./placeholder";
+import { itemLabel } from "./placeholder";
 
 // Layout math for the item grid: 3 cards per row inside the sheet's
 // horizontal padding, separated by GRID_GAP. Card width is derived from the
@@ -27,7 +38,6 @@ export function ItemPicker() {
     : undefined;
   const visible = state.mode === "edit" && spot !== undefined;
   const current = spot ? state.map[spot.id] : undefined;
-  const compatible = spot ? CATALOG.filter((item) => fits(item, spot)) : [];
 
   // Subtract the sheet's L/R border (SHEET_BORDER each side, inside the box) as
   // well as its padding, then floor so 3 cards + 2 gaps never round *over* the
@@ -86,66 +96,117 @@ export function ItemPicker() {
           </View>
         </View>
 
-        <ScrollView contentContainerClassName="pb-2">
-          <View className="flex-row flex-wrap gap-3">
-            {compatible.map((item) => {
-              const isCurrent = current?.source === "catalog" && current.id === item.id;
-              const art = artSource(item.id);
-              return (
-                <BouncablePress
-                  key={item.id}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isCurrent }}
-                  onPress={() => spot && assign(spot.id, { source: "catalog", id: item.id })}
-                  className="items-center gap-[6px]"
-                  style={{ width: cardWidth }}
-                >
-                  {/* Large art tile so visually-distinct variants (e.g. stage vs
-                      stage-2) read at a glance; falls back to the type color. */}
-                  <View
-                    className={`aspect-square w-full items-center justify-center overflow-hidden rounded-2xl border ${isCurrent ? "border-2 border-neon" : "border-white/10"}`}
-                    style={{
-                      backgroundColor: itemColor(item),
-                      ...(isCurrent
-                        ? {
-                            shadowColor: NEON,
-                            shadowOpacity: 0.95,
-                            shadowRadius: 12,
-                            elevation: 12,
-                          }
-                        : undefined),
-                    }}
-                  >
-                    {art ? (
-                      <Image
-                        source={art}
-                        style={{ height: "88%", width: "88%" }}
-                        contentFit="contain"
-                      />
-                    ) : null}
-                    {isCurrent ? (
-                      <View className="absolute right-[6px] top-[6px] size-[22px] items-center justify-center rounded-full bg-neon">
-                        <Text className="text-[13px] font-black text-[#160E29]">✓</Text>
-                      </View>
-                    ) : null}
-                  </View>
-                  <Text
-                    className={`text-center text-xs ${isCurrent ? "font-extrabold text-foreground" : "font-semibold text-[#C9C6D6]"}`}
-                    numberOfLines={1}
-                  >
-                    {itemLabel(item.id)}
-                  </Text>
-                </BouncablePress>
-              );
-            })}
-          </View>
-
-          {compatible.length === 0 ? (
-            <Text className="py-6 text-center text-sm text-muted">No compatible items yet.</Text>
-          ) : null}
-        </ScrollView>
+        {spot ? (
+          <MobileQueryErrorBoundary
+            title="Couldn't refresh items"
+            copy="Your saved catalog is still available. Retry to check for new items."
+            retryLabel="Retry loading items"
+          >
+            <CatalogGrid
+              spot={spot}
+              current={current}
+              cardWidth={cardWidth}
+              onAssign={(itemId) => assign(spot.id, { source: "catalog", id: itemId })}
+            />
+          </MobileQueryErrorBoundary>
+        ) : null}
       </View>
     </Modal>
+  );
+}
+
+interface CatalogGridProps {
+  spot: Spot;
+  current: ContentRef | undefined;
+  cardWidth: number;
+  onAssign: (itemId: string) => void;
+}
+
+function CatalogGrid({ spot, current, cardWidth, onAssign }: CatalogGridProps) {
+  const query = useAtomValue(catalogAtom);
+  const compatible = query.data.items.filter((item) => item.art?.url && fits(item, spot));
+
+  return (
+    <ScrollView contentContainerClassName="pb-2">
+      {query.isError && !query.isFetching ? (
+        <View className="mb-3 items-center gap-2 rounded-xl border border-danger/40 bg-danger/10 p-3">
+          <Text accessibilityRole="alert" className="text-center text-xs text-foreground">
+            Couldn't refresh items. Showing your saved catalog.
+          </Text>
+          <BouncablePress
+            accessibilityRole="button"
+            accessibilityLabel="Retry refreshing catalog"
+            onPress={() => void query.refetch()}
+            className="rounded-lg border border-border px-3 py-2"
+          >
+            <Text className="text-xs font-bold text-foreground">Retry</Text>
+          </BouncablePress>
+        </View>
+      ) : query.isFetching ? (
+        <View className="mb-3 flex-row items-center justify-center gap-2">
+          <ActivityIndicator accessibilityLabel="Refreshing catalog" color={NEON} size="small" />
+          <Text className="text-xs text-muted">Checking for new items…</Text>
+        </View>
+      ) : null}
+      <View className="flex-row flex-wrap gap-3">
+        {compatible.map((item) => {
+          const isCurrent = current?.source === "catalog" && current.id === item.id;
+          const art = artSource(item);
+          const label = item.name ?? itemLabel(item.id);
+          return (
+            <BouncablePress
+              key={item.id}
+              accessibilityRole="button"
+              accessibilityLabel={label}
+              accessibilityState={{ selected: isCurrent }}
+              onPress={() => onAssign(item.id)}
+              className="items-center gap-[6px]"
+              style={{ width: cardWidth }}
+            >
+              <View
+                className={`aspect-square w-full items-center justify-center overflow-hidden rounded-2xl border bg-white/5 ${isCurrent ? "border-2 border-neon" : "border-white/10"}`}
+                style={{
+                  ...(isCurrent
+                    ? {
+                        shadowColor: NEON,
+                        shadowOpacity: 0.95,
+                        shadowRadius: 12,
+                        elevation: 12,
+                      }
+                    : undefined),
+                }}
+              >
+                {art ? (
+                  <Image
+                    source={art}
+                    style={{ height: "88%", width: "88%" }}
+                    contentFit="contain"
+                    cachePolicy="memory-disk"
+                  />
+                ) : null}
+                {isCurrent ? (
+                  <View className="absolute right-[6px] top-[6px] size-[22px] items-center justify-center rounded-full bg-neon">
+                    <Text className="text-[13px] font-black text-[#160E29]">✓</Text>
+                  </View>
+                ) : null}
+              </View>
+              <Text
+                className={`text-center text-xs ${isCurrent ? "font-extrabold text-foreground" : "font-semibold text-[#C9C6D6]"}`}
+                numberOfLines={1}
+              >
+                {label}
+              </Text>
+            </BouncablePress>
+          );
+        })}
+      </View>
+
+      {compatible.length === 0 ? (
+        <Text className="py-6 text-center text-sm text-muted">
+          No uploaded items available for this spot yet.
+        </Text>
+      ) : null}
+    </ScrollView>
   );
 }
 

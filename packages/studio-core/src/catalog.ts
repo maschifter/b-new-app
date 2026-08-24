@@ -1,10 +1,9 @@
 import type { CatalogItem } from "./types.ts";
 
-// Seed catalog for the Foundation stage. Placeholder items only — items with a
-// bundled tile in ../ui/art render as their art; the rest render as a labelled
-// colored block (color derived from its `type` tag, label from its id — see
-// ../ui/placeholder.ts). Tags are the semantic matching keys consumed by
-// `fits()`; presentation is derived separately so the domain stays art-free.
+// Seed catalog for the Foundation stage. Items have no art until an admin upload
+// supplies a remote URL, so clients keep them visually hidden until then.
+// Tags are the semantic matching keys consumed by `fits()`; presentation is
+// derived separately so the domain stays art-free.
 //
 // The `type` taxonomy mirrors the design's nine studio modules (design §
 // "DANCE STUDIO" module legend):
@@ -18,7 +17,7 @@ import type { CatalogItem } from "./types.ts";
 //   wall    — Wall Art          (posters / neon signs / mirrors / moodboards)
 //   decor   — Small Decor       (plants / skateboard / basketball / bottles)
 //
-// `type=video`/`type=preview` items are static screen placeholders here; real
+// `type=video`/`type=preview` items are screen metadata here; real
 // per-user video (source "video", UGC) is a later stage.
 
 export const CATALOG: CatalogItem[] = [
@@ -82,4 +81,9 @@ export const CATALOG: CatalogItem[] = [
 
 export function catalogItemById(id: string): CatalogItem | undefined {
   return CATALOG.find((item) => item.id === id);
+}
+
+/** Convert a catalog slug such as "big-screen" into its default display name. */
+export function defaultItemLabel(id: string): string {
+  return id.replace(/-/g, " ").replace(/\b\w/g, (character) => character.toUpperCase());
 }

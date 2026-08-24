@@ -1,9 +1,11 @@
+import InventoryIcon from "@mui/icons-material/Inventory";
 import PersonIcon from "@mui/icons-material/Person";
 import { Admin, Resource } from "react-admin";
 import { authProvider } from "./lib/auth-provider";
 import { dataProvider } from "./lib/data-provider";
 import { AdminLoginPage } from "./pages/admin-login-page";
 import { Dashboard } from "./pages/dashboard";
+import { CatalogCreate, CatalogEdit, CatalogList } from "./resources/catalog";
 import { UserEdit, UserList, UserShow } from "./resources/users";
 
 export function App() {
@@ -23,6 +25,14 @@ export function App() {
         edit={UserEdit}
         icon={PersonIcon}
         recordRepresentation="username"
+      />
+      <Resource
+        name="catalog"
+        list={CatalogList}
+        create={CatalogCreate}
+        edit={CatalogEdit}
+        icon={InventoryIcon}
+        recordRepresentation="display_name"
       />
     </Admin>
   );

@@ -6,6 +6,7 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, waitFor } from "@testing-library/react-native";
 import { Provider, createStore } from "jotai";
+import { queryClientAtom } from "jotai-tanstack-query";
 import type { ReactNode } from "react";
 
 import { getStudioRoom, saveStudioRoom } from "@/lib/api/client";
@@ -54,13 +55,20 @@ function signedInAs(userId: string) {
 function createQueryClient() {
   return new QueryClient({
     defaultOptions: {
-      queries: { gcTime: 0, retry: false },
-      mutations: { gcTime: 0, retry: false },
+      queries: { gcTime: Number.POSITIVE_INFINITY, retry: false },
+      mutations: { gcTime: Number.POSITIVE_INFINITY, retry: false },
     },
   });
 }
 
-function mountSync(store: Store, ownerId: string, client = createQueryClient()) {
+function testStore(client = createQueryClient()): Store {
+  const store = createStore();
+  store.set(queryClientAtom, client);
+  return store;
+}
+
+function mountSync(store: Store, ownerId: string, client = store.get(queryClientAtom)) {
+  store.set(queryClientAtom, client);
   const wrapper = ({ children }: { children: ReactNode }) => (
     <Provider store={store}>
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
@@ -79,7 +87,7 @@ describe("studio sync", () => {
   it("pulls the server room when the local room is untouched", async () => {
     signedInAs("user-1");
     mockedGetRoom.mockResolvedValue(room({ "floor-main": { source: "catalog", id: "stage" } }));
-    const store = createStore();
+    const store = testStore();
 
     mountSync(store, "user-1");
 
@@ -95,10 +103,36 @@ describe("studio sync", () => {
     expect(mockedSaveRoom).not.toHaveBeenCalled();
   });
 
+  it("does not push a pulled dynamic item while the remote catalog is still loading", async () => {
+    signedInAs("user-catalog-race");
+    const remoteSnapshot = snapshot({
+      "decor-1": { source: "catalog", id: "remote-plant" },
+    });
+    mockedGetRoom.mockResolvedValue({
+      ...room(remoteSnapshot.map),
+      ownerId: "user-catalog-race",
+      snapshot: remoteSnapshot,
+    });
+    const store = testStore();
+
+    mountSync(store, "user-catalog-race");
+
+    await waitFor(() =>
+      expect(store.get(syncedSnapshotAtom("user-catalog-race"))).toBe(
+        JSON.stringify(remoteSnapshot),
+      ),
+    );
+    // The bundled fallback cannot render an admin-added item, but that temporary
+    // catalog view must not make the pulled source snapshot look locally dirty.
+    expect(store.get(decorationAtom("user-catalog-race")).map).toEqual({});
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    expect(mockedSaveRoom).not.toHaveBeenCalled();
+  });
+
   it("refetches the room when Studio remounts after a new login", async () => {
     signedInAs("user-refetch");
-    const store = createStore();
     const client = createQueryClient();
+    const store = testStore(client);
     mockedGetRoom.mockResolvedValueOnce(
       room({ "floor-main": { source: "catalog", id: "stage" } }),
     );
@@ -128,7 +162,7 @@ describe("studio sync", () => {
     signedInAs("user-1");
     mockedGetRoom.mockResolvedValue(room({ "wall-art": { source: "catalog", id: "mirror" } }));
     mockedSaveRoom.mockImplementation((_token, next) => Promise.resolve(room(next.map)));
-    const store = createStore();
+    const store = testStore();
     seedRoom(store, "user-1", { "decor-2": { source: "catalog", id: "plant" } });
 
     mountSync(store, "user-1");
@@ -154,7 +188,7 @@ describe("studio sync", () => {
     mockedSaveRoom.mockResolvedValue(
       room({ "ceiling-light": { source: "catalog", id: "spotlight" } }),
     );
-    const store = createStore();
+    const store = testStore();
     seedRoom(store, "user-1", { "decor-2": { source: "catalog", id: "plant" } });
 
     mountSync(store, "user-1");
@@ -188,7 +222,7 @@ describe("studio sync", () => {
           }),
       )
       .mockImplementation((_token, next) => Promise.resolve(room(next.map)));
-    const store = createStore();
+    const store = testStore();
     seedRoom(store, "user-1", firstSnapshot.map);
 
     mountSync(store, "user-1");
@@ -212,7 +246,7 @@ describe("studio sync", () => {
     mockedGetRoom.mockResolvedValue(null);
     mockedSaveRoom.mockRejectedValueOnce(new Error("Offline"));
     mockedSaveRoom.mockImplementation((_token, next) => Promise.resolve(room(next.map)));
-    const store = createStore();
+    const store = testStore();
     seedRoom(store, "user-1", { "decor-2": { source: "catalog", id: "plant" } });
 
     mountSync(store, "user-1");
@@ -227,7 +261,7 @@ describe("studio sync", () => {
   it("does nothing for a room that is not the signed-in user's", async () => {
     signedInAs("user-2");
     mockedGetRoom.mockResolvedValue(room({}));
-    const store = createStore();
+    const store = testStore();
 
     mountSync(store, "user-1");
 

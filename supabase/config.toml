@@ -6,3 +6,8 @@ port = 54321
 
 [db]
 port = 54322
+
+[storage.buckets.catalog-art]
+public = true
+file_size_limit = "5MiB"
+allowed_mime_types = ["image/png", "image/jpeg", "image/webp"]

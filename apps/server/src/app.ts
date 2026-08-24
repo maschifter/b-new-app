@@ -1,5 +1,6 @@
 import cors from "@fastify/cors";
 import jwt, { type TokenOrHeader } from "@fastify/jwt";
+import multipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
 import sensible from "@fastify/sensible";
 import type { FastifyRequest } from "fastify";
@@ -8,11 +9,13 @@ import buildGetJwks from "get-jwks";
 import type { Env } from "./config.js";
 import { errorHandlerPlugin } from "./lib/errors.js";
 import { adminRoutes } from "./modules/admin/routes.js";
+import { catalogRoutes } from "./modules/catalog/routes.js";
 import { devRoutes } from "./modules/dev/routes.js";
 import { healthRoutes } from "./modules/health/routes.js";
 import { studioRoutes } from "./modules/studio/routes.js";
 import { userRoutes } from "./modules/user/routes.js";
 import { authPlugin } from "./plugins/auth.js";
+import { catalogPlugin } from "./plugins/catalog.js";
 import { supabasePlugin } from "./plugins/supabase.js";
 
 export async function buildApp(config: Env) {
@@ -37,6 +40,9 @@ export async function buildApp(config: Env) {
     methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   });
   await app.register(rateLimit, { max: config.RATE_LIMIT_MAX, timeWindow: "1 minute" });
+  await app.register(multipart, {
+    limits: { files: 1, fileSize: 5 * 1024 * 1024 },
+  });
   const getJwks = buildGetJwks();
   await app.register(jwt, {
     decode: { complete: true },
@@ -53,10 +59,12 @@ export async function buildApp(config: Env) {
     url: config.SUPABASE_URL,
     secretKey: config.SUPABASE_SECRET_KEY,
   });
+  await app.register(catalogPlugin);
   await app.register(authPlugin);
   await app.register(errorHandlerPlugin);
   await app.register(healthRoutes);
   await app.register(userRoutes, { prefix: "/api/user" });
+  await app.register(catalogRoutes, { prefix: "/api/studio" });
   await app.register(studioRoutes, { prefix: "/api/studio" });
   await app.register(adminRoutes, { prefix: "/api/admin" });
   if (config.NODE_ENV === "development" && config.DEV_ADMIN_SECRET) {

@@ -4,7 +4,7 @@ import type { DecorationSnapshot } from "@bnewapp/studio-core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAtom } from "jotai";
 import { useEffect, useRef } from "react";
-import { decorationAtom, hasStoredRoom, syncedSnapshotAtom } from "./atoms";
+import { hasStoredRoom, persistedDecorationAtom, syncedSnapshotAtom } from "./atoms";
 
 // Cloud sync for a user's studio room. Runs entirely as a side effect: it never
 // renders UI and never changes the useStudio() contract, so the screen is
@@ -40,7 +40,7 @@ function useStudioSync(ownerId: string) {
   // visited room, which fail this ownership check.
   const enabled = Boolean(token) && ownerId === session?.user.id;
 
-  const [snapshot, setSnapshot] = useAtom(decorationAtom(ownerId));
+  const [snapshot, setSnapshot] = useAtom(persistedDecorationAtom(ownerId));
   const [syncedJson, setSyncedJson] = useAtom(syncedSnapshotAtom(ownerId));
 
   const snapshotJson = JSON.stringify(snapshot);

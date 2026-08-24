@@ -1,5 +1,5 @@
 import { BouncablePress } from "@/components/bouncable-press";
-import type { ContentRef, Spot } from "@bnewapp/studio-core";
+import type { CatalogItem, ContentRef, Spot } from "@bnewapp/studio-core";
 import { Image } from "expo-image";
 import { Text, View } from "react-native";
 import type { ArtHitBox } from "./art";
@@ -16,14 +16,15 @@ interface SpotLayerProps {
   spot: Spot;
   frame: PixelFrame;
   content: ContentRef | undefined;
+  item: CatalogItem | undefined;
   selected: boolean;
   /** Render empty spots as a tappable outline (edit mode); hidden otherwise. */
   showEmpty: boolean;
   onPress?: (spotId: string) => void;
 }
 
-export function SpotLayer({ spot, frame, content, selected, showEmpty, onPress }: SpotLayerProps) {
-  const presentation = content ? describeContent(content) : null;
+export function SpotLayer({ spot, frame, content, item, selected, showEmpty, onPress }: SpotLayerProps) {
+  const presentation = content ? describeContent(content, item) : null;
 
   if (!presentation && !showEmpty) return null;
 
@@ -40,35 +41,20 @@ export function SpotLayer({ spot, frame, content, selected, showEmpty, onPress }
   const badgeSize = Math.round(Math.min(Math.min(frame.width, frame.height) * 0.34, 64));
 
   const body = presentation ? (
-    presentation.art ? (
-      // Real art: a transparent sprite fit whole (no distortion) inside the
-      // frame, no block chrome. `anchor` grounds floor-standing items to the
-      // frame's bottom edge (the floor line); wall/ceiling art stays centered.
-      <View
-        testID={`spot-content-${spot.id}`}
-        className={`flex-1 ${selected ? "rounded-[10px] border-2 border-neon" : ""}`}
-      >
-        <Image
-          source={presentation.art}
-          style={{ position: "absolute", inset: 0 }}
-          contentFit={presentation.artFit ?? "contain"}
-          contentPosition={spot.anchor === "bottom" ? "bottom" : "center"}
-          transition={200}
-        />
-        {presentation.isVideo ? <PlayBadge size={badgeSize} /> : null}
-      </View>
-    ) : (
-      // Fallback for items without art yet: the labelled colored block.
-      <View
-        testID={`spot-content-${spot.id}`}
-        className={`flex-1 items-center justify-center overflow-hidden rounded-[10px] p-[6px] ${selected ? "border-2 border-neon" : ""}`}
-        style={{ backgroundColor: presentation.color }}
-      >
-        <Text numberOfLines={2} className="text-center text-[13px] font-bold text-foreground">
-          {presentation.label}
-        </Text>
-      </View>
-    )
+    // Remote art is a transparent sprite fit inside the authored spot frame.
+    <View
+      testID={`spot-content-${spot.id}`}
+      className={`flex-1 ${selected ? "rounded-[10px] border-2 border-neon" : ""}`}
+    >
+      <Image
+        source={presentation.art}
+        style={{ position: "absolute", inset: 0 }}
+        contentFit={presentation.artFit ?? "contain"}
+        contentPosition={spot.anchor === "bottom" ? "bottom" : "center"}
+        transition={200}
+      />
+      {presentation.isVideo ? <PlayBadge size={badgeSize} /> : null}
+    </View>
   ) : (
     <View
       testID={`spot-empty-${spot.id}`}

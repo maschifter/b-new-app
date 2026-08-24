@@ -5,6 +5,12 @@
 /** Tags are a flat bag; values are single- or multi-valued. */
 export type Tags = Record<string, string | string[]>;
 
+/** Alpha-aware bounds measured in the source image's pixel coordinate space. */
+export interface ArtHitBox {
+  size: { width: number; height: number };
+  opaqueBounds: { x: number; y: number; width: number; height: number };
+}
+
 /**
  * A spot's accept rule is a predicate shape, not baked-in logic. Today it can
  * be the simplest AND-of-tags; it can grow to allow-lists without changing the
@@ -18,6 +24,8 @@ export type AcceptRule =
 export interface CatalogItem {
   id: string;
   tags: Tags; // type, size, …
+  name?: string;
+  art?: { url: string; hitbox?: ArtHitBox };
 }
 
 /** A fixed placement position in a room, defined by designers. */

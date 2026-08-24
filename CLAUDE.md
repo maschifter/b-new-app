@@ -13,7 +13,7 @@ locally and synced to the cloud.
 
 Key technologies:
 
-- **Mobile** (`apps/mobile`): Expo 54 + expo-router, React 19 / React Native 0.81,
+- **Mobile** (`apps/mobile`): Expo SDK 55 + Expo Router, React 19.2 / React Native 0.83,
   Jotai + react-native-mmkv for state, `@tanstack/react-query` for server data,
   Supabase Auth, expo-image for art.
 - **Server** (`apps/server`): Fastify 5, `@fastify/jwt`, Zod for input validation,
@@ -218,9 +218,8 @@ Key UI rules:
   above the boundary so suspense query atoms remain unconditionally enabled where mounted.
 - Keep explicit loading UI for pull-to-refresh, pagination, background refetches, mutations, and
   form submissions. Suspense does not replace those states.
-- Use `StyleSheet` for new UI. NativeWind is not part of the current mobile build contract; do not
-  introduce `className` patterns unless an explicit migration also adds and verifies the
-  dependency, Babel/Metro/CSS configuration, typing, tests, and updates these rules.
+- Use NativeWind `className` for static component styling. Keep React Native `style` for values
+  computed at runtime, animated styles, or third-party components without NativeWind interop.
 
 Compose feeds as **screen → list → item card**:
 
