@@ -7,6 +7,7 @@ function httpError(statusCode: number, message: string) {
 }
 
 const httpErrors = {
+  badRequest: (message: string) => httpError(400, message),
   conflict: (message: string) => httpError(409, message),
   notFound: (message: string) => httpError(404, message),
   internalServerError: (message: string) => httpError(500, message),
@@ -126,6 +127,17 @@ describe("admin catalog service", () => {
         sort_order: 40,
       }),
     ).rejects.toMatchObject({ statusCode: 409 });
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+
+  it("maps the access-price database constraint to a client error", async () => {
+    const query = builder({ data: null, error: { code: "23514" } });
+    const { service, invalidate } = serviceFor(query);
+
+    await expect(service.update(ROW.id, { price: 250 })).rejects.toMatchObject({
+      statusCode: 400,
+      message: "Free items must have no price; premium items require a positive Glow price",
+    });
     expect(invalidate).not.toHaveBeenCalled();
   });
 

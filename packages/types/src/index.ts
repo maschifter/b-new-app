@@ -27,6 +27,28 @@ export interface StudioCatalog {
   items: CatalogItemDTO[];
 }
 
+export interface Wallet {
+  glow: number;
+}
+
+export interface InventoryItem {
+  itemId: string;
+  acquiredAt: string;
+}
+
+export interface Inventory {
+  items: InventoryItem[];
+}
+
+export interface PurchaseItemBody {
+  itemId: string;
+}
+
+export interface PurchaseItemResult {
+  wallet: Wallet;
+  item: InventoryItem;
+}
+
 export type StudioCatalogResponse = ApiSuccess<StudioCatalog>;
 
 export interface HealthStatus {

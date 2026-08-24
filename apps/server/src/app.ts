@@ -12,6 +12,7 @@ import { adminRoutes } from "./modules/admin/routes.js";
 import { catalogRoutes } from "./modules/catalog/routes.js";
 import { devRoutes } from "./modules/dev/routes.js";
 import { healthRoutes } from "./modules/health/routes.js";
+import { shopRoutes } from "./modules/shop/routes.js";
 import { studioRoutes } from "./modules/studio/routes.js";
 import { userRoutes } from "./modules/user/routes.js";
 import { authPlugin } from "./plugins/auth.js";
@@ -66,6 +67,7 @@ export async function buildApp(config: Env) {
   await app.register(userRoutes, { prefix: "/api/user" });
   await app.register(catalogRoutes, { prefix: "/api/studio" });
   await app.register(studioRoutes, { prefix: "/api/studio" });
+  await app.register(shopRoutes, { prefix: "/api/shop" });
   await app.register(adminRoutes, { prefix: "/api/admin" });
   if (config.NODE_ENV === "development" && config.DEV_ADMIN_SECRET) {
     await app.register(devRoutes, {

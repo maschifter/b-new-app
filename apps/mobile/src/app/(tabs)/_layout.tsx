@@ -52,6 +52,10 @@ export default function TabsLayout() {
         options={{ title: "My Studio", tabBarIcon: tabIcon("home", "home-outline") }}
       />
       <Tabs.Screen
+        name="inventory"
+        options={{ title: "Inventory", tabBarIcon: tabIcon("bag", "bag-outline") }}
+      />
+      <Tabs.Screen
         name="explore"
         options={{ title: "Explore", tabBarIcon: tabIcon("compass", "compass-outline") }}
       />

@@ -45,7 +45,9 @@ function isTags(value: unknown): value is Tags {
 }
 
 function extraTags(tags: Tags): Tags {
-  return Object.fromEntries(Object.entries(tags).filter(([key]) => key !== "type" && key !== "size"));
+  return Object.fromEntries(
+    Object.entries(tags).filter(([key]) => key !== "type" && key !== "size"),
+  );
 }
 
 function firstTag(value: string | string[] | undefined): string {
@@ -94,10 +96,10 @@ export function CatalogTagsInput() {
   return (
     <Stack spacing={2} sx={{ maxWidth: 560 }}>
       <FormControl required>
-        <InputLabel id="catalog-type-label">Type</InputLabel>
+        <InputLabel id="catalog-type-label">Category</InputLabel>
         <Select
           labelId="catalog-type-label"
-          label="Type"
+          label="Category"
           value={firstTag(tags.type)}
           onChange={(event) => updateFixedTag("type", event.target.value)}
         >

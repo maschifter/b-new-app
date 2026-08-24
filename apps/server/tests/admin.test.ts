@@ -120,6 +120,23 @@ describe("admin catalog validation", () => {
     );
     expect(CreateCatalogItemRequest.safeParse({ ...valid, tags: { type: [] } }).success).toBe(false);
   });
+
+  it("requires a positive-price item to use premium access", () => {
+    const item = {
+      id: "paid-floor-light",
+      tags: { type: "floor", size: "M" },
+      display_name: "Paid Floor Light",
+      status: "draft",
+      sort_order: 41,
+      price: 250,
+    } as const;
+
+    expect(CreateCatalogItemRequest.safeParse({ ...item, access: "free" }).success).toBe(false);
+    expect(CreateCatalogItemRequest.safeParse({ ...item, access: "premium" }).success).toBe(true);
+    expect(
+      CreateCatalogItemRequest.safeParse({ ...item, access: "premium", price: null }).success,
+    ).toBe(false);
+  });
 });
 
 describe("development admin routes", () => {

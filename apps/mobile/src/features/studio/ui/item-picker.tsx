@@ -1,6 +1,7 @@
 import { BouncablePress } from "@/components/bouncable-press";
 import { MobileQueryErrorBoundary } from "@/components/error-boundary";
-import { catalogAtom } from "@/features/catalog";
+import { artSource, catalogAtom } from "@/features/catalog";
+import { ownedItemIdsAtom } from "@/features/shop";
 import { type ContentRef, type Spot, fits } from "@bnewapp/studio-core";
 import { Image } from "expo-image";
 import { useAtomValue } from "jotai";
@@ -14,7 +15,6 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useStudio } from "../state/studio-provider";
-import { artSource } from "./art";
 import { itemLabel } from "./placeholder";
 
 // Layout math for the item grid: 3 cards per row inside the sheet's
@@ -29,7 +29,7 @@ const SHEET_BORDER = 1;
 // items that `fits()` the spot -> pick one (assign) or remove the current one
 // (clear). Compatibility is enforced here at write time; reconcile re-checks it
 // at read time. This is presentation only — the studio logic is untouched.
-export function ItemPicker() {
+export function ItemPicker({ onOpenShop }: { onOpenShop?: () => void }) {
   const { state, template, selectSpot, assign, clear } = useStudio();
   const { width } = useWindowDimensions();
 
@@ -107,6 +107,14 @@ export function ItemPicker() {
               current={current}
               cardWidth={cardWidth}
               onAssign={(itemId) => assign(spot.id, { source: "catalog", id: itemId })}
+              onOpenShop={
+                onOpenShop
+                  ? () => {
+                      close();
+                      onOpenShop();
+                    }
+                  : undefined
+              }
             />
           </MobileQueryErrorBoundary>
         ) : null}
@@ -120,11 +128,30 @@ interface CatalogGridProps {
   current: ContentRef | undefined;
   cardWidth: number;
   onAssign: (itemId: string) => void;
+  onOpenShop?: () => void;
 }
 
-function CatalogGrid({ spot, current, cardWidth, onAssign }: CatalogGridProps) {
+function CatalogGrid({ spot, current, cardWidth, onAssign, onOpenShop }: CatalogGridProps) {
   const query = useAtomValue(catalogAtom);
-  const compatible = query.data.items.filter((item) => item.art?.url && fits(item, spot));
+  const owned = useAtomValue(ownedItemIdsAtom);
+  const compatible = query.data.items.filter(
+    (item) => item.art?.url && fits(item, spot) && owned.ids.has(item.id),
+  );
+
+  if (owned.isPending) {
+    return (
+      <View
+        testID="inventory-picker-loading"
+        accessible
+        className="items-center gap-3 py-10"
+        accessibilityRole="progressbar"
+        accessibilityLabel="Loading owned items"
+      >
+        <ActivityIndicator color={NEON} />
+        <Text className="text-sm text-muted">Loading your inventory…</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView contentContainerClassName="pb-2">
@@ -202,9 +229,21 @@ function CatalogGrid({ spot, current, cardWidth, onAssign }: CatalogGridProps) {
       </View>
 
       {compatible.length === 0 ? (
-        <Text className="py-6 text-center text-sm text-muted">
-          No uploaded items available for this spot yet.
-        </Text>
+        <View className="items-center gap-3 py-6">
+          <Text className="text-center text-sm text-muted">
+            You don't own a compatible item for this spot yet.
+          </Text>
+          {onOpenShop ? (
+            <BouncablePress
+              accessibilityRole="button"
+              accessibilityLabel="Buy more in the Shop"
+              onPress={onOpenShop}
+              className="min-h-11 justify-center rounded-xl bg-primary px-5"
+            >
+              <Text className="text-sm font-extrabold text-foreground">Buy more in the Shop</Text>
+            </BouncablePress>
+          ) : null}
+        </View>
       ) : null}
     </ScrollView>
   );

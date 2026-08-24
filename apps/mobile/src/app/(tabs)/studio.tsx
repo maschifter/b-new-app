@@ -15,6 +15,7 @@ export default function StudioTab() {
         ownerId={ownerId}
         avatarLabel={avatarLabel}
         onOpenProfile={() => router.push("/profile")}
+        onOpenShop={() => router.push("/shop")}
       />
     </>
   );

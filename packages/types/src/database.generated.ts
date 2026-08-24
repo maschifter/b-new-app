@@ -158,12 +158,69 @@ export type Database = {
           },
         ]
       }
+      user_items: {
+        Row: {
+          acquired_at: string
+          item_id: string
+          owner_id: string
+          source: string
+        }
+        Insert: {
+          acquired_at?: string
+          item_id: string
+          owner_id: string
+          source?: string
+        }
+        Update: {
+          acquired_at?: string
+          item_id?: string
+          owner_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_wallets: {
+        Row: {
+          glow: number
+          owner_id: string
+          starter_granted: boolean
+          updated_at: string
+        }
+        Insert: {
+          glow?: number
+          owner_id: string
+          starter_granted?: boolean
+          updated_at?: string
+        }
+        Update: {
+          glow?: number
+          owner_id?: string
+          starter_granted?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      purchase_item: {
+        Args: { p_item: string; p_owner: string }
+        Returns: {
+          out_acquired_at: string
+          out_glow: number
+          out_status: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

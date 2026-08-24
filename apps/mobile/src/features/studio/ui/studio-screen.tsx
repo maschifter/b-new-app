@@ -11,12 +11,22 @@ interface StudioScreenProps {
   avatarLabel?: string;
   /** Opens the profile screen; wired by the app so the feature stays route-agnostic. */
   onOpenProfile?: () => void;
+  onOpenShop?: () => void;
 }
 
-export function StudioScreen({ ownerId, avatarLabel, onOpenProfile }: StudioScreenProps) {
+export function StudioScreen({
+  ownerId,
+  avatarLabel,
+  onOpenProfile,
+  onOpenShop,
+}: StudioScreenProps) {
   return (
     <StudioProvider ownerId={ownerId}>
-      <StudioContent avatarLabel={avatarLabel} onOpenProfile={onOpenProfile} />
+      <StudioContent
+        avatarLabel={avatarLabel}
+        onOpenProfile={onOpenProfile}
+        onOpenShop={onOpenShop}
+      />
     </StudioProvider>
   );
 }
@@ -24,9 +34,11 @@ export function StudioScreen({ ownerId, avatarLabel, onOpenProfile }: StudioScre
 function StudioContent({
   avatarLabel,
   onOpenProfile,
+  onOpenShop,
 }: {
   avatarLabel?: string;
   onOpenProfile?: () => void;
+  onOpenShop?: () => void;
 }) {
   const { state, template, selectSpot } = useStudio();
 
@@ -66,7 +78,7 @@ function StudioContent({
         )}
       </SafeAreaView>
 
-      <ItemPicker />
+      <ItemPicker onOpenShop={onOpenShop} />
     </View>
   );
 }

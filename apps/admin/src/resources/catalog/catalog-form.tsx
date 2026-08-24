@@ -22,6 +22,16 @@ export function catalogEditableFields(record: Partial<CatalogRecord>) {
   };
 }
 
+function validatePrice(value: number | null | undefined, values: Partial<CatalogRecord>) {
+  if (values.access === "premium" && (value ?? 0) <= 0) {
+    return "Premium items require a positive Glow price";
+  }
+  if (values.access === "free" && (value ?? 0) > 0) {
+    return "Free items must use 0 or no price";
+  }
+  return undefined;
+}
+
 export function CatalogFormFields({ includeId = false }: { includeId?: boolean }) {
   const record = useRecordContext<CatalogRecord>();
 
@@ -54,13 +64,19 @@ export function CatalogFormFields({ includeId = false }: { includeId?: boolean }
       <SelectInput
         source="access"
         choices={[
-          { id: "free", name: "Free" },
-          { id: "premium", name: "Premium (ownership enforcement comes later)" },
+          { id: "free", name: "Free (granted to every user)" },
+          { id: "premium", name: "Premium (requires purchase)" },
         ]}
         validate={required()}
         fullWidth
       />
-      <NumberInput source="price" min={0} helperText="Reserved for the later economy phase." />
+      <NumberInput
+        source="price"
+        label="Glow price"
+        min={0}
+        validate={validatePrice}
+        helperText="Free items use 0 or no price; Premium items require a positive price."
+      />
       <NumberInput source="sort_order" label="Sort order" validate={required()} />
     </Stack>
   );

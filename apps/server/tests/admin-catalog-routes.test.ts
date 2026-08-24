@@ -59,6 +59,36 @@ describe("admin catalog routes", () => {
     await app.close();
   });
 
+  it("returns 400 for a free catalog item with a positive Glow price", async () => {
+    const supabase = { from: vi.fn() };
+    const app = await buildAdminCatalogApp(supabase);
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/admin/catalog",
+      payload: { ...VALID_BODY, price: 250 },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(supabase.from).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it("returns 400 for a premium catalog item without a positive Glow price", async () => {
+    const supabase = { from: vi.fn() };
+    const app = await buildAdminCatalogApp(supabase);
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/admin/catalog",
+      payload: { ...VALID_BODY, access: "premium", price: null },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(supabase.from).not.toHaveBeenCalled();
+    await app.close();
+  });
+
   it("returns 409 for a duplicate catalog id", async () => {
     const query = queryBuilder({ data: null, error: { code: "23505" } });
     const app = await buildAdminCatalogApp({ from: vi.fn().mockReturnValue(query) });

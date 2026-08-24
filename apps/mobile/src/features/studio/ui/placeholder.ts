@@ -1,6 +1,6 @@
+import { type ArtHitBox, artHitBox, artSource } from "@/features/catalog";
 import { type CatalogItem, type ContentRef, defaultItemLabel } from "@bnewapp/studio-core";
 import type { ImageSource } from "expo-image";
-import { type ArtHitBox, artHitBox, artSource } from "./art";
 
 // Presentation layer: only uploaded remote art is renderable. Seed metadata is
 // retained for offline reconciliation, but it must never become placeholder UI.

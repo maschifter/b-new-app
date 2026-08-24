@@ -51,6 +51,7 @@ export function CatalogList() {
         <FunctionField<CatalogRecord> label="Type" render={itemType} />
         <TextField source="status" />
         <TextField source="access" />
+        <NumberField source="price" label="Glow price" emptyText="—" />
         <NumberField source="sort_order" />
       </Datagrid>
     </List>

@@ -1,6 +1,7 @@
-import { act, fireEvent, render, screen } from "@testing-library/react-native";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
 import type { StudioCatalog } from "@bnewapp/types";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { Provider, createStore } from "jotai";
 import { queryClientAtom } from "jotai-tanstack-query";
 import { ItemPicker } from "../../ui/item-picker";
@@ -64,10 +65,21 @@ function Harness() {
 
 function mountStudio(store: ReturnType<typeof createStore>, ownerId: string) {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY, retry: false } },
+    defaultOptions: {
+      queries: {
+        gcTime: Number.POSITIVE_INFINITY,
+        retry: false,
+        staleTime: Number.POSITIVE_INFINITY,
+      },
+    },
   });
-  queryClient.setQueryData(["studio-catalog", null], UPLOADED_CATALOG);
   store.set(queryClientAtom, queryClient);
+  const inventoryUserId = "studio-persistence-inventory-user";
+  store.set(queryAuthAtom, { userId: inventoryUserId, accessToken: "token" });
+  queryClient.setQueryData(["studio-catalog", inventoryUserId], UPLOADED_CATALOG);
+  queryClient.setQueryData(["shop-inventory", inventoryUserId], {
+    items: [{ itemId: "plant", acquiredAt: "2026-08-24T08:00:00.000Z" }],
+  });
   const tree = (nextOwnerId: string) => (
     <QueryClientProvider client={queryClient}>
       <Provider store={store}>
@@ -77,9 +89,7 @@ function mountStudio(store: ReturnType<typeof createStore>, ownerId: string) {
       </Provider>
     </QueryClientProvider>
   );
-  const view = render(
-    tree(ownerId),
-  );
+  const view = render(tree(ownerId));
   // The stage only renders spots once it has measured a non-zero size.
   fireEvent(screen.getByTestId("studio-stage"), "layout", {
     nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 844 } },

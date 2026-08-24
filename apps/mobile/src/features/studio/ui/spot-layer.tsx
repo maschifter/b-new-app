@@ -1,8 +1,8 @@
 import { BouncablePress } from "@/components/bouncable-press";
+import type { ArtHitBox } from "@/features/catalog";
 import type { CatalogItem, ContentRef, Spot } from "@bnewapp/studio-core";
 import { Image } from "expo-image";
 import { Text, View } from "react-native";
-import type { ArtHitBox } from "./art";
 import { describeContent, itemLabel } from "./placeholder";
 
 export interface PixelFrame {
@@ -23,7 +23,15 @@ interface SpotLayerProps {
   onPress?: (spotId: string) => void;
 }
 
-export function SpotLayer({ spot, frame, content, item, selected, showEmpty, onPress }: SpotLayerProps) {
+export function SpotLayer({
+  spot,
+  frame,
+  content,
+  item,
+  selected,
+  showEmpty,
+  onPress,
+}: SpotLayerProps) {
   const presentation = content ? describeContent(content, item) : null;
 
   if (!presentation && !showEmpty) return null;

@@ -15,3 +15,4 @@ export {
   emptyDecoration,
 } from "./template.ts";
 export { coerceSnapshot } from "./coerce.ts";
+export { canAfford, resolvePrice } from "./shop.ts";
