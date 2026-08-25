@@ -4,7 +4,7 @@ import {
   type DecorationSnapshot,
 } from "@bnewapp/studio-core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, waitFor } from "@testing-library/react-native";
+import { act, render, renderHook, waitFor } from "@testing-library/react-native";
 import { Provider, createStore } from "jotai";
 import { queryClientAtom } from "jotai-tanstack-query";
 import type { ReactNode } from "react";
@@ -12,10 +12,14 @@ import type { ReactNode } from "react";
 import { getStudioRoom, saveStudioRoom } from "@/lib/api/client";
 import { useAuthSession } from "@/lib/auth/session-provider";
 import { decorationAtom, syncedSnapshotAtom } from "../atoms";
-import { StudioSync } from "../studio-sync";
+import { StudioSync, useStudioVisitorCount } from "../studio-sync";
 
 jest.mock("@/lib/auth/session-provider", () => ({ useAuthSession: jest.fn() }));
 jest.mock("@/lib/api/client", () => ({ getStudioRoom: jest.fn(), saveStudioRoom: jest.fn() }));
+const mockedUseFocusEffect = jest.fn();
+jest.mock("expo-router", () => ({
+  useFocusEffect: (effect: () => void) => mockedUseFocusEffect(effect),
+}));
 
 const mockedSession = useAuthSession as jest.Mock;
 const mockedGetRoom = getStudioRoom as jest.Mock;
@@ -84,6 +88,47 @@ afterEach(() => {
 });
 
 describe("studio sync", () => {
+  it("distinguishes a pending visitor count from a confirmed empty room", async () => {
+    signedInAs("user-1");
+    let resolveRoom: ((value: null) => void) | undefined;
+    mockedGetRoom.mockReturnValue(
+      new Promise((resolve) => {
+        resolveRoom = resolve;
+      }),
+    );
+    const client = createQueryClient();
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useStudioVisitorCount("user-1"), { wrapper });
+
+    expect(result.current).toBeUndefined();
+    const finishRoomRequest = resolveRoom;
+    if (!finishRoomRequest) throw new Error("Expected visitor count request to start");
+    act(() => finishRoomRequest(null));
+    await waitFor(() => expect(result.current).toBe(0));
+  });
+
+  it("refetches the visitor count whenever Studio receives focus", async () => {
+    signedInAs("user-1");
+    mockedGetRoom
+      .mockResolvedValueOnce({ ...room({}), visitorCount: 3 })
+      .mockResolvedValueOnce({ ...room({}), visitorCount: 4 });
+    const client = createQueryClient();
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useStudioVisitorCount("user-1"), { wrapper });
+
+    await waitFor(() => expect(result.current).toBe(3));
+    const focusEffect = mockedUseFocusEffect.mock.calls.at(-1)?.[0] as (() => void) | undefined;
+    if (!focusEffect) throw new Error("Expected Studio focus effect to be registered");
+    act(() => focusEffect());
+    await waitFor(() => expect(result.current).toBe(4));
+  });
+
   it("pulls the server room when the local room is untouched", async () => {
     signedInAs("user-1");
     mockedGetRoom.mockResolvedValue(room({ "floor-main": { source: "catalog", id: "stage" } }));

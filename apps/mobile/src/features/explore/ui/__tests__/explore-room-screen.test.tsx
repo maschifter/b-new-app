@@ -1,5 +1,5 @@
 import { CURRENT_VERSION, DEFAULT_TEMPLATE_ID } from "@bnewapp/studio-core";
-import type { ExploreRoom } from "@bnewapp/types";
+import type { VisitedStudioRoom } from "@bnewapp/types";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, renderAsync, screen } from "@testing-library/react-native";
 import { router } from "expo-router";
@@ -7,21 +7,22 @@ import { Provider, createStore } from "jotai";
 import { queryClientAtom } from "jotai-tanstack-query";
 
 import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
-import { getExploreRoom } from "../../api";
+import { visitExploreRoom } from "../../api";
 import { ExploreRoomScreen } from "../explore-room-screen";
 
 jest.mock("expo-router", () => ({ router: { back: jest.fn(), push: jest.fn() } }));
-jest.mock("../../api", () => ({ getExploreRoom: jest.fn(), getExploreRooms: jest.fn() }));
+jest.mock("../../api", () => ({ visitExploreRoom: jest.fn(), getExploreRooms: jest.fn() }));
 
-const mockedGetRoom = getExploreRoom as jest.Mock;
+const mockedGetRoom = visitExploreRoom as jest.Mock;
 const mockedBack = router.back as jest.Mock;
 
-function room(): ExploreRoom {
+function room(): VisitedStudioRoom {
   return {
     ownerId: "owner-1",
     username: "dancer-neo",
     snapshot: { version: CURRENT_VERSION, templateId: DEFAULT_TEMPLATE_ID, map: {} },
     updatedAt: "2026-08-01T00:00:00.000Z",
+    visitorCount: 12,
   };
 }
 
@@ -51,6 +52,8 @@ it("renders the visited room and a working back control on success", async () =>
   await mountRoom();
 
   await screen.findByText("dancer-neo");
+  expect(screen.getByText("Visitors: 12")).toBeOnTheScreen();
+  expect(screen.getByLabelText("12 room visitors")).toBeOnTheScreen();
   // The stage is hidden from assistive tech (the card summarizes it), so query
   // through the hidden elements to confirm it rendered.
   expect(screen.getByTestId("studio-stage", { includeHiddenElements: true })).toBeTruthy();

@@ -120,6 +120,38 @@ export type Database = {
         }
         Relationships: []
       }
+      room_visits: {
+        Row: {
+          id: number
+          room_id: string
+          room_owner_id: string
+          visited_at: string
+          visitor_id: string
+        }
+        Insert: {
+          id?: never
+          room_id: string
+          room_owner_id: string
+          visited_at?: string
+          visitor_id: string
+        }
+        Update: {
+          id?: never
+          room_id?: string
+          room_owner_id?: string
+          visited_at?: string
+          visitor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_visits_room_fk"
+            columns: ["room_id", "room_owner_id"]
+            isOneToOne: false
+            referencedRelation: "studio_rooms"
+            referencedColumns: ["id", "owner_id"]
+          },
+        ]
+      }
       studio_rooms: {
         Row: {
           created_at: string
@@ -213,6 +245,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      count_room_visitors: { Args: { p_room_id: string }; Returns: number }
       purchase_item: {
         Args: { p_item: string; p_owner: string }
         Returns: {

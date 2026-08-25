@@ -13,7 +13,13 @@ export function ExploreRoomShell({ children }: { children: ReactNode }) {
   );
 }
 
-export function ExploreRoomHeader({ username }: { username?: string }) {
+export function ExploreRoomHeader({
+  username,
+  visitorCount,
+}: {
+  username?: string;
+  visitorCount?: number;
+}) {
   return (
     <SafeAreaView
       edges={["top", "left", "right"]}
@@ -34,6 +40,15 @@ export function ExploreRoomHeader({ username }: { username?: string }) {
           <Text className="text-[15px] font-bold text-foreground" numberOfLines={1}>
             {username}
           </Text>
+        </View>
+      ) : null}
+      {visitorCount !== undefined ? (
+        <View
+          accessible
+          accessibilityLabel={`${visitorCount} room visitors`}
+          className="ml-auto rounded-[18px] bg-panel/70 px-[14px] py-2"
+        >
+          <Text className="text-[15px] font-bold text-foreground">Visitors: {visitorCount}</Text>
         </View>
       ) : null}
     </SafeAreaView>

@@ -117,6 +117,18 @@ describe("studio flow", () => {
       </Provider>,
     );
     expect(screen.getByTestId("studio-stage")).toBeTruthy();
+    expect(screen.queryByText("Visitors: 0")).not.toBeOnTheScreen();
+  });
+
+  it("shows the owner's total room visitors", () => {
+    render(
+      <Provider store={testStore()}>
+        <StudioScreen visitorCount={24} />
+      </Provider>,
+    );
+
+    expect(screen.getByText("Visitors: 24")).toBeOnTheScreen();
+    expect(screen.getByLabelText("24 room visitors")).toBeOnTheScreen();
   });
 
   it("tap spot -> pick a compatible item -> block appears in the spot", async () => {

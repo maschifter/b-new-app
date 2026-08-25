@@ -7,7 +7,14 @@ import {
   ROOM_TEMPLATE,
   templateById,
 } from "@bnewapp/studio-core";
-import type { ApiSuccess, ExploreRoom, ExploreRoomsPage, StudioRoom } from "@bnewapp/types";
+import type {
+  ApiSuccess,
+  ExploreRoom,
+  ExploreRoomsPage,
+  StudioRoom,
+  StudioRoomWithVisitorCount,
+  VisitedStudioRoom,
+} from "@bnewapp/types";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { CatalogUnavailableError } from "../catalog/service.js";
@@ -71,13 +78,21 @@ function buildExploreRoom(row: RawExploreRow, catalog: CatalogItem[]): ExploreRo
   return { ownerId: row.owner_id, snapshot, updatedAt: row.updated_at, username };
 }
 
+async function countRoomVisitors(app: FastifyInstance, roomId: string): Promise<number> {
+  const { data, error } = await app.supabase.rpc("count_room_visitors", { p_room_id: roomId });
+  if (error || data === null) {
+    throw app.httpErrors.internalServerError("Could not load the room visitor count");
+  }
+  return data;
+}
+
 export async function studioRoutes(app: FastifyInstance) {
   // Load the caller's room. Returns null when they have never saved one, so the
   // client can seed from its local sample decoration.
   app.get(
     "/room",
     { preHandler: app.authenticate },
-    async (request): Promise<ApiSuccess<StudioRoom | null>> => {
+    async (request): Promise<ApiSuccess<StudioRoomWithVisitorCount | null>> => {
       const { data: row, error } = await app.supabase
         .from("studio_rooms")
         .select(ROOM_COLUMNS)
@@ -101,9 +116,16 @@ export async function studioRoutes(app: FastifyInstance) {
         throw error;
       }
       const snapshot = reconcile(migrated, template, catalog);
+      const visitorCount = await countRoomVisitors(app, row.id);
 
       return {
-        data: { id: row.id, ownerId: row.owner_id, snapshot, updatedAt: row.updated_at },
+        data: {
+          id: row.id,
+          ownerId: row.owner_id,
+          snapshot,
+          updatedAt: row.updated_at,
+          visitorCount,
+        },
       };
     },
   );
@@ -147,9 +169,13 @@ export async function studioRoutes(app: FastifyInstance) {
         .single();
 
       if (error || !row) throw app.httpErrors.internalServerError("Could not save the studio room");
-
       return {
-        data: { id: row.id, ownerId: row.owner_id, snapshot, updatedAt: row.updated_at },
+        data: {
+          id: row.id,
+          ownerId: row.owner_id,
+          snapshot,
+          updatedAt: row.updated_at,
+        },
       };
     },
   );
@@ -206,12 +232,12 @@ export async function studioRoutes(app: FastifyInstance) {
     },
   );
 
-  // A single other user's room, read-only. Not filtered by emptiness: the client
-  // reaches it from the feed and a reconciled-empty room still renders as a bare stage.
-  app.get(
-    "/rooms/:ownerId",
+  // Record a visit, then return the room with its current total. The endpoint is
+  // intentionally a POST because opening this detail mutates the visit log.
+  app.post(
+    "/rooms/:ownerId/visits",
     { preHandler: app.authenticate },
-    async (request): Promise<ApiSuccess<ExploreRoom | null>> => {
+    async (request): Promise<ApiSuccess<VisitedStudioRoom | null>> => {
       const params = exploreParamsSchema.safeParse(request.params);
       if (!params.success) throw app.httpErrors.badRequest("Invalid room owner id");
 
@@ -224,8 +250,20 @@ export async function studioRoutes(app: FastifyInstance) {
       if (error) throw app.httpErrors.internalServerError("Could not load the room");
       if (!data) return { data: null };
 
+      if (data.owner_id !== request.user.sub) {
+        const { error: visitError } = await app.supabase.from("room_visits").insert({
+          room_id: data.id,
+          room_owner_id: data.owner_id,
+          visitor_id: request.user.sub,
+        });
+        if (visitError) throw app.httpErrors.internalServerError("Could not record the room visit");
+      }
+
       const { items: catalog } = await app.catalogService.getForRead();
-      return { data: buildExploreRoom(data, catalog) };
+      const room = buildExploreRoom(data, catalog);
+      if (!room) return { data: null };
+      const visitorCount = await countRoomVisitors(app, data.id);
+      return { data: { ...room, visitorCount } };
     },
   );
 }

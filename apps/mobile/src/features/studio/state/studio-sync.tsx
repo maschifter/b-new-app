@@ -2,8 +2,9 @@ import { getStudioRoom, saveStudioRoom } from "@/lib/api/client";
 import { useAuthSession } from "@/lib/auth/session-provider";
 import type { DecorationSnapshot } from "@bnewapp/studio-core";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useFocusEffect } from "expo-router";
 import { useAtom } from "jotai";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { hasStoredRoom, persistedDecorationAtom, syncedSnapshotAtom } from "./atoms";
 
 // Cloud sync for a user's studio room. Runs entirely as a side effect: it never
@@ -31,6 +32,30 @@ interface PendingPush {
 export function StudioSync({ ownerId }: { ownerId: string }) {
   useStudioSync(ownerId);
   return null;
+}
+
+export function useStudioVisitorCount(ownerId: string | undefined): number | undefined {
+  const { session } = useAuthSession();
+  const token = session?.access_token;
+  const enabled = Boolean(ownerId && token && ownerId === session?.user.id);
+  const roomQuery = useQuery({
+    queryKey: ["studio-room", ownerId],
+    queryFn: () => {
+      if (!token) throw new Error("Not authenticated");
+      return getStudioRoom(token);
+    },
+    enabled,
+    staleTime: 0,
+    retry: false,
+  });
+  const refetchRoom = roomQuery.refetch;
+  useFocusEffect(
+    useCallback(() => {
+      if (enabled) void refetchRoom();
+    }, [enabled, refetchRoom]),
+  );
+  if (roomQuery.data) return roomQuery.data.visitorCount;
+  return roomQuery.isSuccess ? 0 : undefined;
 }
 
 function useStudioSync(ownerId: string) {

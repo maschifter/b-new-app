@@ -17,7 +17,7 @@ import { getExploreRooms } from "../../api";
 import { ExploreScreen } from "../explore-screen";
 
 jest.mock("expo-router", () => ({ router: { push: jest.fn(), back: jest.fn() } }));
-jest.mock("../../api", () => ({ getExploreRooms: jest.fn(), getExploreRoom: jest.fn() }));
+jest.mock("../../api", () => ({ getExploreRooms: jest.fn(), visitExploreRoom: jest.fn() }));
 
 const mockedGetRooms = getExploreRooms as jest.Mock;
 

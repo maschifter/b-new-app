@@ -36,7 +36,7 @@ type QueryBuilder = Record<string, ReturnType<typeof vi.fn>>;
 function queryableRooms(result: { data: unknown; error: unknown }): QueryBuilder {
   const builder: QueryBuilder = {};
   const chain = () => builder;
-  for (const method of ["select", "eq", "neq", "order", "limit", "or"]) {
+  for (const method of ["select", "insert", "eq", "neq", "order", "limit", "or"]) {
     builder[method] = vi.fn(chain);
   }
   builder.maybeSingle = vi.fn(() => Promise.resolve(result));
@@ -68,7 +68,7 @@ const EMPTY_AFTER_RECONCILE = {
 };
 
 function registerStudio(
-  supabase: unknown,
+  supabase: Record<string, unknown>,
   catalogService = {
     getForRead: vi.fn().mockResolvedValue({ version: 0, items: CATALOG }),
     getAuthoritative: vi.fn().mockResolvedValue({ version: 0, items: CATALOG }),
@@ -80,9 +80,14 @@ function registerStudio(
     vi.fn((path: string, _options: unknown, routeHandler: Handler) => {
       handlers[`${method} ${path}`] = routeHandler;
     });
+  const supabaseClient = {
+    rpc: vi.fn().mockResolvedValue({ data: 0, error: null }),
+    ...supabase,
+  };
   const app = {
     authenticate: vi.fn(),
     get: capture("GET"),
+    post: capture("POST"),
     put: capture("PUT"),
     httpErrors: {
       badRequest: (message: string) => Object.assign(new Error(message), { statusCode: 400 }),
@@ -92,7 +97,7 @@ function registerStudio(
         Object.assign(new Error(message), { statusCode: 503 }),
     },
     catalogService,
-    supabase,
+    supabase: supabaseClient,
   };
   return { app, handlers };
 }
@@ -142,17 +147,27 @@ describe("studio room endpoints", () => {
     });
     const eq = vi.fn().mockReturnValue({ maybeSingle });
     const select = vi.fn().mockReturnValue({ eq });
-    const supabase = { from: vi.fn().mockReturnValue({ select }) };
+    const supabase = {
+      from: vi.fn().mockReturnValue({ select }),
+      rpc: vi.fn().mockResolvedValue({ data: 3, error: null }),
+    };
     const { app, handlers } = registerStudio(supabase);
     await studioRoutes(app as never);
 
     const response = (await getHandler(handlers, "GET /room")({ user: { sub: "user-1" } })) as {
-      data: { id: string; ownerId: string; updatedAt: string; snapshot: { map: object } };
+      data: {
+        id: string;
+        ownerId: string;
+        updatedAt: string;
+        visitorCount: number;
+        snapshot: { map: object };
+      };
     };
 
     expect(response.data.id).toBe("room-1");
     expect(response.data.ownerId).toBe("user-1");
     expect(response.data.updatedAt).toBe("2026-08-10T00:00:00.000Z");
+    expect(response.data.visitorCount).toBe(3);
     expect(response.data.snapshot.map).toHaveProperty("floor-main");
     expect(response.data.snapshot.map).not.toHaveProperty("ghost-spot");
   });
@@ -201,7 +216,9 @@ describe("studio room endpoints", () => {
     });
     const select = vi.fn().mockReturnValue({ single });
     const upsert = vi.fn().mockReturnValue({ select });
-    const supabase = { from: vi.fn().mockReturnValue({ upsert }) };
+    const supabase = {
+      from: vi.fn().mockReturnValue({ upsert }),
+    };
     const { app, handlers } = registerStudio(supabase);
     await studioRoutes(app as never);
 
@@ -225,6 +242,7 @@ describe("studio room endpoints", () => {
     expect(payload.map).toHaveProperty("floor-main");
     expect(payload.map).not.toHaveProperty("ghost-spot");
     expect(options).toEqual({ onConflict: "owner_id" });
+    expect(app.supabase.rpc).not.toHaveBeenCalled();
   });
 
   it("rejects an unknown template with a 400", async () => {
@@ -293,7 +311,10 @@ describe("explore rooms endpoints", () => {
     const app = await buildApp(testConfig);
 
     const list = await app.inject({ method: "GET", url: "/api/studio/rooms" });
-    const detail = await app.inject({ method: "GET", url: `/api/studio/rooms/${VALID_ID}` });
+    const detail = await app.inject({
+      method: "POST",
+      url: `/api/studio/rooms/${VALID_ID}/visits`,
+    });
 
     expect(list.statusCode).toBe(401);
     expect(detail.statusCode).toBe(401);
@@ -306,8 +327,8 @@ describe("explore rooms endpoints", () => {
 
     const list = await app.inject({ method: "GET", url: "/api/studio/rooms", headers });
     const detail = await app.inject({
-      method: "GET",
-      url: `/api/studio/rooms/${VALID_ID}`,
+      method: "POST",
+      url: `/api/studio/rooms/${VALID_ID}/visits`,
       headers,
     });
 
@@ -528,18 +549,89 @@ describe("explore rooms endpoints", () => {
 
   it("returns a single reconciled room with its owner handle", async () => {
     const builder = queryableRooms({ data: OTHER_ROOM, error: null });
-    const supabase = { from: vi.fn().mockReturnValue(builder) };
+    const rpc = vi.fn().mockResolvedValue({ data: 7, error: null });
+    const supabase = { from: vi.fn().mockReturnValue(builder), rpc };
     const { app, handlers } = registerStudio(supabase);
     await studioRoutes(app as never);
 
-    const response = (await getHandler(handlers, "GET /rooms/:ownerId")({
+    const response = (await getHandler(handlers, "POST /rooms/:ownerId/visits")({
       user: { sub: "user-1" },
       params: { ownerId: VALID_ID },
-    })) as { data: { ownerId: string; username: string; snapshot: { map: object } } | null };
+    })) as {
+      data: {
+        ownerId: string;
+        username: string;
+        visitorCount: number;
+        snapshot: { map: object };
+      } | null;
+    };
 
     expect(builder.eq).toHaveBeenCalledWith("owner_id", VALID_ID);
-    expect(response.data).toMatchObject({ ownerId: "user-2", username: "dancer-000002" });
+    expect(builder.insert).toHaveBeenCalledWith({
+      room_id: OTHER_ROOM.id,
+      room_owner_id: OTHER_ROOM.owner_id,
+      visitor_id: "user-1",
+    });
+    expect(rpc).toHaveBeenCalledWith("count_room_visitors", { p_room_id: OTHER_ROOM.id });
+    expect(response.data).toMatchObject({
+      ownerId: "user-2",
+      username: "dancer-000002",
+      visitorCount: 7,
+    });
     expect(response.data?.snapshot.map).toHaveProperty("floor-main");
+  });
+
+  it("returns the count without logging when an owner opens their own room route", async () => {
+    const ownRoom = { ...OTHER_ROOM, owner_id: "user-1" };
+    const builder = queryableRooms({ data: ownRoom, error: null });
+    const supabase = {
+      from: vi.fn().mockReturnValue(builder),
+      rpc: vi.fn().mockResolvedValue({ data: 5, error: null }),
+    };
+    const { app, handlers } = registerStudio(supabase);
+    await studioRoutes(app as never);
+
+    const response = (await getHandler(handlers, "POST /rooms/:ownerId/visits")({
+      user: { sub: "user-1" },
+      params: { ownerId: VALID_ID },
+    })) as { data: { visitorCount: number } | null };
+
+    expect(builder.insert).not.toHaveBeenCalled();
+    expect(response.data?.visitorCount).toBe(5);
+  });
+
+  it("fails the visit request when the unique visitor count cannot be loaded", async () => {
+    const builder = queryableRooms({ data: OTHER_ROOM, error: null });
+    const supabase = {
+      from: vi.fn().mockReturnValue(builder),
+      rpc: vi.fn().mockResolvedValue({ data: null, error: { message: "boom" } }),
+    };
+    const { app, handlers } = registerStudio(supabase);
+    await studioRoutes(app as never);
+
+    await expect(
+      getHandler(handlers, "POST /rooms/:ownerId/visits")({
+        user: { sub: "user-1" },
+        params: { ownerId: VALID_ID },
+      }),
+    ).rejects.toMatchObject({ statusCode: 500 });
+  });
+
+  it("fails the visit request when the visit log cannot be stored", async () => {
+    const room = queryableRooms({ data: OTHER_ROOM, error: null });
+    const failedVisit = queryableRooms({ data: null, error: { message: "boom" } });
+    const supabase = {
+      from: vi.fn().mockReturnValueOnce(room).mockReturnValueOnce(failedVisit),
+    };
+    const { app, handlers } = registerStudio(supabase);
+    await studioRoutes(app as never);
+
+    await expect(
+      getHandler(handlers, "POST /rooms/:ownerId/visits")({
+        user: { sub: "user-1" },
+        params: { ownerId: VALID_ID },
+      }),
+    ).rejects.toMatchObject({ statusCode: 500 });
   });
 
   it("returns null when the requested room does not exist", async () => {
@@ -548,7 +640,7 @@ describe("explore rooms endpoints", () => {
     const { app, handlers } = registerStudio(supabase);
     await studioRoutes(app as never);
 
-    const response = await getHandler(handlers, "GET /rooms/:ownerId")({
+    const response = await getHandler(handlers, "POST /rooms/:ownerId/visits")({
       user: { sub: "user-1" },
       params: { ownerId: VALID_ID },
     });
@@ -562,7 +654,7 @@ describe("explore rooms endpoints", () => {
     await studioRoutes(app as never);
 
     await expect(
-      getHandler(handlers, "GET /rooms/:ownerId")({
+      getHandler(handlers, "POST /rooms/:ownerId/visits")({
         user: { sub: "user-1" },
         params: { ownerId: "not-a-uuid" },
       }),
@@ -577,7 +669,7 @@ describe("explore rooms endpoints", () => {
     await studioRoutes(app as never);
 
     await expect(
-      getHandler(handlers, "GET /rooms/:ownerId")({
+      getHandler(handlers, "POST /rooms/:ownerId/visits")({
         user: { sub: "user-1" },
         params: { ownerId: VALID_ID },
       }),

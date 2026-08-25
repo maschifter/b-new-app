@@ -1,5 +1,10 @@
 import { apiUrl } from "@/lib/api/client";
-import type { ApiSuccess, ExploreRoom, ExploreRoomsCursor, ExploreRoomsPage } from "@bnewapp/types";
+import type {
+  ApiSuccess,
+  ExploreRoomsCursor,
+  ExploreRoomsPage,
+  VisitedStudioRoom,
+} from "@bnewapp/types";
 
 interface GetExploreRoomsParams {
   limit?: number;
@@ -28,16 +33,18 @@ export async function getExploreRooms(
   return body.data;
 }
 
-// A single other user's room, read-only. `null` when the owner has no room.
-export async function getExploreRoom(
+// Record a visit to another user's room, then return its read-only detail.
+// Returns `null` when the owner has no room.
+export async function visitExploreRoom(
   accessToken: string,
   ownerId: string,
-): Promise<ExploreRoom | null> {
-  const response = await fetch(`${apiUrl}/api/studio/rooms/${ownerId}`, {
+): Promise<VisitedStudioRoom | null> {
+  const response = await fetch(`${apiUrl}/api/studio/rooms/${ownerId}/visits`, {
+    method: "POST",
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!response.ok) throw new Error("Unable to load this studio");
 
-  const body = (await response.json()) as ApiSuccess<ExploreRoom | null>;
+  const body = (await response.json()) as ApiSuccess<VisitedStudioRoom | null>;
   return body.data;
 }

@@ -7,7 +7,7 @@ import {
   atomWithSuspenseInfiniteQuery,
   atomWithSuspenseQuery,
 } from "jotai-tanstack-query";
-import { getExploreRoom, getExploreRooms } from "../api";
+import { getExploreRooms, visitExploreRoom } from "../api";
 
 const EXPLORE_PAGE_LIMIT = 20;
 
@@ -47,8 +47,11 @@ export const exploreRoomQueryAtomFamily = atomFamily((ownerId: string) =>
       queryKey: ["explore-room", auth?.userId ?? null, ownerId],
       queryFn: async () => {
         if (!auth) throw new Error("Not authenticated");
-        return getExploreRoom(auth.accessToken, ownerId);
+        return visitExploreRoom(auth.accessToken, ownerId);
       },
+      // This request appends a visit. Retrying after an ambiguous network error
+      // could store the same screen opening more than once.
+      retry: false,
     };
   }),
 );

@@ -3,6 +3,7 @@ import type {
   HealthStatus,
   SaveStudioRoomBody,
   StudioRoom,
+  StudioRoomWithVisitorCount,
   UserProfile,
 } from "@bnewapp/types";
 import Constants from "expo-constants";
@@ -57,13 +58,15 @@ export async function getCurrentUser(accessToken: string): Promise<UserProfile> 
   return body.data;
 }
 
-export async function getStudioRoom(accessToken: string): Promise<StudioRoom | null> {
+export async function getStudioRoom(
+  accessToken: string,
+): Promise<StudioRoomWithVisitorCount | null> {
   const response = await fetch(`${apiUrl}/api/studio/room`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!response.ok) throw new Error("Unable to load your studio room");
 
-  const body = (await response.json()) as ApiSuccess<StudioRoom | null>;
+  const body = (await response.json()) as ApiSuccess<StudioRoomWithVisitorCount | null>;
   return body.data;
 }
 

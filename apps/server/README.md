@@ -84,7 +84,7 @@ Admin endpoints additionally use `app.requireAdmin`, which requires the verified
 | `GET`          | `/api/studio/room`             | user       | Current user's saved studio room, or `null`             |
 | `PUT`          | `/api/studio/room`             | user       | Reconcile and upsert the current user's studio snapshot |
 | `GET`          | `/api/studio/rooms`            | user       | Cursor-paginated Explore feed of other users' rooms     |
-| `GET`          | `/api/studio/rooms/:ownerId`   | user       | A user's room for read-only Explore detail              |
+| `POST`         | `/api/studio/rooms/:ownerId/visits` | user    | Record a visit and return the room with its visitor count |
 | `GET`          | `/api/admin/users`             | admin      | Paginated, searchable user list                         |
 | `GET`          | `/api/admin/users/:id`         | admin      | User, auth, and studio-room details                      |
 | `PUT`, `PATCH` | `/api/admin/users/:id`         | admin      | Update allowlisted user fields                          |

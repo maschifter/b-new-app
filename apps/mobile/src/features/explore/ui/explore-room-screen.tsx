@@ -46,7 +46,7 @@ function ExploreRoomContent({ ownerId }: { ownerId: string }) {
       >
         <StudioStage template={template} map={room.snapshot.map} mode="visit" />
       </View>
-      <ExploreRoomHeader username={room.username} />
+      <ExploreRoomHeader username={room.username} visitorCount={room.visitorCount} />
     </View>
   );
 }

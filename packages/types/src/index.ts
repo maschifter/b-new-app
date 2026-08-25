@@ -104,6 +104,11 @@ export interface StudioRoom {
   updatedAt: string;
 }
 
+/** The owner's room detail, including the aggregate displayed in Studio. */
+export type StudioRoomWithVisitorCount = StudioRoom & {
+  visitorCount: number;
+};
+
 /** Body for PUT /api/studio/room — the full decoration snapshot to persist. */
 export type SaveStudioRoomBody = DecorationSnapshot;
 
@@ -114,6 +119,11 @@ export type SaveStudioRoomBody = DecorationSnapshot;
  */
 export type ExploreRoom = Omit<StudioRoom, "id"> & {
   username: string;
+};
+
+/** A room detail returned after recording an authenticated visitor's visit. */
+export type VisitedStudioRoom = ExploreRoom & {
+  visitorCount: number;
 };
 
 /** Keyset cursor for the Explore feed, ordered by (updatedAt desc, id desc). */

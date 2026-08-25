@@ -7,6 +7,7 @@ import { StudioStage } from "./studio-stage";
 
 interface StudioScreenProps {
   ownerId?: string;
+  visitorCount?: number;
   /** Single letter shown inside the floating avatar (e.g. the account initial). */
   avatarLabel?: string;
   /** Opens the profile screen; wired by the app so the feature stays route-agnostic. */
@@ -16,6 +17,7 @@ interface StudioScreenProps {
 
 export function StudioScreen({
   ownerId,
+  visitorCount,
   avatarLabel,
   onOpenProfile,
   onOpenShop,
@@ -24,6 +26,7 @@ export function StudioScreen({
     <StudioProvider ownerId={ownerId}>
       <StudioContent
         avatarLabel={avatarLabel}
+        visitorCount={visitorCount}
         onOpenProfile={onOpenProfile}
         onOpenShop={onOpenShop}
       />
@@ -33,10 +36,12 @@ export function StudioScreen({
 
 function StudioContent({
   avatarLabel,
+  visitorCount,
   onOpenProfile,
   onOpenShop,
 }: {
   avatarLabel?: string;
+  visitorCount?: number;
   onOpenProfile?: () => void;
   onOpenShop?: () => void;
 }) {
@@ -76,6 +81,15 @@ function StudioContent({
         ) : (
           <View />
         )}
+        {visitorCount !== undefined ? (
+          <View
+            accessible
+            accessibilityLabel={`${visitorCount} room visitors`}
+            className="rounded-[18px] bg-panel/70 px-[14px] py-2"
+          >
+            <Text className="text-[15px] font-bold text-foreground">Visitors: {visitorCount}</Text>
+          </View>
+        ) : null}
       </SafeAreaView>
 
       <ItemPicker onOpenShop={onOpenShop} />
