@@ -2,7 +2,8 @@
 
 ## Project Environment
 
-- BNewApp is an Expo 55 / React Native 0.83 development-build app with Expo Router.
+- Environment last inspected on 2026-08-25.
+- BNewApp is an Expo 55.0.28 / React Native 0.83.10 development-build app with Expo Router.
 - Mobile supports iOS and Android; native projects are generated on demand and gitignored.
   Generate them through the repository prebuild/run scripts; never depend on manual native edits.
 - Use `corepack pnpm@10.13.1` from the repository root.
@@ -11,6 +12,8 @@
   port to `expo run:ios` / `expo run:android` rather than stopping the unrelated server.
 - Mobile validation commands are `corepack pnpm --filter @bnewapp/mobile typecheck`,
   `corepack pnpm --filter @bnewapp/mobile test`, and `corepack pnpm lint`.
+- The API server defaults to port 3000. Server and domain tests use Vitest; mobile tests use Jest
+  with React Native Testing Library. No dedicated end-to-end test framework is configured.
 - Argent 0.19.0 is installed. Production, staging, and development bundle IDs are
   `com.bnewapp.mobile`, `com.bnewapp.mobile.staging`, and `com.bnewapp.mobile.dev`.
 - This is a development-build app with native modules, so Expo Go is insufficient;
