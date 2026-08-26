@@ -1,12 +1,13 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { contentRange, parseListQuery } from "../../lib/react-admin.js";
 import { InvalidCatalogArtError } from "../catalog/art.js";
-import { createAdminCatalogService } from "./catalog-service.js";
 import {
   CatalogIdParam,
   CreateCatalogItemRequest,
   UpdateCatalogItemRequest,
 } from "./catalog-schemas.js";
+import { createAdminCatalogService } from "./catalog-service.js";
+import { danceContentRoutes } from "./dance-content-routes.js";
 import { UpdateUserRequest, UserIdParam } from "./schemas.js";
 import { createAdminService } from "./service.js";
 
@@ -18,6 +19,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
     fastify.catalogService.invalidate,
   );
   fastify.addHook("preHandler", fastify.requireAdmin);
+  await fastify.register(danceContentRoutes);
 
   fastify.get("/users", async (request, reply) => {
     let listQuery: ReturnType<typeof parseListQuery>;

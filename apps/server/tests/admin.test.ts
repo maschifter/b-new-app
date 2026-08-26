@@ -4,8 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 import { buildApp } from "../src/app.js";
 import { loadConfig } from "../src/config.js";
 import { contentRange, parseListQuery } from "../src/lib/react-admin.js";
-import { UpdateUserRequest } from "../src/modules/admin/schemas.js";
 import { CreateCatalogItemRequest } from "../src/modules/admin/catalog-schemas.js";
+import { UpdateUserRequest } from "../src/modules/admin/schemas.js";
 import { createAdminService } from "../src/modules/admin/service.js";
 import { devRoutes } from "../src/modules/dev/routes.js";
 import { authPlugin, isAdmin } from "../src/plugins/auth.js";
@@ -32,7 +32,11 @@ const httpErrors = {
   internalServerError: (message: string) => httpError(500, message),
 } as const;
 
-type QueryResult = { data: unknown; error: { code?: string; message: string } | null; count?: number };
+type QueryResult = {
+  data: unknown;
+  error: { code?: string; message: string } | null;
+  count?: number;
+};
 
 function queryBuilder(result: QueryResult) {
   const builder: Record<string, ReturnType<typeof vi.fn>> = {};
@@ -65,9 +69,15 @@ describe("admin authorization", () => {
     const app = await buildApp(testConfig);
     const users = await app.inject({ method: "GET", url: "/api/admin/users" });
     const catalog = await app.inject({ method: "GET", url: "/api/admin/catalog" });
+    const genres = await app.inject({ method: "GET", url: "/api/admin/dance-genres" });
+    const tracks = await app.inject({ method: "GET", url: "/api/admin/music-tracks" });
+    const moves = await app.inject({ method: "GET", url: "/api/admin/dance-moves" });
     const upload = await app.inject({ method: "POST", url: "/api/admin/catalog/plant/art" });
     expect(users.statusCode).toBe(401);
     expect(catalog.statusCode).toBe(401);
+    expect(genres.statusCode).toBe(401);
+    expect(tracks.statusCode).toBe(401);
+    expect(moves.statusCode).toBe(401);
     expect(upload.statusCode).toBe(401);
     await app.close();
   });
@@ -118,7 +128,9 @@ describe("admin catalog validation", () => {
     expect(CreateCatalogItemRequest.safeParse({ ...valid, id: "New Floor Light" }).success).toBe(
       false,
     );
-    expect(CreateCatalogItemRequest.safeParse({ ...valid, tags: { type: [] } }).success).toBe(false);
+    expect(CreateCatalogItemRequest.safeParse({ ...valid, tags: { type: [] } }).success).toBe(
+      false,
+    );
   });
 
   it("requires a positive-price item to use premium access", () => {

@@ -1,4 +1,5 @@
 import type { CatalogItem, DecorationSnapshot } from "@bnewapp/studio-core";
+import type { Database } from "./database.generated.js";
 
 export type { Database } from "./database.generated.js";
 
@@ -13,6 +14,26 @@ export interface ApiError {
 
 export type CatalogItemStatus = "draft" | "published";
 export type CatalogItemAccess = "free" | "premium";
+export type DanceContentStatus = "draft" | "published";
+
+export type AdminDanceGenre = Omit<
+  Database["public"]["Tables"]["dance_genres"]["Row"],
+  "status"
+> & {
+  status: DanceContentStatus;
+};
+
+export type AdminMusicTrack = Omit<
+  Database["public"]["Tables"]["music_tracks"]["Row"],
+  "status"
+> & {
+  status: DanceContentStatus;
+};
+
+export type AdminDanceMove = Omit<Database["public"]["Tables"]["dance_moves"]["Row"], "status"> & {
+  status: DanceContentStatus;
+  genre_ids: string[];
+};
 
 /** Published catalog item returned by the server to authenticated clients. */
 export interface CatalogItemDTO extends CatalogItem {
