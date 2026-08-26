@@ -3,7 +3,7 @@ const BUCKET = "dance-media";
 const DEFAULT_SOURCE_HOST = "amazonaws.com";
 const READ_BATCH_SIZE = 1_000;
 const CONCURRENCY = 6;
-const DOWNLOAD_TIMEOUT_MS = 120_000;
+const DOWNLOAD_TIMEOUT_MS = 600_000;
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAYS_MS = [1_000, 5_000];
 const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
@@ -89,12 +89,17 @@ function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-async function fetchWithRetry(url, options, label) {
+// timeoutMs creates a fresh AbortSignal per attempt — a shared signal would stay
+// aborted after the first timeout and turn every retry into an instant failure.
+async function fetchWithRetry(url, { timeoutMs, ...options }, label) {
   for (let attempt = 1; ; attempt += 1) {
     let response;
 
     try {
-      response = await fetch(url, options);
+      response = await fetch(
+        url,
+        timeoutMs === undefined ? options : { ...options, signal: AbortSignal.timeout(timeoutMs) },
+      );
     } catch (error) {
       if (attempt >= MAX_ATTEMPTS) {
         throw new Error(`${label} failed after ${attempt} attempts: ${error.message}`);
@@ -241,7 +246,7 @@ function publicUrlFor(environment, objectPath) {
 async function downloadSource(sourceUrl) {
   const response = await fetchWithRetry(
     sourceUrl,
-    { signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS) },
+    { timeoutMs: DOWNLOAD_TIMEOUT_MS },
     `download ${sourceUrl}`,
   );
 
