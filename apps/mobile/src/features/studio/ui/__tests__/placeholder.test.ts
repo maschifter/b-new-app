@@ -36,14 +36,11 @@ describe("describeContent", () => {
 
   it("flags video and preview screens so the spot renders a play badge", () => {
     expect(
-      describeContent({ source: "catalog", id: "big-screen" }, uploadedItem("big-screen"))
-        ?.isVideo,
+      describeContent({ source: "catalog", id: "big-screen" }, uploadedItem("big-screen"))?.isVideo,
     ).toBe(true);
     expect(
-      describeContent(
-        { source: "catalog", id: "preview-screen" },
-        uploadedItem("preview-screen"),
-      )?.isVideo,
+      describeContent({ source: "catalog", id: "preview-screen" }, uploadedItem("preview-screen"))
+        ?.isVideo,
     ).toBe(true);
     expect(
       describeContent({ source: "catalog", id: "plant" }, uploadedItem("plant"))?.isVideo,

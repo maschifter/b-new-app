@@ -178,9 +178,7 @@ describe("studio sync", () => {
     signedInAs("user-refetch");
     const client = createQueryClient();
     const store = testStore(client);
-    mockedGetRoom.mockResolvedValueOnce(
-      room({ "floor-main": { source: "catalog", id: "stage" } }),
-    );
+    mockedGetRoom.mockResolvedValueOnce(room({ "floor-main": { source: "catalog", id: "stage" } }));
 
     const firstMount = mountSync(store, "user-refetch", client);
     await waitFor(() =>
@@ -190,9 +188,7 @@ describe("studio sync", () => {
     );
     firstMount.unmount();
 
-    mockedGetRoom.mockResolvedValueOnce(
-      room({ "wall-art": { source: "catalog", id: "mirror" } }),
-    );
+    mockedGetRoom.mockResolvedValueOnce(room({ "wall-art": { source: "catalog", id: "mirror" } }));
     mountSync(store, "user-refetch", client);
 
     await waitFor(() =>

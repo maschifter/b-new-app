@@ -4,7 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 import { danceContentRoutes } from "../src/modules/admin/dance-content-routes.js";
 import {
   CreateDanceMoveRequest,
+  CreateMusicTrackRequest,
   DanceMoveListFilter,
+  UpdateDanceMoveRequest,
 } from "../src/modules/admin/dance-content-schemas.js";
 import { createAdminDanceMovesService } from "../src/modules/admin/dance-moves-service.js";
 import { createAdminMusicTracksService } from "../src/modules/admin/music-tracks-service.js";
@@ -80,7 +82,7 @@ const httpErrors = {
 };
 
 describe("admin dance content validation", () => {
-  it("requires a main video for a published move", () => {
+  it("requires pro dancer and dancer tip videos for a dance move", () => {
     const body = {
       title: "Body Roll",
       description: null,
@@ -95,15 +97,35 @@ describe("admin dance content validation", () => {
       presentation_video_url: null,
       film_yourself_video_url: null,
       music_id: null,
-      status: "published",
+      status: "draft",
       sort_order: 1,
     };
 
     const result = CreateDanceMoveRequest.safeParse(body);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0]?.message).toBe("A published move requires a main video URL");
+      expect(result.error.issues.map((issue) => issue.path.join("."))).toEqual(
+        expect.arrayContaining(["pro_dancer_video_url", "dancer_tip_video_url"]),
+      );
     }
+  });
+
+  it("does not allow required dance move videos to be cleared during an update", () => {
+    expect(UpdateDanceMoveRequest.safeParse({ pro_dancer_video_url: null }).success).toBe(false);
+    expect(UpdateDanceMoveRequest.safeParse({ dancer_tip_video_url: null }).success).toBe(false);
+  });
+
+  it("requires artist, audio, and thumbnail for a music track", () => {
+    expect(
+      CreateMusicTrackRequest.safeParse({
+        title: "Track",
+        artist: null,
+        audio_url: "https://example.com/track.mp3",
+        thumbnail_url: null,
+        status: "draft",
+        sort_order: 1,
+      }).success,
+    ).toBe(false);
   });
 
   it("validates numeric levels and UUID id arrays", () => {
@@ -185,9 +207,9 @@ describe("admin dance move service", () => {
         bpm: null,
         thumbnail_url: null,
         main_video_url: null,
-        pro_dancer_video_url: null,
+        pro_dancer_video_url: "https://example.com/pro.mp4",
         pro_dancer_image_url: null,
-        dancer_tip_video_url: null,
+        dancer_tip_video_url: "https://example.com/tip.mp4",
         dancer_tip_image_url: null,
         presentation_video_url: null,
         film_yourself_video_url: null,
@@ -224,9 +246,9 @@ describe("admin dance move service", () => {
       bpm: null,
       thumbnail_url: null,
       main_video_url: null,
-      pro_dancer_video_url: null,
+      pro_dancer_video_url: "https://example.com/pro.mp4",
       pro_dancer_image_url: null,
-      dancer_tip_video_url: null,
+      dancer_tip_video_url: "https://example.com/tip.mp4",
       dancer_tip_image_url: null,
       presentation_video_url: null,
       film_yourself_video_url: null,
@@ -242,26 +264,29 @@ describe("admin dance move service", () => {
     expect(result.genre_ids).toEqual([GENRE_ID]);
   });
 
-  it("rejects publishing an existing move without a video", async () => {
-    const getQuery = queryBuilder({
+  it("rejects updates to legacy moves that are still missing a required video", async () => {
+    const currentMove = queryBuilder({
       data: { ...moveRow, dance_move_genres: [] },
       error: null,
     });
-    const service = createAdminDanceMovesService(
-      { from: vi.fn().mockReturnValue(getQuery) } as never,
-      httpErrors as never,
-    );
+    const from = vi.fn().mockReturnValue(currentMove);
+    const service = createAdminDanceMovesService({ from } as never, httpErrors as never);
 
     await expect(service.update(MOVE_ID, { status: "published" })).rejects.toMatchObject({
       statusCode: 400,
-      message: "A published move requires a main video URL",
+      message: "A dance move requires a pro dancer video URL",
     });
-    expect(getQuery.update).not.toHaveBeenCalled();
+    expect(currentMove.update).not.toHaveBeenCalled();
   });
 
   it("adds and removes genre joins in one update", async () => {
     const initialGet = queryBuilder({
-      data: { ...moveRow, dance_move_genres: [{ genre_id: GENRE_ID }] },
+      data: {
+        ...moveRow,
+        pro_dancer_video_url: "https://example.com/pro.mp4",
+        dancer_tip_video_url: "https://example.com/tip.mp4",
+        dance_move_genres: [{ genre_id: GENRE_ID }],
+      },
       error: null,
     });
     const joinsRead = queryBuilder({ data: [{ genre_id: GENRE_ID }], error: null });

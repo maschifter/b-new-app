@@ -53,12 +53,16 @@ describe("dance content admin forms", () => {
     expect(transformed.genre_ids).toEqual(["22222222-2222-4222-8222-222222222222"]);
   });
 
-  it("requires a main video before publishing", () => {
-    expect(validateDanceMove({ status: "published", main_video_url: null })).toEqual({
-      main_video_url: "A published move requires a main video URL",
+  it("requires pro dancer and dancer tip videos", () => {
+    expect(validateDanceMove({})).toEqual({
+      pro_dancer_video_url: "A dance move requires a pro dancer video URL",
+      dancer_tip_video_url: "A dance move requires a dancer tip video URL",
     });
     expect(
-      validateDanceMove({ status: "published", main_video_url: "https://example.com/move.mp4" }),
+      validateDanceMove({
+        pro_dancer_video_url: "https://example.com/pro.mp4",
+        dancer_tip_video_url: "https://example.com/tip.mp4",
+      }),
     ).toEqual({});
   });
 

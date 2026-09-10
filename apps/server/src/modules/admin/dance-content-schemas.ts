@@ -1,10 +1,12 @@
 import { z } from "zod";
 
-export const PUBLISHED_MOVE_VIDEO_ERROR = "A published move requires a main video URL";
+export const PRO_DANCER_VIDEO_ERROR = "A dance move requires a pro dancer video URL";
+export const DANCER_TIP_VIDEO_ERROR = "A dance move requires a dancer tip video URL";
 
 const status = z.enum(["draft", "published"]);
 const uuid = z.string().uuid();
 const nullableUrl = z.string().trim().url().nullable();
+const requiredUrl = z.string().trim().url();
 
 const genreFields = z.object({
   name: z.string().trim().min(1).max(120),
@@ -14,9 +16,9 @@ const genreFields = z.object({
 
 const musicTrackFields = z.object({
   title: z.string().trim().min(1).max(200),
-  artist: z.string().trim().nullable(),
-  audio_url: z.string().trim().url(),
-  thumbnail_url: nullableUrl,
+  artist: z.string().trim().min(1).max(200),
+  audio_url: requiredUrl,
+  thumbnail_url: requiredUrl,
   status,
   sort_order: z.number().int(),
 });
@@ -28,9 +30,9 @@ const danceMoveFields = z.object({
   bpm: z.number().int().positive().nullable(),
   thumbnail_url: nullableUrl,
   main_video_url: nullableUrl,
-  pro_dancer_video_url: nullableUrl,
+  pro_dancer_video_url: requiredUrl,
   pro_dancer_image_url: nullableUrl,
-  dancer_tip_video_url: nullableUrl,
+  dancer_tip_video_url: requiredUrl,
   dancer_tip_image_url: nullableUrl,
   presentation_video_url: nullableUrl,
   film_yourself_video_url: nullableUrl,
@@ -39,13 +41,6 @@ const danceMoveFields = z.object({
   status,
   sort_order: z.number().int(),
 });
-
-function hasPublishedVideo(value: {
-  status?: "draft" | "published" | undefined;
-  main_video_url?: string | null | undefined;
-}) {
-  return value.status !== "published" || Boolean(value.main_video_url);
-}
 
 export const DanceContentIdParam = z.object({ id: uuid });
 
@@ -63,20 +58,12 @@ export const UpdateMusicTrackRequest = musicTrackFields
 
 export const CreateDanceMoveRequest = danceMoveFields
   .extend({ genre_ids: z.array(uuid).max(500).default([]) })
-  .strict()
-  .refine(hasPublishedVideo, { message: PUBLISHED_MOVE_VIDEO_ERROR });
+  .strict();
 
 export const UpdateDanceMoveRequest = danceMoveFields
   .partial()
   .strict()
-  .refine((body) => Object.keys(body).length > 0, { message: "No editable fields supplied" })
-  .refine(
-    (body) =>
-      body.status !== "published" ||
-      body.main_video_url === undefined ||
-      Boolean(body.main_video_url),
-    { message: PUBLISHED_MOVE_VIDEO_ERROR },
-  );
+  .refine((body) => Object.keys(body).length > 0, { message: "No editable fields supplied" });
 
 const ids = z.array(uuid).max(500);
 

@@ -23,7 +23,9 @@ async function transparentRectanglePng(): Promise<Buffer> {
       pixels[offset + 3] = 255;
     }
   }
-  return sharp(pixels, { raw: { width, height, channels: 4 } }).png().toBuffer();
+  return sharp(pixels, { raw: { width, height, channels: 4 } })
+    .png()
+    .toBuffer();
 }
 
 describe("catalog art processing", () => {

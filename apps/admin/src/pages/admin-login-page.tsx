@@ -1,9 +1,7 @@
 import { Login, LoginForm, PasswordInput, TextInput, required } from "react-admin";
 
 const defaultEmail = import.meta.env.DEV ? (import.meta.env.VITE_DEV_ADMIN_EMAIL ?? "") : "";
-const defaultPassword = import.meta.env.DEV
-  ? (import.meta.env.VITE_DEV_ADMIN_PASSWORD ?? "")
-  : "";
+const defaultPassword = import.meta.env.DEV ? (import.meta.env.VITE_DEV_ADMIN_PASSWORD ?? "") : "";
 
 export function AdminLoginPage() {
   return (

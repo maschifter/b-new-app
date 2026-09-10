@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import fp from "fastify-plugin";
-import { createCatalogService, type CatalogService } from "../modules/catalog/service.js";
+import { type CatalogService, createCatalogService } from "../modules/catalog/service.js";
 
 declare module "fastify" {
   interface FastifyInstance {

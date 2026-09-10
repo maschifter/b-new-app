@@ -59,21 +59,12 @@ function ShopContent({ onBack }: ShopScreenProps) {
           width={cardWidth}
           owned={owned.ids.has(item.id)}
           disabled={mutation.isPending || !affordable}
-          disabledLabel={
-            isPurchasingItem ? "Buying…" : affordable ? undefined : "Not enough Glow"
-          }
+          disabledLabel={isPurchasingItem ? "Buying…" : affordable ? undefined : "Not enough Glow"}
           onPurchase={purchase}
         />
       );
     },
-    [
-      cardWidth,
-      mutation.isPending,
-      mutation.variables,
-      owned.ids,
-      purchase,
-      wallet.data?.glow,
-    ],
+    [cardWidth, mutation.isPending, mutation.variables, owned.ids, purchase, wallet.data?.glow],
   );
 
   if (catalog.dataUpdatedAt === 0 && catalog.isError) throw catalog.error;

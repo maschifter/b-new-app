@@ -1,9 +1,5 @@
 import { Create, SimpleForm } from "react-admin";
-import {
-  CatalogFormFields,
-  catalogCreateDefaults,
-  catalogEditableFields,
-} from "./catalog-form";
+import { CatalogFormFields, catalogCreateDefaults, catalogEditableFields } from "./catalog-form";
 import type { CatalogRecord } from "./catalog-types";
 
 function createPayload(record: CatalogRecord) {

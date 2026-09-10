@@ -1,7 +1,7 @@
+import { createHash } from "node:crypto";
 import type { Database } from "@bnewapp/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyInstance } from "fastify";
-import { createHash } from "node:crypto";
 import { processCatalogArt } from "../catalog/art.js";
 import type { CreateCatalogItemBody, UpdateCatalogItemBody } from "./catalog-schemas.js";
 

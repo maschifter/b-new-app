@@ -1,7 +1,15 @@
 import type { DashboardSummary } from "@bnewapp/types";
 import GroupIcon from "@mui/icons-material/Group";
 import MeetingRoomIcon from "@mui/icons-material/MeetingRoom";
-import { Alert, Box, Card, CardContent, CardHeader, CircularProgress, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Card,
+  CardContent,
+  CardHeader,
+  CircularProgress,
+  Typography,
+} from "@mui/material";
 import { useEffect, useState } from "react";
 import { Title } from "react-admin";
 import { fetchDashboardSummary } from "../lib/data-provider";

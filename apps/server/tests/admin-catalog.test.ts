@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
+import { describe, expect, it, vi } from "vitest";
 import { createAdminCatalogService } from "../src/modules/admin/catalog-service.js";
 
 function httpError(statusCode: number, message: string) {
@@ -16,16 +16,7 @@ const httpErrors = {
 function builder(result: { data: unknown; error: unknown; count?: number }) {
   const query: Record<string, ReturnType<typeof vi.fn>> = {};
   const chain = () => query;
-  for (const method of [
-    "select",
-    "order",
-    "range",
-    "or",
-    "eq",
-    "insert",
-    "update",
-    "delete",
-  ]) {
+  for (const method of ["select", "order", "range", "or", "eq", "insert", "update", "delete"]) {
     query[method] = vi.fn(chain);
   }
   query.single = vi.fn(() => Promise.resolve(result));

@@ -30,10 +30,7 @@ function countOrZero(result: { count: number | null; error: { message: string } 
   return result.count ?? 0;
 }
 
-export function createAdminService(
-  supabase: SupabaseClient<Database>,
-  httpErrors: HttpErrors,
-) {
+export function createAdminService(supabase: SupabaseClient<Database>, httpErrors: HttpErrors) {
   async function getAuthUserMap(ids: string[]): Promise<Map<string, User>> {
     if (ids.length === 0) return new Map();
     const remainingIds = new Set(ids);
@@ -120,7 +117,8 @@ export function createAdminService(
     },
 
     async updateUser(id: string, updates: UpdateUserBody) {
-      if (updates.username === undefined) throw httpErrors.badRequest("No editable fields supplied");
+      if (updates.username === undefined)
+        throw httpErrors.badRequest("No editable fields supplied");
       const { data, error } = await supabase
         .from("profiles")
         .update({ username: updates.username })
@@ -148,11 +146,23 @@ export function createAdminService(
 
       const results = await Promise.all([
         supabase.from("profiles").select("id", { count: "exact", head: true }),
-        supabase.from("profiles").select("id", { count: "exact", head: true }).gte("created_at", last24h),
-        supabase.from("profiles").select("id", { count: "exact", head: true }).gte("created_at", last7d),
-        supabase.from("profiles").select("id", { count: "exact", head: true }).gte("created_at", last30d),
+        supabase
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .gte("created_at", last24h),
+        supabase
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .gte("created_at", last7d),
+        supabase
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .gte("created_at", last30d),
         supabase.from("studio_rooms").select("id", { count: "exact", head: true }),
-        supabase.from("studio_rooms").select("id", { count: "exact", head: true }).gte("updated_at", last7d),
+        supabase
+          .from("studio_rooms")
+          .select("id", { count: "exact", head: true })
+          .gte("updated_at", last7d),
       ]);
 
       let counts: number[];

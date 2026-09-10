@@ -1,10 +1,7 @@
 import { CATALOG } from "@bnewapp/studio-core";
 import { describe, expect, it, vi } from "vitest";
-import {
-  CatalogUnavailableError,
-  createCatalogService,
-} from "../src/modules/catalog/service.js";
 import { catalogRoutes } from "../src/modules/catalog/routes.js";
+import { CatalogUnavailableError, createCatalogService } from "../src/modules/catalog/service.js";
 
 const CATALOG_ROW = {
   id: "remote-plant",
@@ -100,10 +97,7 @@ describe("catalog service", () => {
   });
 
   it("falls back to the bundled seed on a first read failure", async () => {
-    const supabase = catalogSupabase(
-      [{ data: null, error: { message: "offline" } }],
-      [],
-    );
+    const supabase = catalogSupabase([{ data: null, error: { message: "offline" } }], []);
     const warn = vi.fn();
     const service = createCatalogService(supabase.client as never, { warn });
 
@@ -111,7 +105,11 @@ describe("catalog service", () => {
 
     expect(result.version).toBe(0);
     expect(result.items).toHaveLength(CATALOG.length);
-    expect(result.items[0]).toMatchObject({ name: "Big Screen", status: "published", access: "free" });
+    expect(result.items[0]).toMatchObject({
+      name: "Big Screen",
+      status: "published",
+      access: "free",
+    });
     expect(warn).toHaveBeenCalledOnce();
   });
 
@@ -140,20 +138,14 @@ describe("catalog service", () => {
   });
 
   it("fails writes instead of reconciling against the bundled fallback", async () => {
-    const supabase = catalogSupabase(
-      [{ data: null, error: { message: "offline" } }],
-      [],
-    );
+    const supabase = catalogSupabase([{ data: null, error: { message: "offline" } }], []);
     const service = createCatalogService(supabase.client as never);
 
     await expect(service.getForWrite()).rejects.toBeInstanceOf(CatalogUnavailableError);
   });
 
   it("fails authoritative reads instead of returning the bundled fallback", async () => {
-    const supabase = catalogSupabase(
-      [{ data: null, error: { message: "offline" } }],
-      [],
-    );
+    const supabase = catalogSupabase([{ data: null, error: { message: "offline" } }], []);
     const service = createCatalogService(supabase.client as never);
 
     await expect(service.getAuthoritative()).rejects.toBeInstanceOf(CatalogUnavailableError);
@@ -168,11 +160,9 @@ describe("catalog route", () => {
       catalogService: {
         getAuthoritative: vi.fn().mockRejectedValue(new CatalogUnavailableError()),
       },
-      get: vi.fn(
-        (_path: string, _options: unknown, routeHandler: () => Promise<unknown>) => {
-          handler = routeHandler;
-        },
-      ),
+      get: vi.fn((_path: string, _options: unknown, routeHandler: () => Promise<unknown>) => {
+        handler = routeHandler;
+      }),
       httpErrors: {
         serviceUnavailable: (message: string) =>
           Object.assign(new Error(message), { statusCode: 503 }),

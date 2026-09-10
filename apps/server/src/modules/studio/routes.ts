@@ -1,10 +1,10 @@
 import {
-  type CatalogItem,
   CURRENT_VERSION,
+  type CatalogItem,
+  ROOM_TEMPLATE,
   coerceSnapshot,
   migrate,
   reconcile,
-  ROOM_TEMPLATE,
   templateById,
 } from "@bnewapp/studio-core";
 import type {

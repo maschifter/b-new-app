@@ -5,6 +5,7 @@ These rules apply to `supabase`. Also follow the root `AGENTS.md`.
 ## Migration Workflow
 
 - Treat `supabase/migrations/*.sql` as the schema source of truth.
+- Declare local Supabase Storage buckets in `supabase/config.toml`. Keep its bucket names, public/private setting, file-size limit, and MIME allowlist aligned with the server upload path; do not infer a missing bucket from the absence of a database migration.
 - Create a new timestamped migration for every schema change. Do not edit a migration that may have been applied remotely.
 - Make migrations deterministic and safe to re-review. Separate unrelated schema changes.
 - Prefer additive rollout: add nullable/defaulted structures, migrate data, update consumers, then tighten constraints in a later safe step.

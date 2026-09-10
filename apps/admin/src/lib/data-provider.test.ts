@@ -40,9 +40,7 @@ describe("admin HTTP client", () => {
 
     expect(refreshSession).toHaveBeenCalledOnce();
     expect(fetchJson).toHaveBeenCalledTimes(2);
-    expect(fetchJson.mock.calls[0]?.[1].headers.get("Authorization")).toBe(
-      "Bearer expired-token",
-    );
+    expect(fetchJson.mock.calls[0]?.[1].headers.get("Authorization")).toBe("Bearer expired-token");
     expect(fetchJson.mock.calls[1]?.[1].headers.get("Authorization")).toBe("Bearer fresh-token");
     expect(signOut).not.toHaveBeenCalled();
   });

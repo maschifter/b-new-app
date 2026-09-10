@@ -14,6 +14,8 @@ import {
   UpdateMusicTrackRequest,
 } from "./dance-content-schemas.js";
 import { createAdminDanceGenresService } from "./dance-genres-service.js";
+import { DanceMediaImageQuery, DanceMediaUploadRequest } from "./dance-media-schemas.js";
+import { InvalidDanceMediaImageError, createDanceMediaService } from "./dance-media-service.js";
 import { createAdminDanceMovesService } from "./dance-moves-service.js";
 import { createAdminMusicTracksService } from "./music-tracks-service.js";
 
@@ -47,6 +49,29 @@ export async function danceContentRoutes(fastify: FastifyInstance) {
   const genres = createAdminDanceGenresService(fastify.supabase, fastify.httpErrors);
   const tracks = createAdminMusicTracksService(fastify.supabase, fastify.httpErrors);
   const moves = createAdminDanceMovesService(fastify.supabase, fastify.httpErrors);
+  const danceMedia = createDanceMediaService(fastify.supabase, fastify.httpErrors);
+
+  fastify.post("/dance-media/uploads", async (request) => {
+    const body = DanceMediaUploadRequest.safeParse(request.body);
+    if (!body.success) throw fastify.httpErrors.badRequest("Invalid dance media upload request");
+    return { data: await danceMedia.createUploadTicket(body.data) };
+  });
+
+  fastify.post("/dance-media/images", async (request) => {
+    const query = DanceMediaImageQuery.safeParse(request.query);
+    if (!query.success) throw fastify.httpErrors.badRequest("Invalid dance media image query");
+    if (!request.isMultipart()) throw fastify.httpErrors.badRequest("Expected an image upload");
+    const file = await request.file({ limits: { fileSize: 10 * 1024 * 1024 } });
+    if (!file) throw fastify.httpErrors.badRequest("Image file is required");
+    try {
+      return { data: await danceMedia.uploadImage(query.data, await file.toBuffer()) };
+    } catch (error) {
+      if (error instanceof InvalidDanceMediaImageError) {
+        throw fastify.httpErrors.badRequest(error.message);
+      }
+      throw error;
+    }
+  });
 
   fastify.get("/dance-genres", async (request, reply) => {
     const { start, end, sort, order, filter } = parseResourceListQuery(

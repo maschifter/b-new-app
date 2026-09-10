@@ -1,7 +1,6 @@
-import { Link, Stack } from "@mui/material";
-import { FormDataConsumer, TextInput, type TextInputProps } from "react-admin";
+import { Link } from "@mui/material";
 
-export type MediaPreviewKind = "audio" | "image" | "link" | "none";
+export type MediaPreviewKind = "audio" | "image" | "link" | "video" | "none";
 
 export function previewKind(
   url: unknown,
@@ -50,25 +49,13 @@ export function MediaPreview({
     // biome-ignore lint/a11y/useMediaCaption: Music-track previews do not contain spoken content.
     return <audio src={url} controls preload="none" style={{ width: "100%", maxWidth: 520 }} />;
   }
+  if (preview === "video") {
+    // biome-ignore lint/a11y/useMediaCaption: Dance-video previews do not contain spoken content.
+    return <video src={url} controls preload="metadata" style={{ width: "100%", maxWidth: 520 }} />;
+  }
   return (
     <Link href={url} target="_blank" rel="noreferrer">
       Open media in a new tab
     </Link>
-  );
-}
-
-interface MediaUrlInputProps extends Omit<TextInputProps, "parse" | "source"> {
-  source: string;
-  preview: Exclude<MediaPreviewKind, "none">;
-}
-
-export function MediaUrlInput({ source, preview, ...props }: MediaUrlInputProps) {
-  return (
-    <Stack spacing={1}>
-      <TextInput source={source} parse={parseNullableUrl} fullWidth {...props} />
-      <FormDataConsumer>
-        {({ formData }) => <MediaPreview url={formData[source]} kind={preview} />}
-      </FormDataConsumer>
-    </Stack>
   );
 }

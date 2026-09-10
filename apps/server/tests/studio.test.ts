@@ -222,7 +222,10 @@ describe("studio room endpoints", () => {
     const { app, handlers } = registerStudio(supabase);
     await studioRoutes(app as never);
 
-    await getHandler(handlers, "PUT /room")({
+    await getHandler(
+      handlers,
+      "PUT /room",
+    )({
       user: { sub: "user-1" },
       body: {
         version: CURRENT_VERSION,
@@ -251,7 +254,10 @@ describe("studio room endpoints", () => {
     await studioRoutes(app as never);
 
     await expect(
-      getHandler(handlers, "PUT /room")({
+      getHandler(
+        handlers,
+        "PUT /room",
+      )({
         user: { sub: "user-1" },
         body: { version: CURRENT_VERSION, templateId: "does-not-exist", map: {} },
       }),
@@ -265,7 +271,10 @@ describe("studio room endpoints", () => {
     await studioRoutes(app as never);
 
     await expect(
-      getHandler(handlers, "PUT /room")({
+      getHandler(
+        handlers,
+        "PUT /room",
+      )({
         user: { sub: "user-1" },
         body: { version: CURRENT_VERSION + 1, templateId: DEFAULT_TEMPLATE_ID, map: {} },
       }),
@@ -295,7 +304,10 @@ describe("studio room endpoints", () => {
     await studioRoutes(app as never);
 
     await expect(
-      getHandler(handlers, "PUT /room")({
+      getHandler(
+        handlers,
+        "PUT /room",
+      )({
         user: { sub: "user-1" },
         body: { version: CURRENT_VERSION, templateId: DEFAULT_TEMPLATE_ID, map: {} },
       }),
@@ -343,7 +355,10 @@ describe("explore rooms endpoints", () => {
     const { app, handlers } = registerStudio(supabase);
     await studioRoutes(app as never);
 
-    const response = (await getHandler(handlers, "GET /rooms")({
+    const response = (await getHandler(
+      handlers,
+      "GET /rooms",
+    )({
       user: { sub: "user-1" },
       query: {},
     })) as { data: { items: Array<{ ownerId: string; username: string }>; nextCursor: unknown } };
@@ -364,7 +379,10 @@ describe("explore rooms endpoints", () => {
     const { app, handlers } = registerStudio(supabase);
     await studioRoutes(app as never);
 
-    const response = (await getHandler(handlers, "GET /rooms")({
+    const response = (await getHandler(
+      handlers,
+      "GET /rooms",
+    )({
       user: { sub: "user-1" },
       query: { limit: "1" },
     })) as { data: { items: unknown[]; nextCursor: { updatedAt: string; id: string } | null } };
@@ -383,7 +401,10 @@ describe("explore rooms endpoints", () => {
     const { app, handlers } = registerStudio(supabase);
     await studioRoutes(app as never);
 
-    const response = (await getHandler(handlers, "GET /rooms")({
+    const response = (await getHandler(
+      handlers,
+      "GET /rooms",
+    )({
       user: { sub: "user-1" },
       query: { limit: "1" },
     })) as { data: { items: unknown[]; nextCursor: { updatedAt: string; id: string } | null } };
@@ -401,7 +422,10 @@ describe("explore rooms endpoints", () => {
     const { app, handlers } = registerStudio(supabase);
     await studioRoutes(app as never);
 
-    await getHandler(handlers, "GET /rooms")({
+    await getHandler(
+      handlers,
+      "GET /rooms",
+    )({
       user: { sub: "user-1" },
       query: { cursorUpdatedAt: "2026-08-10T00:00:00.000Z", cursorId: VALID_ID },
     });
@@ -420,7 +444,9 @@ describe("explore rooms endpoints", () => {
     };
     const firstPage = queryableRooms({ data: [OTHER_ROOM, tiedRoom], error: null });
     const secondPage = queryableRooms({ data: [tiedRoom], error: null });
-    const supabase = { from: vi.fn().mockReturnValueOnce(firstPage).mockReturnValueOnce(secondPage) };
+    const supabase = {
+      from: vi.fn().mockReturnValueOnce(firstPage).mockReturnValueOnce(secondPage),
+    };
     const { app, handlers } = registerStudio(supabase);
     await studioRoutes(app as never);
     const listRooms = getHandler(handlers, "GET /rooms");
@@ -458,7 +484,9 @@ describe("explore rooms endpoints", () => {
     };
     const firstPage = queryableRooms({ data: [returnedRoom, olderRoom], error: null });
     const secondPage = queryableRooms({ data: [olderRoom], error: null });
-    const supabase = { from: vi.fn().mockReturnValueOnce(firstPage).mockReturnValueOnce(secondPage) };
+    const supabase = {
+      from: vi.fn().mockReturnValueOnce(firstPage).mockReturnValueOnce(secondPage),
+    };
     const { app, handlers } = registerStudio(supabase);
     await studioRoutes(app as never);
     const listRooms = getHandler(handlers, "GET /rooms");
@@ -500,7 +528,10 @@ describe("explore rooms endpoints", () => {
     await studioRoutes(app as never);
 
     await expect(
-      getHandler(handlers, "GET /rooms")({
+      getHandler(
+        handlers,
+        "GET /rooms",
+      )({
         user: { sub: "user-1" },
         query: { cursorUpdatedAt: "2026-08-10T00:00:00.000Z" },
       }),
@@ -514,7 +545,10 @@ describe("explore rooms endpoints", () => {
     await studioRoutes(app as never);
 
     await expect(
-      getHandler(handlers, "GET /rooms")({
+      getHandler(
+        handlers,
+        "GET /rooms",
+      )({
         user: { sub: "user-1" },
         query: { cursorUpdatedAt: "not-a-timestamp", cursorId: VALID_ID },
       }),
@@ -528,7 +562,10 @@ describe("explore rooms endpoints", () => {
     await studioRoutes(app as never);
 
     await expect(
-      getHandler(handlers, "GET /rooms")({
+      getHandler(
+        handlers,
+        "GET /rooms",
+      )({
         user: { sub: "user-1" },
         query: { cursorUpdatedAt: "2026-08-10T00:00:00.000Z", cursorId: "not-a-uuid" },
       }),
@@ -554,7 +591,10 @@ describe("explore rooms endpoints", () => {
     const { app, handlers } = registerStudio(supabase);
     await studioRoutes(app as never);
 
-    const response = (await getHandler(handlers, "POST /rooms/:ownerId/visits")({
+    const response = (await getHandler(
+      handlers,
+      "POST /rooms/:ownerId/visits",
+    )({
       user: { sub: "user-1" },
       params: { ownerId: VALID_ID },
     })) as {
@@ -591,7 +631,10 @@ describe("explore rooms endpoints", () => {
     const { app, handlers } = registerStudio(supabase);
     await studioRoutes(app as never);
 
-    const response = (await getHandler(handlers, "POST /rooms/:ownerId/visits")({
+    const response = (await getHandler(
+      handlers,
+      "POST /rooms/:ownerId/visits",
+    )({
       user: { sub: "user-1" },
       params: { ownerId: VALID_ID },
     })) as { data: { visitorCount: number } | null };
@@ -610,7 +653,10 @@ describe("explore rooms endpoints", () => {
     await studioRoutes(app as never);
 
     await expect(
-      getHandler(handlers, "POST /rooms/:ownerId/visits")({
+      getHandler(
+        handlers,
+        "POST /rooms/:ownerId/visits",
+      )({
         user: { sub: "user-1" },
         params: { ownerId: VALID_ID },
       }),
@@ -627,7 +673,10 @@ describe("explore rooms endpoints", () => {
     await studioRoutes(app as never);
 
     await expect(
-      getHandler(handlers, "POST /rooms/:ownerId/visits")({
+      getHandler(
+        handlers,
+        "POST /rooms/:ownerId/visits",
+      )({
         user: { sub: "user-1" },
         params: { ownerId: VALID_ID },
       }),
@@ -640,7 +689,10 @@ describe("explore rooms endpoints", () => {
     const { app, handlers } = registerStudio(supabase);
     await studioRoutes(app as never);
 
-    const response = await getHandler(handlers, "POST /rooms/:ownerId/visits")({
+    const response = await getHandler(
+      handlers,
+      "POST /rooms/:ownerId/visits",
+    )({
       user: { sub: "user-1" },
       params: { ownerId: VALID_ID },
     });
@@ -654,7 +706,10 @@ describe("explore rooms endpoints", () => {
     await studioRoutes(app as never);
 
     await expect(
-      getHandler(handlers, "POST /rooms/:ownerId/visits")({
+      getHandler(
+        handlers,
+        "POST /rooms/:ownerId/visits",
+      )({
         user: { sub: "user-1" },
         params: { ownerId: "not-a-uuid" },
       }),
@@ -669,7 +724,10 @@ describe("explore rooms endpoints", () => {
     await studioRoutes(app as never);
 
     await expect(
-      getHandler(handlers, "POST /rooms/:ownerId/visits")({
+      getHandler(
+        handlers,
+        "POST /rooms/:ownerId/visits",
+      )({
         user: { sub: "user-1" },
         params: { ownerId: VALID_ID },
       }),

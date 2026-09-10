@@ -3,10 +3,7 @@ import { queryErrorResetVersionAtom } from "@/lib/react-query/query-error-reset"
 import type { ExploreRoomsCursor, ExploreRoomsPage } from "@bnewapp/types";
 import type { InfiniteData } from "@tanstack/react-query";
 import { atomFamily } from "jotai-family";
-import {
-  atomWithSuspenseInfiniteQuery,
-  atomWithSuspenseQuery,
-} from "jotai-tanstack-query";
+import { atomWithSuspenseInfiniteQuery, atomWithSuspenseQuery } from "jotai-tanstack-query";
 import { getExploreRooms, visitExploreRoom } from "../api";
 
 const EXPLORE_PAGE_LIMIT = 20;

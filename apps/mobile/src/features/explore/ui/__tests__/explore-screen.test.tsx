@@ -113,13 +113,11 @@ it("advances past an initial empty page to the first page with items", async () 
 
 it("does not show the empty state while advancing past an empty page", async () => {
   const requested: string[] = [];
-  mockedGetRooms.mockImplementation(
-    (_token: string, opts: { cursor?: { id: string } } = {}) => {
-      const key = opts.cursor ? opts.cursor.id : "start";
-      requested.push(key);
-      return key === "start" ? Promise.resolve(page([], "c1")) : new Promise(() => {});
-    },
-  );
+  mockedGetRooms.mockImplementation((_token: string, opts: { cursor?: { id: string } } = {}) => {
+    const key = opts.cursor ? opts.cursor.id : "start";
+    requested.push(key);
+    return key === "start" ? Promise.resolve(page([], "c1")) : new Promise(() => {});
+  });
   await mountExplore();
 
   await waitFor(() => expect(requested).toEqual(["start", "c1"]));

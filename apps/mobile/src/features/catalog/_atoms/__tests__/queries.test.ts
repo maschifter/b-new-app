@@ -89,10 +89,7 @@ describe("catalogAtom synchronous initial data", () => {
     expect(new MMKV({ id: "catalog" }).getString("catalog:v1:user-2")).toBe(
       JSON.stringify(REMOTE_CATALOG),
     );
-    expect(prefetch).toHaveBeenCalledWith(
-      ["https://example.com/remote-plant.webp"],
-      "memory-disk",
-    );
+    expect(prefetch).toHaveBeenCalledWith(["https://example.com/remote-plant.webp"], "memory-disk");
     unsubscribe();
     prefetch.mockRestore();
   });

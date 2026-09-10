@@ -35,6 +35,22 @@ export type AdminDanceMove = Omit<Database["public"]["Tables"]["dance_moves"]["R
   genre_ids: string[];
 };
 
+export type DanceMediaTarget = "move" | "track";
+
+export interface DanceMediaUploadRequest {
+  target: DanceMediaTarget;
+  field: string;
+  recordId?: string;
+  filename: string;
+}
+
+export interface DanceMediaUploadTicket {
+  path: string;
+  token: string;
+  publicUrl: string;
+  contentType: string;
+}
+
 /** Published catalog item returned by the server to authenticated clients. */
 export interface CatalogItemDTO extends CatalogItem {
   name: string;

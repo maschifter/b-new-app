@@ -1,6 +1,6 @@
 import RoomRoute from "@/app/room/[ownerId]";
-import { useLocalSearchParams } from "expo-router";
 import { render, screen } from "@testing-library/react-native";
+import { useLocalSearchParams } from "expo-router";
 
 jest.mock("expo-router", () => {
   const React = require("react");

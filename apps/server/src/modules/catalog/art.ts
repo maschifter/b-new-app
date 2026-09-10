@@ -53,8 +53,10 @@ export async function processCatalogArt(input: Buffer): Promise<{
 }> {
   let metadata: Metadata;
   try {
-    metadata = await sharp(input, { failOn: "error", limitInputPixels: MAX_INPUT_EDGE ** 2 })
-      .metadata();
+    metadata = await sharp(input, {
+      failOn: "error",
+      limitInputPixels: MAX_INPUT_EDGE ** 2,
+    }).metadata();
   } catch (error) {
     throw new InvalidCatalogArtError("Invalid image file", { cause: error });
   }

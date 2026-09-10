@@ -156,9 +156,7 @@ it("shows Buying only on the item being purchased", async () => {
 
   expect(await screen.findByRole("button", { name: "Buying… Neon Lamp" })).toBeDisabled();
   expect(screen.getByRole("button", { name: "Buy Premium Speaker" })).toBeDisabled();
-  expect(
-    screen.queryByRole("button", { name: "Buying… Premium Speaker" }),
-  ).not.toBeOnTheScreen();
+  expect(screen.queryByRole("button", { name: "Buying… Premium Speaker" })).not.toBeOnTheScreen();
 
   resolvePurchase?.({
     wallet: { glow: 999_749 },

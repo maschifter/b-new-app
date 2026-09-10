@@ -1,5 +1,5 @@
-import { createAtomWithMMKV } from "@/lib/jotai/atom-with-mmkv";
 import { catalogAtom } from "@/features/catalog";
+import { createAtomWithMMKV } from "@/lib/jotai/atom-with-mmkv";
 import {
   type DecorationSnapshot,
   ROOM_TEMPLATE,

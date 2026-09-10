@@ -3,7 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyInstance } from "fastify";
 import {
   type CreateDanceMoveBody,
-  PUBLISHED_MOVE_VIDEO_ERROR,
+  DANCER_TIP_VIDEO_ERROR,
+  PRO_DANCER_VIDEO_ERROR,
   type UpdateDanceMoveBody,
 } from "./dance-content-schemas.js";
 
@@ -89,6 +90,19 @@ function moveUpdate(body: UpdateDanceMoveBody) {
     ...(body.status === undefined ? {} : { status: body.status }),
     ...(body.sort_order === undefined ? {} : { sort_order: body.sort_order }),
   };
+}
+
+function validateRequiredVideos(
+  current: AdminDanceMove,
+  body: UpdateDanceMoveBody,
+  httpErrors: HttpErrors,
+) {
+  if (!(body.pro_dancer_video_url ?? current.pro_dancer_video_url)) {
+    throw httpErrors.badRequest(PRO_DANCER_VIDEO_ERROR);
+  }
+  if (!(body.dancer_tip_video_url ?? current.dancer_tip_video_url)) {
+    throw httpErrors.badRequest(DANCER_TIP_VIDEO_ERROR);
+  }
 }
 
 function uniqueIds(ids: string[]) {
@@ -203,13 +217,7 @@ export function createAdminDanceMovesService(
 
     async update(id: string, body: UpdateDanceMoveBody) {
       const current = await get(id);
-      const nextStatus = body.status ?? current.status;
-      const nextMainVideoUrl =
-        body.main_video_url === undefined ? current.main_video_url : body.main_video_url;
-      if (nextStatus === "published" && !nextMainVideoUrl) {
-        throw httpErrors.badRequest(PUBLISHED_MOVE_VIDEO_ERROR);
-      }
-
+      validateRequiredVideos(current, body, httpErrors);
       const fields = moveUpdate(body);
       if (Object.keys(fields).length > 0) {
         const { data, error } = await supabase

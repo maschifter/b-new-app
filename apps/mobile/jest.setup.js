@@ -10,6 +10,4 @@ jest.mock("@react-native-async-storage/async-storage", () =>
 // initialized"), which is always the case under jest. Reanimated imports
 // worklets transitively, so mocking it here is what keeps `react-native-
 // reanimated` importable — the reanimated JS layer itself stays real.
-jest.mock("react-native-worklets", () =>
-  require("react-native-worklets/lib/module/mock"),
-);
+jest.mock("react-native-worklets", () => require("react-native-worklets/lib/module/mock"));

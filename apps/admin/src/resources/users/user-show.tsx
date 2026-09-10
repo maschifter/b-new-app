@@ -1,12 +1,6 @@
 import type { AdminUserDetail } from "@bnewapp/types";
 import { Box, Card, CardContent, CardHeader, Chip, Stack, Typography } from "@mui/material";
-import {
-  DateField,
-  Show,
-  SimpleShowLayout,
-  TextField,
-  useRecordContext,
-} from "react-admin";
+import { DateField, Show, SimpleShowLayout, TextField, useRecordContext } from "react-admin";
 
 function RoleField() {
   const record = useRecordContext<AdminUserDetail>();

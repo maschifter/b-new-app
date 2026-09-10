@@ -5,6 +5,7 @@ describe("media URL helpers", () => {
   it("shows only the requested preview for valid URLs", () => {
     expect(previewKind("https://cdn.example.com/thumb.webp", "image")).toBe("image");
     expect(previewKind("https://cdn.example.com/track.mp3", "audio")).toBe("audio");
+    expect(previewKind("https://cdn.example.com/video.mp4", "video")).toBe("video");
     expect(previewKind("https://cdn.example.com/video.mp4", "link")).toBe("link");
   });
 

@@ -1,7 +1,7 @@
 import type { AdminMusicTrack } from "@bnewapp/types";
 import { Stack } from "@mui/material";
 import { NumberInput, SelectInput, TextInput, required } from "react-admin";
-import { MediaUrlInput } from "../../components/media-url-input";
+import { MediaUploadInput } from "../../components/media-upload-input";
 
 export const musicTrackCreateDefaults = {
   artist: null,
@@ -25,9 +25,25 @@ export function TrackFormFields() {
   return (
     <Stack spacing={2} sx={{ maxWidth: 720 }}>
       <TextInput source="title" validate={required()} fullWidth />
-      <TextInput source="artist" fullWidth />
-      <MediaUrlInput source="audio_url" label="Audio URL" preview="audio" validate={required()} />
-      <MediaUrlInput source="thumbnail_url" label="Thumbnail URL" preview="image" />
+      <TextInput source="artist" validate={required()} fullWidth />
+      <MediaUploadInput
+        source="audio_url"
+        label="Audio URL"
+        preview="audio"
+        kind="audio"
+        target="track"
+        requirement="required"
+        validate={required()}
+      />
+      <MediaUploadInput
+        source="thumbnail_url"
+        label="Thumbnail URL"
+        preview="image"
+        kind="image"
+        target="track"
+        requirement="required"
+        validate={required()}
+      />
       <SelectInput
         source="status"
         choices={[

@@ -11,3 +11,8 @@ port = 54322
 public = true
 file_size_limit = "5MiB"
 allowed_mime_types = ["image/png", "image/jpeg", "image/webp"]
+
+[storage.buckets.dance-media]
+public = true
+file_size_limit = "45MiB"
+allowed_mime_types = ["image/png", "image/jpeg", "image/webp", "video/mp4", "audio/mpeg", "audio/mp4"]

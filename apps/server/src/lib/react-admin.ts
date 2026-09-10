@@ -33,9 +33,7 @@ function parseJson(value: string): unknown {
 
 export function parseListQuery(raw: unknown, fallbackSort = "created_at"): ParsedListQuery {
   const query = ListQuery.parse(raw);
-  const [start, inclusiveEnd] = query.range
-    ? ListRange.parse(parseJson(query.range))
-    : [0, 24];
+  const [start, inclusiveEnd] = query.range ? ListRange.parse(parseJson(query.range)) : [0, 24];
   const [sort, rawOrder] = query.sort
     ? ListSort.parse(parseJson(query.sort))
     : [fallbackSort, "DESC"];

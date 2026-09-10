@@ -73,10 +73,7 @@ function mapCatalogRow(row: CatalogRow): CatalogItemDTO {
   };
 }
 
-export function createCatalogService(
-  supabase: SupabaseClient<Database>,
-  logger?: CatalogLogger,
-) {
+export function createCatalogService(supabase: SupabaseClient<Database>, logger?: CatalogLogger) {
   let cache: CatalogCache | null = null;
 
   async function loadVersion(): Promise<number> {
@@ -92,9 +89,7 @@ export function createCatalogService(
   async function loadItems(): Promise<CatalogItemDTO[]> {
     const { data, error } = await supabase
       .from("catalog_items")
-      .select(
-        "id, tags, display_name, art_url, art_hitbox, status, access, price, sort_order",
-      )
+      .select("id, tags, display_name, art_url, art_hitbox, status, access, price, sort_order")
       .eq("status", "published")
       .not("art_url", "is", null)
       .order("sort_order", { ascending: true })

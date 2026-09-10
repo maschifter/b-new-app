@@ -7,19 +7,10 @@ const apiUrl = import.meta.env.VITE_API_URL;
 if (!apiUrl) throw new Error("Missing VITE_API_URL — set it in apps/admin/.env.local");
 
 function isUnauthorized(error: unknown): error is { status: number } {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "status" in error &&
-    error.status === 401
-  );
+  return typeof error === "object" && error !== null && "status" in error && error.status === 401;
 }
 
-async function authenticatedFetch(
-  url: string,
-  options: fetchUtils.Options,
-  canRefresh: boolean,
-) {
+async function authenticatedFetch(url: string, options: fetchUtils.Options, canRefresh: boolean) {
   const { data } = await supabase.auth.getSession();
   const headers = new Headers((options.headers as HeadersInit) ?? undefined);
   if (!headers.has("Accept")) headers.set("Accept", "application/json");

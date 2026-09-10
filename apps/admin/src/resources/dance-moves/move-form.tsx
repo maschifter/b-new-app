@@ -10,9 +10,11 @@ import {
   TextInput,
   required,
 } from "react-admin";
-import { MediaUrlInput, parseNullableUrl } from "../../components/media-url-input";
+import { MediaUploadInput } from "../../components/media-upload-input";
+import { parseNullableUrl } from "../../components/media-url-input";
 
-export const PUBLISHED_MOVE_VIDEO_ERROR = "A published move requires a main video URL";
+export const PRO_DANCER_VIDEO_ERROR = "A dance move requires a pro dancer video URL";
+export const DANCER_TIP_VIDEO_ERROR = "A dance move requires a dancer tip video URL";
 
 const nullableMediaFields = [
   "thumbnail_url",
@@ -58,10 +60,14 @@ export function danceMoveEditableFields(record: Partial<AdminDanceMove>) {
 }
 
 export function validateDanceMove(values: Partial<AdminDanceMove>) {
-  if (values.status === "published" && !values.main_video_url?.trim()) {
-    return { main_video_url: PUBLISHED_MOVE_VIDEO_ERROR };
-  }
-  return {};
+  return {
+    ...(values.pro_dancer_video_url?.trim()
+      ? {}
+      : { pro_dancer_video_url: PRO_DANCER_VIDEO_ERROR }),
+    ...(values.dancer_tip_video_url?.trim()
+      ? {}
+      : { dancer_tip_video_url: DANCER_TIP_VIDEO_ERROR }),
+  };
 }
 
 export function MoveFormFields() {
@@ -97,21 +103,65 @@ export function MoveFormFields() {
 
       <Divider />
       <Typography variant="h6">Media URLs</Typography>
-      <MediaUrlInput source="thumbnail_url" label="Thumbnail URL" preview="image" />
-      <MediaUrlInput source="main_video_url" label="Main video URL" preview="link" />
-      <MediaUrlInput source="pro_dancer_video_url" label="Pro dancer video URL" preview="link" />
-      <MediaUrlInput source="pro_dancer_image_url" label="Pro dancer image URL" preview="image" />
-      <MediaUrlInput source="dancer_tip_video_url" label="Dancer tip video URL" preview="link" />
-      <MediaUrlInput source="dancer_tip_image_url" label="Dancer tip image URL" preview="image" />
-      <MediaUrlInput
+      <MediaUploadInput
+        source="thumbnail_url"
+        label="Thumbnail URL"
+        preview="image"
+        kind="image"
+        target="move"
+      />
+      <MediaUploadInput
+        source="main_video_url"
+        label="Main video URL"
+        preview="video"
+        kind="video"
+        target="move"
+      />
+      <MediaUploadInput
+        source="pro_dancer_video_url"
+        label="Pro dancer video URL"
+        preview="video"
+        kind="video"
+        target="move"
+        requirement="required"
+        validate={required()}
+      />
+      <MediaUploadInput
+        source="pro_dancer_image_url"
+        label="Pro dancer image URL"
+        preview="image"
+        kind="image"
+        target="move"
+      />
+      <MediaUploadInput
+        source="dancer_tip_video_url"
+        label="Dancer tip video URL"
+        preview="video"
+        kind="video"
+        target="move"
+        requirement="required"
+        validate={required()}
+      />
+      <MediaUploadInput
+        source="dancer_tip_image_url"
+        label="Dancer tip image URL"
+        preview="image"
+        kind="image"
+        target="move"
+      />
+      <MediaUploadInput
         source="presentation_video_url"
         label="Presentation video URL"
-        preview="link"
+        preview="video"
+        kind="video"
+        target="move"
       />
-      <MediaUrlInput
+      <MediaUploadInput
         source="film_yourself_video_url"
         label="Film yourself video URL"
-        preview="link"
+        preview="video"
+        kind="video"
+        target="move"
       />
     </Stack>
   );
