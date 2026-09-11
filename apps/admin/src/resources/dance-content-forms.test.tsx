@@ -26,17 +26,21 @@ describe("dance content admin forms", () => {
   });
 
   it("strips server-managed fields from track edits", () => {
-    expect(
-      musicTrackEditableFields({
-        ...serverFields,
-        title: "Track",
-        artist: null,
-        audio_url: "https://example.com/track.mp3",
-        thumbnail_url: null,
-        status: "draft",
-        sort_order: 3,
-      }),
-    ).not.toHaveProperty("id");
+    const transformed = musicTrackEditableFields({
+      ...serverFields,
+      title: "Track",
+      artist: null,
+      audio_url: "https://example.com/track.mp3",
+      delay_before_avatar_dance: 2_500,
+      thumbnail_url: null,
+      status: "draft",
+      sort_order: 3,
+    });
+
+    expect(transformed).toMatchObject({
+      delay_before_avatar_dance: 2_500,
+    });
+    expect(transformed).not.toHaveProperty("id");
   });
 
   it("keeps genre ids while stripping server-managed fields from move edits", () => {

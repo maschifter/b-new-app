@@ -7,6 +7,7 @@ import {
   CreateMusicTrackRequest,
   DanceMoveListFilter,
   UpdateDanceMoveRequest,
+  UpdateMusicTrackRequest,
 } from "../src/modules/admin/dance-content-schemas.js";
 import { createAdminDanceMovesService } from "../src/modules/admin/dance-moves-service.js";
 import { createAdminMusicTracksService } from "../src/modules/admin/music-tracks-service.js";
@@ -126,6 +127,29 @@ describe("admin dance content validation", () => {
         sort_order: 1,
       }).success,
     ).toBe(false);
+  });
+
+  it("accepts a nullable non-negative choreography offset in milliseconds", () => {
+    const body = {
+      title: "Track",
+      artist: "Artist",
+      audio_url: "https://example.com/track.mp3",
+      delay_before_avatar_dance: 2_500,
+      thumbnail_url: "https://example.com/track.jpg",
+      status: "draft",
+      sort_order: 1,
+    };
+
+    expect(CreateMusicTrackRequest.safeParse(body).success).toBe(true);
+    expect(UpdateMusicTrackRequest.safeParse({ delay_before_avatar_dance: null }).success).toBe(
+      true,
+    );
+    expect(UpdateMusicTrackRequest.safeParse({ delay_before_avatar_dance: -1 }).success).toBe(
+      false,
+    );
+    expect(UpdateMusicTrackRequest.safeParse({ delay_before_avatar_dance: 1.5 }).success).toBe(
+      false,
+    );
   });
 
   it("validates numeric levels and UUID id arrays", () => {
@@ -316,6 +340,31 @@ describe("admin dance move service", () => {
 });
 
 describe("admin music track service", () => {
+  it("persists a choreography offset update", async () => {
+    const row = {
+      id: TRACK_ID,
+      legacy_id: null,
+      title: "Track",
+      artist: "Artist",
+      audio_url: "https://example.com/track.mp3",
+      delay_before_avatar_dance: 2_500,
+      thumbnail_url: "https://example.com/track.jpg",
+      status: "draft",
+      sort_order: 1,
+      created_at: "2026-08-26T00:00:00.000Z",
+      updated_at: "2026-08-26T00:00:00.000Z",
+    };
+    const query = queryBuilder({ data: row, error: null });
+    const service = createAdminMusicTracksService(
+      { from: vi.fn().mockReturnValue(query) } as never,
+      httpErrors as never,
+    );
+
+    await service.update(TRACK_ID, { delay_before_avatar_dance: 2_500 });
+
+    expect(query.update).toHaveBeenCalledWith({ delay_before_avatar_dance: 2_500 });
+  });
+
   it("maps an in-use track delete to 409", async () => {
     const query = queryBuilder({ data: null, error: { code: "23503" } });
     const service = createAdminMusicTracksService(

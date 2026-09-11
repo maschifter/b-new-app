@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "rewriteRelativeImportExtensions": true,
+    "noEmit": false,
+    "outDir": "dist"
+  },
+  "exclude": ["src/**/__tests__/**"]
+}

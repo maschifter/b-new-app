@@ -18,6 +18,7 @@ const musicTrackFields = z.object({
   title: z.string().trim().min(1).max(200),
   artist: z.string().trim().min(1).max(200),
   audio_url: requiredUrl,
+  delay_before_avatar_dance: z.number().int().nonnegative().nullable(),
   thumbnail_url: requiredUrl,
   status,
   sort_order: z.number().int(),

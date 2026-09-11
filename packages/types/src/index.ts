@@ -1,7 +1,17 @@
+import type { DancePostStatus } from "@bnewapp/dance-core";
 import type { CatalogItem, DecorationSnapshot } from "@bnewapp/studio-core";
 import type { Database } from "./database.generated.js";
 
 export type { Database } from "./database.generated.js";
+
+// Pure dance-domain contracts (status unions, scan status, coercion) live in
+// @bnewapp/dance-core and are re-exported so consumers import them from one place.
+export type {
+  DancePostStatus,
+  ScanJobState,
+  ScanStatus,
+  ScanStatusRow,
+} from "@bnewapp/dance-core";
 
 export interface ApiSuccess<T> {
   data: T;
@@ -173,4 +183,94 @@ export interface ExploreRoomsCursor {
 export interface ExploreRoomsPage {
   items: ExploreRoom[];
   nextCursor: ExploreRoomsCursor | null;
+}
+
+// --- Dance flow (consumer) -------------------------------------------------
+// Curated wire shapes for the consumer dance feature. Camelcase like the other
+// app-facing DTOs (StudioRoom, ExploreRoom); the server maps DB columns onto them.
+
+/** A published genre in the consumer catalog. */
+export interface DanceGenre {
+  id: string;
+  name: string;
+  sortOrder: number;
+}
+
+/** The music track joined onto a move, carrying the beat-drop offset the Record
+ * screen seeks to. */
+export interface DanceMoveMusic {
+  id: string;
+  title: string;
+  artist: string | null;
+  audioUrl: string;
+  /** ms into the track where the choreography begins; null → play from the start. */
+  delayBeforeAvatarDance: number | null;
+}
+
+/**
+ * A published, scannable move. Eligible moves always have a filmYourselfVideoUrl
+ * (the PiP reference + expert_url), so it is non-null here.
+ */
+export interface DanceMove {
+  id: string;
+  title: string;
+  description: string | null;
+  level: number;
+  bpm: number | null;
+  thumbnailUrl: string | null;
+  mainVideoUrl: string | null;
+  proDancerVideoUrl: string | null;
+  proDancerImageUrl: string | null;
+  dancerTipVideoUrl: string | null;
+  dancerTipImageUrl: string | null;
+  presentationVideoUrl: string | null;
+  filmYourselfVideoUrl: string;
+  genreIds: string[];
+  music: DanceMoveMusic | null;
+  sortOrder: number;
+  createdAt: string;
+}
+
+/** Keyset cursor for the moves feed, ordered by (sortOrder, createdAt, id). */
+export interface DanceMovesCursor {
+  sortOrder: number;
+  createdAt: string;
+  id: string;
+}
+
+/** A page of moves with the cursor to fetch the next page, if any. */
+export interface DanceMovesPage {
+  items: DanceMove[];
+  nextCursor: DanceMovesCursor | null;
+}
+
+/** A user's recorded attempt. The amateur video URL is never stored — only the
+ * Storage object path — so it is not part of the DTO. */
+export interface DancePost {
+  id: string;
+  danceMoveId: string;
+  musicId: string | null;
+  status: DancePostStatus;
+  score: number | null;
+  videoLengthS: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Body for POST /api/dance/posts — musicId is resolved server-side from the move. */
+export interface CreateDancePostBody {
+  danceMoveId: string;
+  videoLength: number;
+}
+
+/** Supabase Storage signed upload target for the amateur recording. */
+export interface DancePostUpload {
+  signedUrl: string;
+  path: string;
+}
+
+/** Result of POST /api/dance/posts: the created post id and where to upload. */
+export interface CreateDancePostResult {
+  postId: string;
+  upload: DancePostUpload;
 }

@@ -5,5 +5,8 @@
   "type": "module",
   "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
   "scripts": { "build": "tsc -p tsconfig.build.json", "typecheck": "tsc --noEmit" },
-  "dependencies": { "@bnewapp/studio-core": "workspace:*" }
+  "dependencies": {
+    "@bnewapp/dance-core": "workspace:*",
+    "@bnewapp/studio-core": "workspace:*"
+  }
 }

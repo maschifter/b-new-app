@@ -5,6 +5,7 @@ import { MediaUploadInput } from "../../components/media-upload-input";
 
 export const musicTrackCreateDefaults = {
   artist: null,
+  delay_before_avatar_dance: null,
   thumbnail_url: null,
   status: "draft",
   sort_order: 0,
@@ -15,6 +16,7 @@ export function musicTrackEditableFields(record: Partial<AdminMusicTrack>) {
     title: record.title,
     artist: record.artist ?? null,
     audio_url: record.audio_url,
+    delay_before_avatar_dance: record.delay_before_avatar_dance ?? null,
     thumbnail_url: record.thumbnail_url ?? null,
     status: record.status,
     sort_order: record.sort_order,
@@ -43,6 +45,11 @@ export function TrackFormFields() {
         target="track"
         requirement="required"
         validate={required()}
+      />
+      <NumberInput
+        source="delay_before_avatar_dance"
+        label="Choreography offset (ms)"
+        min={0}
       />
       <SelectInput
         source="status"

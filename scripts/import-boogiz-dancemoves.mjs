@@ -107,6 +107,12 @@ function positiveIntegerOrNull(value) {
   return Number.isInteger(value) && value > 0 ? value : null;
 }
 
+function nonNegativeIntegerOrNull(value) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? Math.round(value)
+    : null;
+}
+
 function requiredTimestamp(value, fieldName, legacyId) {
   if (typeof value !== "string" || Number.isNaN(Date.parse(value))) {
     throw new Error(`Missing or invalid ${fieldName} on legacy document ${legacyId}`);
@@ -140,6 +146,7 @@ function mapMusic(document) {
     title: requiredString(document.title, "title", legacyId),
     artist: nullableString(document.artist),
     audio_url: requiredString(document.musicLink, "musicLink", legacyId),
+    delay_before_avatar_dance: nonNegativeIntegerOrNull(document.delayBeforeAvatarDance),
     thumbnail_url: nullableString(document.thumbnail),
     status: document.active === true ? "published" : "draft",
     created_at: requiredTimestamp(document.createdAt, "createdAt", legacyId),
