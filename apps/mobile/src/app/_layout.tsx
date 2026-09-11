@@ -42,6 +42,7 @@ function RootNavigator() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="profile" />
         <Stack.Screen name="shop" />
+        <Stack.Screen name="dance" />
         <Stack.Screen name="room/[ownerId]" />
       </Stack.Protected>
     </Stack>

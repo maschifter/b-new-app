@@ -13,6 +13,7 @@ interface StudioScreenProps {
   /** Opens the profile screen; wired by the app so the feature stays route-agnostic. */
   onOpenProfile?: () => void;
   onOpenShop?: () => void;
+  onOpenDance?: () => void;
 }
 
 export function StudioScreen({
@@ -21,6 +22,7 @@ export function StudioScreen({
   avatarLabel,
   onOpenProfile,
   onOpenShop,
+  onOpenDance,
 }: StudioScreenProps) {
   return (
     <StudioProvider ownerId={ownerId}>
@@ -29,6 +31,7 @@ export function StudioScreen({
         visitorCount={visitorCount}
         onOpenProfile={onOpenProfile}
         onOpenShop={onOpenShop}
+        onOpenDance={onOpenDance}
       />
     </StudioProvider>
   );
@@ -39,11 +42,13 @@ function StudioContent({
   visitorCount,
   onOpenProfile,
   onOpenShop,
+  onOpenDance,
 }: {
   avatarLabel?: string;
   visitorCount?: number;
   onOpenProfile?: () => void;
   onOpenShop?: () => void;
+  onOpenDance?: () => void;
 }) {
   const { state, template, selectSpot } = useStudio();
 
@@ -81,15 +86,27 @@ function StudioContent({
         ) : (
           <View />
         )}
-        {visitorCount !== undefined ? (
-          <View
-            accessible
-            accessibilityLabel={`${visitorCount} room visitors`}
-            className="rounded-[18px] bg-panel/70 px-[14px] py-2"
-          >
-            <Text className="text-[15px] font-bold text-foreground">Visitors: {visitorCount}</Text>
-          </View>
-        ) : null}
+        <View className="flex-row items-center gap-2">
+          {onOpenDance ? (
+            <BouncablePress
+              accessibilityRole="button"
+              accessibilityLabel="Learn a dance"
+              onPress={onOpenDance}
+              className="rounded-[18px] bg-primary px-[14px] py-2"
+            >
+              <Text className="text-[15px] font-bold text-foreground">Dance</Text>
+            </BouncablePress>
+          ) : null}
+          {visitorCount !== undefined ? (
+            <View
+              accessible
+              accessibilityLabel={`${visitorCount} room visitors`}
+              className="rounded-[18px] bg-panel/70 px-[14px] py-2"
+            >
+              <Text className="text-[15px] font-bold text-foreground">Visitors: {visitorCount}</Text>
+            </View>
+          ) : null}
+        </View>
       </SafeAreaView>
 
       <ItemPicker onOpenShop={onOpenShop} />

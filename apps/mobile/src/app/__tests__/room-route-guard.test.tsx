@@ -44,6 +44,7 @@ it("keeps the room route out of a signed-out deep link", () => {
   render(<RootLayout />);
 
   expect(screen.queryByText("room/[ownerId]")).toBeNull();
+  expect(screen.queryByText("dance")).toBeNull();
   expect(screen.getByText("auth")).toBeTruthy();
 });
 
@@ -52,5 +53,6 @@ it("exposes the room route only inside the authenticated stack", () => {
   render(<RootLayout />);
 
   expect(screen.getByText("room/[ownerId]")).toBeTruthy();
+  expect(screen.getByText("dance")).toBeTruthy();
   expect(screen.queryByText("auth")).toBeNull();
 });

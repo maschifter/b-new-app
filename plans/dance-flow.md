@@ -539,13 +539,14 @@ is **done** only when every box under it is checked and its checks pass (typeche
 - [x] Tests: routes + scanning-client (success/failover/fallback/invalid) + worker (happy/retry/terminal-fallback) (§2.5)
 
 ### Milestone 4 — Mobile browse
-- [ ] `features/dance` scaffold: `index.ts`, `api.ts`, `_atoms/{queries,mutations,ui,effects}.ts`, `ui/` (§4)
-- [ ] Query atoms: genres, moves (`atomWithInfiniteQuery` + cursor + derived flat list), moveDetail; `userId` in every key (§4)
-- [ ] Entry point: `onOpenDance` prop on `StudioScreen`, wired in `app/(tabs)/studio.tsx` → `router.push("/dance")` (§4)
-- [ ] Routes declared inside `Stack.Protected` in root `_layout.tsx` (§4)
-- [ ] Choose-move screen: genre selector + moves carousel, shuffle, skeleton, empty, pull-to-refresh, infinite scroll (§4.1)
-- [ ] Learn screen: paged learning videos, playback-speed bar, CTA → record; no music picker (§4.2)
-- [ ] Tests: move list loading/empty/data/pagination (§4)
+- [x] `features/dance` browse scaffold: `index.ts`, `api.ts`, `_atoms/{queries,ui}.ts`, `ui/` (§4)
+  - `mutations.ts` and `effects.ts` intentionally arrive with milestones 5–6; mobile conventions prohibit empty state files.
+- [x] Query atoms: genres, moves (`atomWithInfiniteQuery` + cursor + derived flat list), moveDetail; `userId` in every key (§4)
+- [x] Entry point: `onOpenDance` prop on `StudioScreen`, wired in `app/(tabs)/studio.tsx` → `router.push("/dance")` (§4)
+- [x] Routes declared inside `Stack.Protected` in root `_layout.tsx` (§4)
+- [x] Choose-move screen: genre selector + moves carousel, shuffle, skeleton, empty, pull-to-refresh, infinite scroll (§4.1)
+- [x] Learn screen: paged learning videos, playback-speed bar, CTA reserved for the milestone 5 recording route; no music picker (§4.2)
+- [x] Tests: move list loading/empty/data/pagination (§4)
 
 ### Milestone 5 — Mobile record
 - [ ] Add `react-native-vision-camera` + config plugin + camera/mic usage strings; EAS dev-client build (§5)
