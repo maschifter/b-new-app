@@ -40,6 +40,26 @@ function resolveApiUrl(): string {
 // request URLs off the same base without re-resolving the Metro/env host.
 export const apiUrl = resolveApiUrl();
 
+// Bearer auth header for authenticated requests. Feature api modules reuse this
+// instead of re-spelling the `Bearer ${accessToken}` template per call.
+export function authHeaders(accessToken: string): Record<string, string> {
+  return { Authorization: `Bearer ${accessToken}` };
+}
+
+// Auth header plus JSON content type for requests that send a body.
+export function jsonHeaders(accessToken: string): Record<string, string> {
+  return { ...authHeaders(accessToken), "Content-Type": "application/json" };
+}
+
+// Unwrap the shared `ApiSuccess<T>` envelope, throwing `errorMessage` on a
+// non-2xx response. For endpoints whose failures need the server's message or
+// custom validation, read the response directly instead.
+export async function unwrapApiSuccess<T>(response: Response, errorMessage: string): Promise<T> {
+  if (!response.ok) throw new Error(errorMessage);
+  const body = (await response.json()) as ApiSuccess<T>;
+  return body.data;
+}
+
 export async function getHealth(): Promise<HealthStatus> {
   const response = await fetch(`${apiUrl}/health`);
   if (!response.ok) {
@@ -50,24 +70,21 @@ export async function getHealth(): Promise<HealthStatus> {
 
 export async function getCurrentUser(accessToken: string): Promise<UserProfile> {
   const response = await fetch(`${apiUrl}/api/user/me`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
+    headers: authHeaders(accessToken),
   });
-  if (!response.ok) throw new Error("Unable to load your profile");
-
-  const body = (await response.json()) as ApiSuccess<UserProfile>;
-  return body.data;
+  return unwrapApiSuccess<UserProfile>(response, "Unable to load your profile");
 }
 
 export async function getStudioRoom(
   accessToken: string,
 ): Promise<StudioRoomWithVisitorCount | null> {
   const response = await fetch(`${apiUrl}/api/studio/room`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
+    headers: authHeaders(accessToken),
   });
-  if (!response.ok) throw new Error("Unable to load your studio room");
-
-  const body = (await response.json()) as ApiSuccess<StudioRoomWithVisitorCount | null>;
-  return body.data;
+  return unwrapApiSuccess<StudioRoomWithVisitorCount | null>(
+    response,
+    "Unable to load your studio room",
+  );
 }
 
 export async function saveStudioRoom(
@@ -76,11 +93,8 @@ export async function saveStudioRoom(
 ): Promise<StudioRoom> {
   const response = await fetch(`${apiUrl}/api/studio/room`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+    headers: jsonHeaders(accessToken),
     body: JSON.stringify(snapshot),
   });
-  if (!response.ok) throw new Error("Unable to save your studio room");
-
-  const body = (await response.json()) as ApiSuccess<StudioRoom>;
-  return body.data;
+  return unwrapApiSuccess<StudioRoom>(response, "Unable to save your studio room");
 }

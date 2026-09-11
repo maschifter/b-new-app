@@ -1,4 +1,4 @@
-import { apiUrl } from "@/lib/api/client";
+import { apiUrl, authHeaders, jsonHeaders } from "@/lib/api/client";
 import type {
   Inventory,
   InventoryItem,
@@ -85,14 +85,14 @@ async function readResponse<T>(
 
 export async function getWallet(accessToken: string): Promise<Wallet> {
   const response = await fetch(`${apiUrl}/api/shop/wallet`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
+    headers: authHeaders(accessToken),
   });
   return readResponse(response, "Unable to load your Glow balance", parseWallet);
 }
 
 export async function getInventory(accessToken: string): Promise<Inventory> {
   const response = await fetch(`${apiUrl}/api/shop/inventory`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
+    headers: authHeaders(accessToken),
   });
   return readResponse(response, "Unable to load your inventory", parseInventory);
 }
@@ -103,7 +103,7 @@ export async function purchaseItem(
 ): Promise<PurchaseItemResult> {
   const response = await fetch(`${apiUrl}/api/shop/purchase`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+    headers: jsonHeaders(accessToken),
     body: JSON.stringify(body),
   });
   return readResponse(response, "Unable to purchase this item", parsePurchaseResult);

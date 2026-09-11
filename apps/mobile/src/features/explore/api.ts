@@ -1,10 +1,5 @@
-import { apiUrl } from "@/lib/api/client";
-import type {
-  ApiSuccess,
-  ExploreRoomsCursor,
-  ExploreRoomsPage,
-  VisitedStudioRoom,
-} from "@bnewapp/types";
+import { apiUrl, authHeaders, unwrapApiSuccess } from "@/lib/api/client";
+import type { ExploreRoomsCursor, ExploreRoomsPage, VisitedStudioRoom } from "@bnewapp/types";
 
 interface GetExploreRoomsParams {
   limit?: number;
@@ -25,12 +20,9 @@ export async function getExploreRooms(
   }
   const query = params.toString();
   const response = await fetch(`${apiUrl}/api/studio/rooms${query ? `?${query}` : ""}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
+    headers: authHeaders(accessToken),
   });
-  if (!response.ok) throw new Error("Unable to load studios");
-
-  const body = (await response.json()) as ApiSuccess<ExploreRoomsPage>;
-  return body.data;
+  return unwrapApiSuccess<ExploreRoomsPage>(response, "Unable to load studios");
 }
 
 // Record a visit to another user's room, then return its read-only detail.
@@ -41,10 +33,7 @@ export async function visitExploreRoom(
 ): Promise<VisitedStudioRoom | null> {
   const response = await fetch(`${apiUrl}/api/studio/rooms/${ownerId}/visits`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${accessToken}` },
+    headers: authHeaders(accessToken),
   });
-  if (!response.ok) throw new Error("Unable to load this studio");
-
-  const body = (await response.json()) as ApiSuccess<VisitedStudioRoom | null>;
-  return body.data;
+  return unwrapApiSuccess<VisitedStudioRoom | null>(response, "Unable to load this studio");
 }

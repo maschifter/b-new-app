@@ -1,11 +1,5 @@
-import { apiUrl } from "@/lib/api/client";
-import type {
-  ApiSuccess,
-  DanceGenre,
-  DanceMove,
-  DanceMovesCursor,
-  DanceMovesPage,
-} from "@bnewapp/types";
+import { apiUrl, authHeaders, unwrapApiSuccess } from "@/lib/api/client";
+import type { DanceGenre, DanceMove, DanceMovesCursor, DanceMovesPage } from "@bnewapp/types";
 
 interface GetDanceMovesParams {
   genreId?: string | null;
@@ -13,14 +7,11 @@ interface GetDanceMovesParams {
   limit?: number;
 }
 
-function authorization(accessToken: string): HeadersInit {
-  return { Authorization: `Bearer ${accessToken}` };
-}
-
 export async function getDanceGenres(accessToken: string): Promise<DanceGenre[]> {
-  const response = await fetch(`${apiUrl}/api/dance/genres`, { headers: authorization(accessToken) });
-  if (!response.ok) throw new Error("Unable to load dance genres");
-  return ((await response.json()) as ApiSuccess<DanceGenre[]>).data;
+  const response = await fetch(`${apiUrl}/api/dance/genres`, {
+    headers: authHeaders(accessToken),
+  });
+  return unwrapApiSuccess<DanceGenre[]>(response, "Unable to load dance genres");
 }
 
 export async function getDanceMoves(
@@ -31,16 +22,14 @@ export async function getDanceMoves(
   if (genreId) params.set("genre_id", genreId);
   if (cursor) params.set("cursor", JSON.stringify(cursor));
   const response = await fetch(`${apiUrl}/api/dance/moves?${params.toString()}`, {
-    headers: authorization(accessToken),
+    headers: authHeaders(accessToken),
   });
-  if (!response.ok) throw new Error("Unable to load dance moves");
-  return ((await response.json()) as ApiSuccess<DanceMovesPage>).data;
+  return unwrapApiSuccess<DanceMovesPage>(response, "Unable to load dance moves");
 }
 
 export async function getDanceMove(accessToken: string, moveId: string): Promise<DanceMove> {
   const response = await fetch(`${apiUrl}/api/dance/moves/${moveId}`, {
-    headers: authorization(accessToken),
+    headers: authHeaders(accessToken),
   });
-  if (!response.ok) throw new Error("Unable to load this dance move");
-  return ((await response.json()) as ApiSuccess<DanceMove>).data;
+  return unwrapApiSuccess<DanceMove>(response, "Unable to load this dance move");
 }
