@@ -18,7 +18,7 @@ const testConfig = {
   SUPABASE_SECRET_KEY: "test-secret-key",
 } as const;
 
-type Handler = (request: { query?: unknown; params?: unknown }) => Promise<unknown>;
+type Handler = (request: { body?: unknown; query?: unknown; params?: unknown; user?: { sub: string } }) => Promise<unknown>;
 
 function httpError(statusCode: number, message: string) {
   return Object.assign(new Error(message), { statusCode });
@@ -30,6 +30,9 @@ function registerDance(supabase: Record<string, unknown>) {
     authenticate: vi.fn(),
     get: vi.fn((path: string, _options: unknown, handler: Handler) => {
       handlers[`GET ${path}`] = handler;
+    }),
+    post: vi.fn((path: string, _options: unknown, handler: Handler) => {
+      handlers[`POST ${path}`] = handler;
     }),
     httpErrors: {
       badRequest: (message: string) => httpError(400, message),
@@ -88,6 +91,17 @@ describe("dance consumer routes", () => {
     const app = await buildApp(testConfig);
     const response = await app.inject({ method: "GET", url: "/api/dance/genres" });
     expect(response.statusCode).toBe(401);
+    await app.close();
+  });
+
+  it("requires authentication for every dance post endpoint", async () => {
+    const app = await buildApp(testConfig);
+    const create = await app.inject({ method: "POST", url: "/api/dance/posts", payload: {} });
+    const uploaded = await app.inject({ method: "POST", url: `/api/dance/posts/${MOVE_ID}/uploaded` });
+    const score = await app.inject({ method: "GET", url: `/api/dance/posts/${MOVE_ID}/score` });
+    expect(create.statusCode).toBe(401);
+    expect(uploaded.statusCode).toBe(401);
+    expect(score.statusCode).toBe(401);
     await app.close();
   });
 
@@ -195,6 +209,23 @@ describe("dance consumer routes", () => {
       statusCode: 400,
       message: "Invalid dance move id",
     });
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("validates post bodies and post ids before touching Supabase", async () => {
+    const from = vi.fn();
+    const { app, handlers } = registerDance({ from });
+    await danceRoutes(app as never);
+
+    await expect(
+      handlers["POST /posts"]?.({
+        body: { danceMoveId: "not-a-uuid", videoLength: 0 },
+        user: { sub: GENRE_ID },
+      }),
+    ).rejects.toMatchObject({ statusCode: 400, message: "Invalid dance post" });
+    await expect(
+      handlers["GET /posts/:id/score"]?.({ params: { id: "not-a-uuid" }, user: { sub: GENRE_ID } }),
+    ).rejects.toMatchObject({ statusCode: 400, message: "Invalid dance post id" });
     expect(from).not.toHaveBeenCalled();
   });
 });

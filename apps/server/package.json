@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@bnewapp/dance-core": "workspace:*",
     "@bnewapp/studio-core": "workspace:*",
     "@bnewapp/types": "workspace:*",
     "@fastify/cors": "^11.0.0",

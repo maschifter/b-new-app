@@ -303,9 +303,9 @@ No queue library — the `dance_scans` table is the queue. "Enqueue" = the
      `is_external_score=false`), mark the scan `completed`, and resolve the post to
      `status='scored'` with that score — so the mobile poll always terminates and
      the V1 `dance_posts.status='failed'` branch stays unused.
-- **Stuck-row reaper**: rows in `processing` with `locked_at` older than a
-  timeout (e.g. > 3 min, covering the ~90s scan timeout + margin) are reset to
-  `pending` — recovers jobs orphaned by a mid-flight restart. Idempotent per
+- **Stuck-row reaper**: rows in `processing` with `locked_at` older than the
+  configured scan client's maximum failover duration plus a safety margin are reset to
+  `pending` — recovers jobs orphaned by a mid-flight restart without reclaiming a live scan. Idempotent per
   `postId`.
 
 ### 2.5 Tests (Vitest, `apps/server/tests`)
@@ -524,19 +524,19 @@ is **done** only when every box under it is checked and its checks pass (typeche
 - [x] Tests: auth required, invalid input, success, not-found, Supabase failure (§2.5)
 
 ### Milestone 3 — Upload + scan pipeline
-- [ ] `POST /api/dance/posts` — resolves `musicId` from move, creates `uploading` row, returns signed upload URL (`dance-videos` bucket, key `owner_id/postId.mp4`) (§2.2)
-- [ ] `POST /api/dance/posts/:id/uploaded` — mark `uploaded`, insert `pending` `dance_scans` row (§2.2)
-- [ ] `GET /api/dance/posts/:id/score` — polling endpoint returns `ScanStatus` (§2.2)
-- [ ] Scanning client (`scanning-client.ts`): form-urlencoded `expert_url`+`amateur_url`+`jobid`, 90s timeout, `SCAN_SERVER_URLS` from env, URL failover, invalid-score rejection (§2.3)
-- [ ] Amateur signed read URL minted per attempt from `video_path`; expert URL public, sent directly (§2.3, §Decisions)
-- [ ] Interval worker (`scan-worker.ts`): `setInterval` from `buildApp`, `onClose` stop, re-entrancy guard (§2.4)
-- [ ] Claim budget `N − inFlight`; atomic conditional `UPDATE … WHERE id=? AND status='pending'`; flip post to `scoring` on claim (§2.4)
-- [ ] Process: dance-core score → write `completed` + `original`/`updated`; post `scored`, `score = original_score` (§2.4)
-- [ ] Retry/backoff (base 3s, up to 3 attempts) → terminal fallback score `50..70` (§2.4)
-- [ ] Stuck-row reaper (`locked_at` > ~3 min → `pending`) (§2.4)
-- [ ] Env wired: `SCAN_SERVER_URLS`, `DANCE_VIDEO_BUCKET`, `SCAN_WORKER_CONCURRENCY`, `SCAN_WORKER_ENABLED` (§5)
-- [ ] `dance-videos` private bucket in `supabase/config.toml` (private, 45MiB, `video/mp4`) (§5)
-- [ ] Tests: routes + scanning-client (success/failover/fallback/invalid) + worker (happy/retry/terminal-fallback) (§2.5)
+- [x] `POST /api/dance/posts` — resolves `musicId` from move, creates `uploading` row, returns signed upload URL (`dance-videos` bucket, key `owner_id/postId.mp4`) (§2.2)
+- [x] `POST /api/dance/posts/:id/uploaded` — mark `uploaded`, insert `pending` `dance_scans` row (§2.2)
+- [x] `GET /api/dance/posts/:id/score` — polling endpoint returns `ScanStatus` (§2.2)
+- [x] Scanning client (`scanning-client.ts`): form-urlencoded `expert_url`+`amateur_url`+`jobid`, 90s timeout, `SCAN_SERVER_URLS` from env, URL failover, invalid-score rejection (§2.3)
+- [x] Amateur signed read URL minted per attempt from `video_path`; expert URL public, sent directly (§2.3, §Decisions)
+- [x] Interval worker (`scan-worker.ts`): `setInterval` from `buildApp`, `onClose` stop, re-entrancy guard (§2.4)
+- [x] Claim budget `N − inFlight`; atomic conditional `UPDATE … WHERE id=? AND status='pending'`; flip post to `scoring` on claim (§2.4)
+- [x] Process: dance-core score → write `completed` + `original`/`updated`; post `scored`, `score = original_score` (§2.4)
+- [x] Retry/backoff (base 3s, up to 3 attempts) → terminal fallback score `50..70` (§2.4)
+- [x] Stuck-row reaper (`locked_at` > ~3 min → `pending`) (§2.4)
+- [x] Server config wired: scan URLs, video bucket, worker concurrency, and worker enablement (§5)
+- [x] `dance-videos` private bucket in `supabase/config.toml` (private, 45MiB, `video/mp4`) (§5)
+- [x] Tests: routes + scanning-client (success/failover/fallback/invalid) + worker (happy/retry/terminal-fallback) (§2.5)
 
 ### Milestone 4 — Mobile browse
 - [ ] `features/dance` scaffold: `index.ts`, `api.ts`, `_atoms/{queries,mutations,ui,effects}.ts`, `ui/` (§4)

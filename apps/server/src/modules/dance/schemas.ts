@@ -12,6 +12,15 @@ export const DanceMoveIdParams = z.object({
   id: z.string().uuid(),
 });
 
+export const DancePostIdParams = z.object({
+  id: z.string().uuid(),
+});
+
+export const CreateDancePostRequest = z.object({
+  danceMoveId: z.string().uuid(),
+  videoLength: z.coerce.number().finite().positive().max(600),
+});
+
 export const DanceMovesQuery = z.object({
   genre_id: z.string().uuid().optional(),
   cursor: z.string().min(1).optional(),

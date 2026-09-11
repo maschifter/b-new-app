@@ -16,3 +16,8 @@ allowed_mime_types = ["image/png", "image/jpeg", "image/webp"]
 public = true
 file_size_limit = "45MiB"
 allowed_mime_types = ["image/png", "image/jpeg", "image/webp", "video/mp4", "audio/mpeg", "audio/mp4"]
+
+[storage.buckets.dance-videos]
+public = false
+file_size_limit = "45MiB"
+allowed_mime_types = ["video/mp4"]

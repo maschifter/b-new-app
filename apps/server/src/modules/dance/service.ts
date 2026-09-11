@@ -1,4 +1,14 @@
-import type { DanceGenre, DanceMove, DanceMovesPage, Database } from "@bnewapp/types";
+import { coerceScanStatus } from "@bnewapp/dance-core";
+import type {
+  CreateDancePostResult,
+  DanceGenre,
+  DanceMove,
+  DanceMovesPage,
+  DancePost,
+  Database,
+  ScanStatus,
+} from "@bnewapp/types";
+import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyInstance } from "fastify";
 import type { DanceMovesCursor } from "./schemas.js";
@@ -81,7 +91,45 @@ function cursorFilter(cursor: DanceMovesCursor): string {
   ].join(",");
 }
 
-export function createDanceService(supabase: SupabaseClient<Database>, httpErrors: HttpErrors) {
+const POST_STATUSES = ["uploading", "uploaded", "scoring", "scored", "failed"] as const;
+
+function toDancePostStatus(value: string): DancePost["status"] | null {
+  return POST_STATUSES.find((status) => status === value) ?? null;
+}
+
+function toDancePost(
+  row: Pick<
+    Database["public"]["Tables"]["dance_posts"]["Row"],
+    | "id"
+    | "dance_move_id"
+    | "music_id"
+    | "status"
+    | "score"
+    | "video_length_s"
+    | "created_at"
+    | "updated_at"
+  >,
+  httpErrors: HttpErrors,
+): DancePost {
+  const status = toDancePostStatus(row.status);
+  if (status === null) throw httpErrors.internalServerError("Invalid dance post status");
+  return {
+    id: row.id,
+    danceMoveId: row.dance_move_id,
+    musicId: row.music_id,
+    status,
+    score: row.score,
+    videoLengthS: row.video_length_s,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export function createDanceService(
+  supabase: SupabaseClient<Database>,
+  httpErrors: HttpErrors,
+  danceVideoBucket = "dance-videos",
+) {
   return {
     async listGenres(): Promise<DanceGenre[]> {
       const { data, error } = await supabase
@@ -145,6 +193,110 @@ export function createDanceService(supabase: SupabaseClient<Database>, httpError
       if (error) throw httpErrors.internalServerError("Could not load dance move");
       if (!data) throw httpErrors.notFound("Dance move not found");
       return toDanceMove(data as DanceMoveWithRelations);
+    },
+
+    async createPost(
+      ownerId: string,
+      input: { danceMoveId: string; videoLength: number },
+    ): Promise<CreateDancePostResult> {
+      const { data: move, error: moveError } = await supabase
+        .from("dance_moves")
+        .select("id, music_id")
+        .eq("id", input.danceMoveId)
+        .eq("status", "published")
+        .not("film_yourself_video_url", "is", null)
+        .maybeSingle();
+      if (moveError) throw httpErrors.internalServerError("Could not load dance move");
+      if (!move) throw httpErrors.notFound("Dance move not found");
+
+      const postId = randomUUID();
+      const path = `${ownerId}/${postId}.mp4`;
+      const { error: insertError } = await supabase.from("dance_posts").insert({
+        id: postId,
+        owner_id: ownerId,
+        dance_move_id: move.id,
+        music_id: move.music_id,
+        video_path: path,
+        video_length_s: input.videoLength,
+        status: "uploading",
+      });
+      if (insertError) throw httpErrors.internalServerError("Could not create dance post");
+
+      const { data: upload, error: uploadError } = await supabase.storage
+        .from(danceVideoBucket)
+        .createSignedUploadUrl(path);
+      if (uploadError || !upload) {
+        await supabase.from("dance_posts").delete().eq("id", postId).eq("owner_id", ownerId);
+        throw httpErrors.internalServerError("Could not create dance video upload URL");
+      }
+      return { postId, upload: { signedUrl: upload.signedUrl, path } };
+    },
+
+    async markUploaded(ownerId: string, postId: string): Promise<DancePost> {
+      const { data: existing, error: existingError } = await supabase
+        .from("dance_posts")
+        .select("id, owner_id, dance_move_id, music_id, status, score, video_length_s, created_at, updated_at")
+        .eq("id", postId)
+        .eq("owner_id", ownerId)
+        .maybeSingle();
+      if (existingError) throw httpErrors.internalServerError("Could not load dance post");
+      if (!existing) throw httpErrors.notFound("Dance post not found");
+
+      const filename = `${postId}.mp4`;
+      const { data: uploadedFiles, error: storageError } = await supabase.storage
+        .from(danceVideoBucket)
+        .list(ownerId, { limit: 1, search: filename });
+      if (storageError) throw httpErrors.internalServerError("Could not verify dance video upload");
+      if (!uploadedFiles?.some((file) => file.name === filename)) {
+        throw httpErrors.conflict("Dance video upload not found");
+      }
+
+      let post = existing;
+      if (existing.status === "uploading") {
+        const { data: updated, error: updateError } = await supabase
+          .from("dance_posts")
+          .update({ status: "uploaded" })
+          .eq("id", postId)
+          .eq("owner_id", ownerId)
+          .eq("status", "uploading")
+          .select("id, owner_id, dance_move_id, music_id, status, score, video_length_s, created_at, updated_at")
+          .maybeSingle();
+        if (updateError) throw httpErrors.internalServerError("Could not update dance post");
+        if (!updated) throw httpErrors.conflict("Dance post upload state changed");
+        post = updated;
+      }
+
+      const { error: scanError } = await supabase.from("dance_scans").upsert(
+        { post_id: postId, owner_id: ownerId, status: "pending" },
+        { onConflict: "post_id", ignoreDuplicates: true },
+      );
+      if (scanError) throw httpErrors.internalServerError("Could not queue dance scan");
+      return toDancePost(post, httpErrors);
+    },
+
+    async getScoreStatus(ownerId: string, postId: string): Promise<ScanStatus> {
+      const { data: post, error: postError } = await supabase
+        .from("dance_posts")
+        .select("status, score")
+        .eq("id", postId)
+        .eq("owner_id", ownerId)
+        .maybeSingle();
+      if (postError) throw httpErrors.internalServerError("Could not load dance post");
+      if (!post) throw httpErrors.notFound("Dance post not found");
+
+      const { data: scan, error: scanError } = await supabase
+        .from("dance_scans")
+        .select("status, is_external_score")
+        .eq("post_id", postId)
+        .eq("owner_id", ownerId)
+        .maybeSingle();
+      if (scanError) throw httpErrors.internalServerError("Could not load dance scan");
+      return coerceScanStatus({
+        postStatus: post.status,
+        score: post.score,
+        scanStatus: scan?.status ?? null,
+        isExternalScore: scan?.is_external_score ?? null,
+      });
     },
   };
 }

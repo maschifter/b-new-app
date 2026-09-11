@@ -197,6 +197,9 @@ importers:
 
   apps/server:
     dependencies:
+      '@bnewapp/dance-core':
+        specifier: workspace:*
+        version: link:../../packages/dance-core
       '@bnewapp/studio-core':
         specifier: workspace:*
         version: link:../../packages/studio-core
