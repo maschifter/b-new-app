@@ -11,6 +11,7 @@ import { errorHandlerPlugin } from "./lib/errors.js";
 import { adminRoutes } from "./modules/admin/routes.js";
 import { catalogRoutes } from "./modules/catalog/routes.js";
 import { devRoutes } from "./modules/dev/routes.js";
+import { danceRoutes } from "./modules/dance/routes.js";
 import { healthRoutes } from "./modules/health/routes.js";
 import { shopRoutes } from "./modules/shop/routes.js";
 import { studioRoutes } from "./modules/studio/routes.js";
@@ -68,6 +69,7 @@ export async function buildApp(config: Env) {
   await app.register(catalogRoutes, { prefix: "/api/studio" });
   await app.register(studioRoutes, { prefix: "/api/studio" });
   await app.register(shopRoutes, { prefix: "/api/shop" });
+  await app.register(danceRoutes, { prefix: "/api/dance" });
   await app.register(adminRoutes, { prefix: "/api/admin" });
   if (config.NODE_ENV === "development" && config.DEV_ADMIN_SECRET) {
     await app.register(devRoutes, {

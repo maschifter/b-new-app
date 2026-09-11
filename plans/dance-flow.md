@@ -516,12 +516,12 @@ is **done** only when every box under it is checked and its checks pass (typeche
 - [x] Unit tests green (dance-core)
 
 ### Milestone 2 — Server consumer reads
-- [ ] Mount `danceRoutes` at `/api/dance` in `app.ts`, all guarded by `app.authenticate` (§2)
-- [ ] `GET /api/dance/genres` — published, sorted by `sort_order` (§2.1)
-- [ ] `GET /api/dance/moves` — published only + eligible filter (non-null `film_yourself_video_url`), cursor pagination `(sort_order, created_at, id)`, joins music incl. `audio_url` + `delay_before_avatar_dance` (§2.1)
-- [ ] `GET /api/dance/moves/:id` — full detail incl. music offset (§2.1)
-- [ ] Zod validation on all inputs
-- [ ] Tests: auth required, invalid input, success, not-found, Supabase failure (§2.5)
+- [x] Mount `danceRoutes` at `/api/dance` in `app.ts`, all guarded by `app.authenticate` (§2)
+- [x] `GET /api/dance/genres` — published, sorted by `sort_order` (§2.1)
+- [x] `GET /api/dance/moves` — published only + eligible filter (non-null `film_yourself_video_url`), cursor pagination `(sort_order, created_at, id)`, joins music incl. `audio_url` + `delay_before_avatar_dance` (§2.1)
+- [x] `GET /api/dance/moves/:id` — full detail incl. music offset (§2.1)
+- [x] Zod validation on all inputs
+- [x] Tests: auth required, invalid input, success, not-found, Supabase failure (§2.5)
 
 ### Milestone 3 — Upload + scan pipeline
 - [ ] `POST /api/dance/posts` — resolves `musicId` from move, creates `uploading` row, returns signed upload URL (`dance-videos` bucket, key `owner_id/postId.mp4`) (§2.2)
