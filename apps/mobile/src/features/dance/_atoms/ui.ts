@@ -29,3 +29,6 @@ export const simulatedDanceRecordingEnabledAtom = atomWithDanceMMKV(
   "dance:v1:simulated-recording",
   false,
 );
+
+/** Development-only camera selection for recording a different dancer. */
+export const useBackDanceCameraAtom = atomWithDanceMMKV("dance:v1:use-back-camera", false);

@@ -6,7 +6,7 @@ import { queryClientAtom } from "jotai-tanstack-query";
 import { Camera, useVideoOutput } from "react-native-vision-camera";
 
 import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
-import { simulatedDanceRecordingEnabledAtom } from "../../_atoms/ui";
+import { simulatedDanceRecordingEnabledAtom, useBackDanceCameraAtom } from "../../_atoms/ui";
 import {
   createDancePost,
   discardUploadingDancePost,
@@ -235,6 +235,17 @@ it("keeps choreography audio playing while the camera session is active", async 
   await mount();
 
   expect(screen.UNSAFE_getByType(Camera).props.allowBackgroundAudioPlayback).toBe(true);
+  expect(screen.UNSAFE_getByType(Camera).props.device).toBe("front");
+});
+
+it("uses the back camera when the development toggle is enabled", async () => {
+  mockCameraPermission.hasPermission = true;
+
+  await mount(move(), (store) => {
+    store.set(useBackDanceCameraAtom, true);
+  });
+
+  expect(screen.UNSAFE_getByType(Camera).props.device).toBe("back");
 });
 
 it("shows a recoverable message when the recorder cannot start", async () => {

@@ -26,7 +26,7 @@ import { submitDanceRecordingMutationAtom } from "../_atoms/mutations";
 import { getDanceMoves } from "../api";
 import { danceMoveDetailAtomFamily, danceScoreAtom } from "../_atoms/queries";
 import { startDanceScorePollingAtom } from "../_atoms/effects";
-import { activeDanceScanAtom, simulatedDanceRecordingEnabledAtom } from "../_atoms/ui";
+import { activeDanceScanAtom, simulatedDanceRecordingEnabledAtom, useBackDanceCameraAtom } from "../_atoms/ui";
 import {
   type DanceRecorder,
   chooseSimulatedDanceVideo,
@@ -75,11 +75,13 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
   const [simulatedVideoUrl, setSimulatedVideoUrl] = useState(move.filmYourselfVideoUrl);
   const auth = useAtomValue(queryAuthAtom);
   const simulatedRecordingToggle = useAtomValue(simulatedDanceRecordingEnabledAtom);
+  const useBackCameraToggle = useAtomValue(useBackDanceCameraAtom);
   const [activeScan, setActiveScan] = useAtom(activeDanceScanAtom);
   const startScorePolling = useSetAtom(startDanceScorePollingAtom);
   const submit = useAtomValue(submitDanceRecordingMutationAtom);
   const score = useAtomValue(danceScoreAtom);
   const simulatedRecordingEnabled = __DEV__ && simulatedRecordingToggle;
+  const useBackCamera = __DEV__ && useBackCameraToggle;
   const cameraPermission = useCameraPermission();
   const hasPermission = simulatedRecordingEnabled || cameraPermission.hasPermission;
   const canRequestPermission = simulatedRecordingEnabled || cameraPermission.canRequestPermission;
@@ -390,7 +392,7 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
           />
         ) : hasPermission ? (
           <Camera
-            device="front"
+            device={useBackCamera ? "back" : "front"}
             isActive={step !== FilmStep.FINISHED}
             allowBackgroundAudioPlayback
             mirrorMode="auto"

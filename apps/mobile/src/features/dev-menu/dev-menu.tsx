@@ -1,5 +1,5 @@
 import { BouncablePress } from "@/components/bouncable-press";
-import { simulatedDanceRecordingEnabledAtom } from "@/features/dance/dev";
+import { simulatedDanceRecordingEnabledAtom, useBackDanceCameraAtom } from "@/features/dance/dev";
 import { type DevMenuFabPosition, devMenuFabPositionAtom } from "@/features/dev-menu/state";
 import { useAtom } from "jotai";
 import { useMemo, useRef, useState } from "react";
@@ -20,6 +20,7 @@ export function DevMenu() {
   const [simulatedRecordingEnabled, setSimulatedRecordingEnabled] = useAtom(
     simulatedDanceRecordingEnabledAtom,
   );
+  const [useBackCamera, setUseBackCamera] = useAtom(useBackDanceCameraAtom);
   const fabPositionRef = useRef(fabPosition);
   const dragStartRef = useRef(fabPosition);
   const hasDraggedRef = useRef(false);
@@ -91,13 +92,26 @@ export function DevMenu() {
             <View className="flex-1 gap-1">
               <Text className="font-bold text-white">Simulated dance recording</Text>
               <Text className="text-sm leading-5 text-zinc-400">
-                Use the reference video as a simulated front-camera capture and return a cached MP4.
+                Use a different catalog video as a simulated capture and return a cached MP4.
               </Text>
             </View>
             <Switch
               accessibilityLabel="Enable simulated dance recording"
               value={simulatedRecordingEnabled}
               onValueChange={setSimulatedRecordingEnabled}
+            />
+          </View>
+          <View className="mt-3 flex-row items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+            <View className="flex-1 gap-1">
+              <Text className="font-bold text-white">Use back camera for dance recording</Text>
+              <Text className="text-sm leading-5 text-zinc-400">
+                Capture someone else dancing when testing on a physical device.
+              </Text>
+            </View>
+            <Switch
+              accessibilityLabel="Enable back camera for dance recording"
+              value={useBackCamera}
+              onValueChange={setUseBackCamera}
             />
           </View>
         </View>
