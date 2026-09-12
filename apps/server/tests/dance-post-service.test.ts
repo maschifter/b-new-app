@@ -147,7 +147,7 @@ describe("dance post service", () => {
   it("returns the normalized score status only for the requesting owner", async () => {
     const post = queryBuilder({ data: { status: "scored", score: 72 }, error: null });
     const scan = queryBuilder({ data: { status: "completed", is_external_score: true }, error: null });
-    const from = vi.fn().mockReturnValueOnce(post).mockReturnValueOnce(scan);
+    const from = vi.fn().mockReturnValueOnce(scan).mockReturnValueOnce(post);
     const service = createDanceService({ from } as never, httpErrors as never);
 
     await expect(service.getScoreStatus(OWNER_ID, POST_ID)).resolves.toEqual({
@@ -161,9 +161,42 @@ describe("dance post service", () => {
     expect(scan.eq).toHaveBeenCalledWith("owner_id", OWNER_ID);
   });
 
+  it("reads the scan before the post so a completed scan cannot race its score write", async () => {
+    let scanWasRead = false;
+    const scan = queryBuilder({ data: { status: "processing", is_external_score: false }, error: null });
+    const post = queryBuilder({ data: undefined, error: null });
+    const scanMaybeSingle = scan.maybeSingle;
+    const postMaybeSingle = post.maybeSingle;
+    if (!scanMaybeSingle || !postMaybeSingle) throw new Error("Expected score query builders");
+    scanMaybeSingle.mockImplementation(async () => {
+      scanWasRead = true;
+      return { data: { status: "processing", is_external_score: false }, error: null };
+    });
+    postMaybeSingle.mockImplementation(async () => ({
+      data: scanWasRead ? { status: "scored", score: 63 } : { status: "scoring", score: null },
+      error: null,
+    }));
+    const service = createDanceService(
+      { from: vi.fn().mockReturnValueOnce(scan).mockReturnValueOnce(post) } as never,
+      httpErrors as never,
+    );
+
+    await expect(service.getScoreStatus(OWNER_ID, POST_ID)).resolves.toEqual({
+      status: "scored",
+      hasScore: true,
+      score: 63,
+      isExternalScore: false,
+      jobState: "processing",
+    });
+  });
+
   it("does not reveal score status for a post that is absent or not owned", async () => {
+    const scan = queryBuilder({ data: null, error: null });
     const post = queryBuilder({ data: null, error: null });
-    const service = createDanceService({ from: vi.fn().mockReturnValue(post) } as never, httpErrors as never);
+    const service = createDanceService(
+      { from: vi.fn().mockReturnValueOnce(scan).mockReturnValueOnce(post) } as never,
+      httpErrors as never,
+    );
 
     await expect(service.getScoreStatus(OWNER_ID, POST_ID)).rejects.toMatchObject({ statusCode: 404 });
   });

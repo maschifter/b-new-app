@@ -12,6 +12,21 @@ export interface DanceRecorder {
 
 const simulationVideoPromises = new Map<string, Promise<string>>();
 
+/**
+ * Prefer a catalog clip that differs from the move being learned, so a dev
+ * recording exercises the pose comparison rather than comparing a file to
+ * itself. The reference remains the safe fallback for a one-move catalog.
+ */
+export function chooseSimulatedDanceVideo(
+  referenceUrl: string,
+  candidateUrls: readonly string[],
+  random: () => number = Math.random,
+): string {
+  const alternatives = candidateUrls.filter((url) => url !== referenceUrl);
+  if (alternatives.length === 0) return referenceUrl;
+  return alternatives[Math.floor(random() * alternatives.length)] ?? referenceUrl;
+}
+
 /** Downloads the public reference once, giving the upload flow a real local MP4. */
 export function preloadSimulatedDanceVideo(sourceUrl: string): Promise<string> {
   const existing = simulationVideoPromises.get(sourceUrl);

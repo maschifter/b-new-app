@@ -23,7 +23,7 @@ jest.mock("expo-file-system", () => ({
   Paths: { cache: "file:///cache" },
 }));
 
-import { createSimulatedDanceRecorder } from "../recording-adapter";
+import { chooseSimulatedDanceVideo, createSimulatedDanceRecorder } from "../recording-adapter";
 
 const SOURCE_URL = "https://example.test/reference.mp4";
 
@@ -117,4 +117,21 @@ it("reuses a file left in the cache by an earlier JS session instead of re-downl
   await reimported.adapter.createSimulatedDanceRecorder(source, 60);
 
   expect(mockDownloadFileAsync).not.toHaveBeenCalled();
+});
+
+it("chooses a different catalog video when one is available", () => {
+  expect(
+    chooseSimulatedDanceVideo("https://example.test/current.mp4", [
+      "https://example.test/current.mp4",
+      "https://example.test/other.mp4",
+    ]),
+  ).toBe("https://example.test/other.mp4");
+});
+
+it("falls back to the reference when the catalog has no other video", () => {
+  expect(
+    chooseSimulatedDanceVideo("https://example.test/current.mp4", [
+      "https://example.test/current.mp4",
+    ]),
+  ).toBe("https://example.test/current.mp4");
 });

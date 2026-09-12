@@ -295,6 +295,17 @@ export function createDanceService(
     },
 
     async getScoreStatus(ownerId: string, postId: string): Promise<ScanStatus> {
+      const { data: scan, error: scanError } = await supabase
+        .from("dance_scans")
+        .select("status, is_external_score")
+        .eq("post_id", postId)
+        .eq("owner_id", ownerId)
+        .maybeSingle();
+      if (scanError) throw httpErrors.internalServerError("Could not load dance scan");
+
+      // The worker writes `dance_posts.score` before marking its scan completed.
+      // Reading in the opposite order avoids returning a completed scan paired
+      // with the pre-score post snapshot, which would prematurely stop polling.
       const { data: post, error: postError } = await supabase
         .from("dance_posts")
         .select("status, score")
@@ -304,13 +315,6 @@ export function createDanceService(
       if (postError) throw httpErrors.internalServerError("Could not load dance post");
       if (!post) throw httpErrors.notFound("Dance post not found");
 
-      const { data: scan, error: scanError } = await supabase
-        .from("dance_scans")
-        .select("status, is_external_score")
-        .eq("post_id", postId)
-        .eq("owner_id", ownerId)
-        .maybeSingle();
-      if (scanError) throw httpErrors.internalServerError("Could not load dance scan");
       return coerceScanStatus({
         postStatus: post.status,
         score: post.score,

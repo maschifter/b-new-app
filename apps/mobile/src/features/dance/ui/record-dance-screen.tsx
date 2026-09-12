@@ -1,5 +1,6 @@
 import { BouncablePress } from "@/components/bouncable-press";
 import { MobileQueryErrorBoundary } from "@/components/error-boundary";
+import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
 import {
   FilmStep,
   countdownCompletionMs,
@@ -22,11 +23,13 @@ import {
   useVideoOutput,
 } from "react-native-vision-camera";
 import { submitDanceRecordingMutationAtom } from "../_atoms/mutations";
+import { getDanceMoves } from "../api";
 import { danceMoveDetailAtomFamily, danceScoreAtom } from "../_atoms/queries";
 import { startDanceScorePollingAtom } from "../_atoms/effects";
 import { activeDanceScanAtom, simulatedDanceRecordingEnabledAtom } from "../_atoms/ui";
 import {
   type DanceRecorder,
+  chooseSimulatedDanceVideo,
   createSimulatedDanceRecorder,
   preloadSimulatedDanceVideo,
 } from "../recording-adapter";
@@ -69,6 +72,8 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
   const [recordedClip, setRecordedClip] = useState<RecordedClip | null>(null);
   const [countdownText, setCountdownText] = useState<string | null>(null);
   const [recordingError, setRecordingError] = useState<string | null>(null);
+  const [simulatedVideoUrl, setSimulatedVideoUrl] = useState(move.filmYourselfVideoUrl);
+  const auth = useAtomValue(queryAuthAtom);
   const simulatedRecordingToggle = useAtomValue(simulatedDanceRecordingEnabledAtom);
   const [activeScan, setActiveScan] = useAtom(activeDanceScanAtom);
   const startScorePolling = useSetAtom(startDanceScorePollingAtom);
@@ -86,7 +91,7 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
     player.muted = true;
   });
   const simulatedCameraPlayer = useVideoPlayer(
-    simulatedRecordingEnabled ? move.filmYourselfVideoUrl : null,
+    simulatedRecordingEnabled ? simulatedVideoUrl : null,
     (player) => {
       player.loop = true;
       player.muted = true;
@@ -148,8 +153,29 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
 
   useEffect(() => {
     if (!simulatedRecordingEnabled) return;
-    void preloadSimulatedDanceVideo(move.filmYourselfVideoUrl);
-  }, [move.filmYourselfVideoUrl, simulatedRecordingEnabled]);
+    void preloadSimulatedDanceVideo(simulatedVideoUrl);
+  }, [simulatedRecordingEnabled, simulatedVideoUrl]);
+
+  useEffect(() => {
+    if (!simulatedRecordingEnabled || !auth) return;
+    let cancelled = false;
+    void getDanceMoves(auth.accessToken, { limit: 20 })
+      .then((page) => {
+        if (cancelled) return;
+        setSimulatedVideoUrl(
+          chooseSimulatedDanceVideo(
+            move.filmYourselfVideoUrl,
+            page.items.map((item) => item.filmYourselfVideoUrl),
+          ),
+        );
+      })
+      .catch(() => {
+        // The reference clip remains a useful simulation when the catalog is unavailable.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [auth, move.filmYourselfVideoUrl, simulatedRecordingEnabled]);
 
   // Latched so the teardown below runs only on unmount: depending on the player
   // identities directly would tear the flow down mid-countdown whenever a player
@@ -243,7 +269,7 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
       referencePlayer.pause();
       referencePlayer.currentTime = 0;
       const recorder = simulatedRecordingEnabled
-        ? await createSimulatedDanceRecorder(move.filmYourselfVideoUrl, recordingLength)
+        ? await createSimulatedDanceRecorder(simulatedVideoUrl, recordingLength)
         : await videoOutput.createRecorder({ maxDuration: recordingLength });
       if (!isMountedRef.current) {
         await recorder.cancelRecording();
@@ -281,12 +307,12 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
     }
   }, [
     finishRecording,
-    move.filmYourselfVideoUrl,
     recordingLength,
     referencePlayer,
     requestStopRecording,
     simulatedCameraPlayer,
     simulatedRecordingEnabled,
+    simulatedVideoUrl,
     videoOutput,
   ]);
 
@@ -417,7 +443,9 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
             : `Recording length: ${recordingLength}s`}
         </Text>
         {simulatedRecordingEnabled ? (
-          <Text className="text-xs text-violet-300">DEV · Simulated recording adapter enabled</Text>
+          <Text className="text-xs text-violet-300">
+            DEV · Simulated {simulatedVideoUrl === move.filmYourselfVideoUrl ? "reference" : "catalog"} recording
+          </Text>
         ) : null}
         {recordedClip ? (
           <Text className="text-sm text-neon">

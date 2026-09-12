@@ -10,6 +10,7 @@ import { simulatedDanceRecordingEnabledAtom } from "../../_atoms/ui";
 import {
   createDancePost,
   discardUploadingDancePost,
+  getDanceMoves,
   getDanceMove,
   getDanceScoreStatus,
   markDancePostUploaded,
@@ -30,6 +31,7 @@ const mockCameraPermission = {
 
 jest.mock("../../api", () => ({
   getDanceMove: jest.fn(),
+  getDanceMoves: jest.fn(),
   createDancePost: jest.fn(),
   discardUploadingDancePost: jest.fn(),
   uploadDanceVideo: jest.fn(),
@@ -67,6 +69,7 @@ jest.mock("react-native-vision-camera", () => ({
 }));
 
 const mockedGetDanceMove = getDanceMove as jest.Mock;
+const mockedGetDanceMoves = getDanceMoves as jest.Mock;
 const mockedCreateDancePost = createDancePost as jest.Mock;
 const mockedDiscardUploadingDancePost = discardUploadingDancePost as jest.Mock;
 const mockedUploadDanceVideo = uploadDanceVideo as jest.Mock;
@@ -115,6 +118,7 @@ function move(overrides: Partial<DanceMove> = {}): DanceMove {
 
 async function mount(danceMove: DanceMove = move(), configure?: (store: JotaiStore) => void) {
   mockedGetDanceMove.mockResolvedValue(danceMove);
+  mockedGetDanceMoves.mockResolvedValue({ items: [], nextCursor: null });
   const store = createStore();
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -424,7 +428,7 @@ it("records through the simulated adapter, and never the camera, when the dev sw
 
   // The dev switch stands in for the camera permission, so the prompt is gone.
   expect(screen.queryByText("Camera access is needed")).not.toBeOnTheScreen();
-  expect(screen.getByText("DEV · Simulated recording adapter enabled")).toBeOnTheScreen();
+  expect(screen.getByText("DEV · Simulated reference recording")).toBeOnTheScreen();
   expect(screen.UNSAFE_queryByType(Camera)).toBeNull();
 
   await fireEventAsync.press(screen.getByLabelText("Start recording"));
