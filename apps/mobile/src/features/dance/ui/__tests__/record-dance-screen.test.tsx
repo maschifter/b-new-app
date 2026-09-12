@@ -7,15 +7,7 @@ import { Camera, useVideoOutput } from "react-native-vision-camera";
 
 import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
 import { simulatedDanceRecordingEnabledAtom, useBackDanceCameraAtom } from "../../_atoms/ui";
-import {
-  createDancePost,
-  discardUploadingDancePost,
-  getDanceMoves,
-  getDanceMove,
-  getDanceScoreStatus,
-  markDancePostUploaded,
-  uploadDanceVideo,
-} from "../../api";
+import { getDanceMoves, getDanceMove } from "../../api";
 import { createSimulatedDanceRecorder } from "../../recording-adapter";
 import { RecordDanceScreen } from "../record-dance-screen";
 
@@ -23,6 +15,9 @@ type JotaiStore = ReturnType<typeof createStore>;
 
 const mockRequestPermission = jest.fn<Promise<boolean>, []>().mockResolvedValue(true);
 const mockCreateRecorder = jest.fn();
+const mockAudioPlayerPause = jest.fn();
+const mockVideoPlayerPause = jest.fn();
+const mockUseIsFocused = jest.fn(() => true);
 const mockCameraPermission = {
   hasPermission: false,
   canRequestPermission: true,
@@ -32,12 +27,8 @@ const mockCameraPermission = {
 jest.mock("../../api", () => ({
   getDanceMove: jest.fn(),
   getDanceMoves: jest.fn(),
-  createDancePost: jest.fn(),
-  discardUploadingDancePost: jest.fn(),
-  uploadDanceVideo: jest.fn(),
-  markDancePostUploaded: jest.fn(),
-  getDanceScoreStatus: jest.fn(),
 }));
+jest.mock("@react-navigation/native", () => ({ useIsFocused: () => mockUseIsFocused() }));
 jest.mock("../../recording-adapter", () => ({
   createSimulatedDanceRecorder: jest.fn(),
   preloadSimulatedDanceVideo: jest.fn().mockResolvedValue("file:///cache/reference.mp4"),
@@ -46,7 +37,7 @@ jest.mock("expo-blur", () => ({ BlurView: "BlurView" }));
 jest.mock("expo-audio", () => ({
   setAudioModeAsync: jest.fn().mockResolvedValue(undefined),
   useAudioPlayer: () => ({
-    pause: jest.fn(),
+    pause: mockAudioPlayerPause,
     play: jest.fn(),
     seekTo: jest.fn().mockResolvedValue(undefined),
   }),
@@ -57,7 +48,7 @@ jest.mock("expo-video", () => ({
     loop: false,
     muted: false,
     play: jest.fn(),
-    pause: jest.fn(),
+    pause: mockVideoPlayerPause,
     addListener: () => ({ remove: jest.fn() }),
   }),
 }));
@@ -70,18 +61,13 @@ jest.mock("react-native-vision-camera", () => ({
 
 const mockedGetDanceMove = getDanceMove as jest.Mock;
 const mockedGetDanceMoves = getDanceMoves as jest.Mock;
-const mockedCreateDancePost = createDancePost as jest.Mock;
-const mockedDiscardUploadingDancePost = discardUploadingDancePost as jest.Mock;
-const mockedUploadDanceVideo = uploadDanceVideo as jest.Mock;
-const mockedMarkDancePostUploaded = markDancePostUploaded as jest.Mock;
-const mockedGetDanceScoreStatus = getDanceScoreStatus as jest.Mock;
 const mockUseVideoOutput = useVideoOutput as jest.Mock;
 const mockedCreateSimulatedRecorder = createSimulatedDanceRecorder as jest.Mock;
 const queryClients: QueryClient[] = [];
 const mountedScreens: Array<{ unmountAsync: () => Promise<void> }> = [];
 
 const MOVE_ID = "00000000-0000-4000-8000-000000000001";
-const POST_ID = "00000000-0000-4000-8000-000000000010";
+const mockRecordingComplete = jest.fn();
 
 // A deliberately fast tempo: the countdown is `(60 / bpm) * 4` seconds, so this
 // keeps the recording flow under a frame instead of the ~2s a real move takes.
@@ -134,7 +120,7 @@ async function mount(danceMove: DanceMove = move(), configure?: (store: JotaiSto
   const result = await renderAsync(
     <QueryClientProvider client={queryClient}>
       <Provider store={store}>
-        <RecordDanceScreen moveId={MOVE_ID} />
+        <RecordDanceScreen moveId={MOVE_ID} onRecordingComplete={mockRecordingComplete} />
       </Provider>
     </QueryClientProvider>,
   );
@@ -162,15 +148,6 @@ function stoppableRecorder() {
       recording = false;
     }),
   };
-}
-
-function mockUploadSucceeds() {
-  mockedCreateDancePost.mockResolvedValue({
-    postId: POST_ID,
-    upload: { signedUrl: "https://storage.example.test/upload", path: "dancer/attempt.mp4" },
-  });
-  mockedUploadDanceVideo.mockResolvedValue(undefined);
-  mockedMarkDancePostUploaded.mockResolvedValue({ id: POST_ID, status: "uploaded" });
 }
 
 /** Drives the flow up to the point where the recorder hands back a clip. */
@@ -205,11 +182,10 @@ beforeEach(() => {
   mockRequestPermission.mockClear();
   mockCreateRecorder.mockReset();
   mockUseVideoOutput.mockClear();
-  mockedCreateDancePost.mockReset();
-  mockedDiscardUploadingDancePost.mockReset();
-  mockedUploadDanceVideo.mockReset();
-  mockedMarkDancePostUploaded.mockReset();
-  mockedGetDanceScoreStatus.mockReset();
+  mockUseIsFocused.mockReturnValue(true);
+  mockAudioPlayerPause.mockReset();
+  mockVideoPlayerPause.mockReset();
+  mockRecordingComplete.mockReset();
   mockedCreateSimulatedRecorder.mockReset();
 });
 
@@ -268,168 +244,22 @@ it("shows a recoverable message when the recorder cannot start", async () => {
   expect(screen.getByLabelText("Start recording")).toBeOnTheScreen();
 });
 
-it("uploads the recorded clip and reports the score once scanning completes", async () => {
+it("hands the normalized local clip to the result route when recording completes", async () => {
   mockCameraPermission.hasPermission = true;
-  mockUploadSucceeds();
-  mockedGetDanceScoreStatus.mockResolvedValue({
-    status: "scored",
-    hasScore: true,
-    score: 96,
-    isExternalScore: false,
-    jobState: "completed",
-  });
-
   await mount(move({ bpm: FAST_BPM }));
+  const audioPauseCalls = mockAudioPlayerPause.mock.calls.length;
+  const videoPauseCalls = mockVideoPlayerPause.mock.calls.length;
   await recordAClip();
 
-  expect(await screen.findByText("You scored 96 points!")).toBeOnTheScreen();
-  expect(mockedCreateDancePost).toHaveBeenCalledWith(
-    "token",
-    expect.objectContaining({ danceMoveId: MOVE_ID }),
+  expect(mockRecordingComplete).toHaveBeenCalledWith(
+    expect.objectContaining({ path: "file:///tmp/dance-attempt.mp4" }),
   );
-  expect(mockedUploadDanceVideo).toHaveBeenCalledWith(
-    "https://storage.example.test/upload",
-    "file:///tmp/dance-attempt.mp4",
-  );
-  expect(mockedMarkDancePostUploaded).toHaveBeenCalledWith("token", POST_ID);
-});
-
-it("surfaces a failed upload without queueing the post for scanning", async () => {
-  mockCameraPermission.hasPermission = true;
-  mockedCreateDancePost.mockResolvedValue({
-    postId: POST_ID,
-    upload: { signedUrl: "https://storage.example.test/upload", path: "dancer/attempt.mp4" },
-  });
-  mockedUploadDanceVideo.mockRejectedValue(new Error("Unable to upload dance video"));
-
-  await mount(move({ bpm: FAST_BPM }));
-  await recordAClip();
-
-  expect(
-    await screen.findByText("Couldn't submit your dance. Please try again."),
-  ).toBeOnTheScreen();
-  expect(mockedMarkDancePostUploaded).not.toHaveBeenCalled();
-  expect(mockedDiscardUploadingDancePost).toHaveBeenCalledWith("token", POST_ID);
-  expect(mockedGetDanceScoreStatus).not.toHaveBeenCalled();
-});
-
-it("keeps polling after a single failed score check instead of giving up", async () => {
-  jest.useFakeTimers();
-  try {
-    mockCameraPermission.hasPermission = true;
-    mockUploadSucceeds();
-    mockedGetDanceScoreStatus
-      .mockRejectedValueOnce(new Error("network blip"))
-      .mockResolvedValueOnce({
-        status: "scored",
-        hasScore: true,
-        score: 92,
-        isExternalScore: false,
-        jobState: "completed",
-      });
-
-    await mount(move({ bpm: FAST_BPM }));
-    await recordAClip();
-
-    await waitFor(() => expect(mockedGetDanceScoreStatus).toHaveBeenCalledTimes(1));
-    expect(screen.getByText("Scoring your dance…")).toBeOnTheScreen();
-    expect(screen.queryByText("Couldn't check your dance score.")).not.toBeOnTheScreen();
-
-    await act(async () => {
-      await jest.advanceTimersByTimeAsync(2_000);
-    });
-    expect(await screen.findByText("You scored 92 points!")).toBeOnTheScreen();
-  } finally {
-    jest.useRealTimers();
-  }
-});
-
-it("hands the clip to the upload flow when the user stops the recording early", async () => {
-  mockCameraPermission.hasPermission = true;
-  mockUploadSucceeds();
-  mockedGetDanceScoreStatus.mockResolvedValue({
-    status: "scoring",
-    hasScore: false,
-    score: null,
-    isExternalScore: false,
-    jobState: "processing",
-  });
-  const recorder = stoppableRecorder();
-  mockCreateRecorder.mockResolvedValue(recorder);
-
-  await mount(move({ bpm: FAST_BPM }));
-  await fireEventAsync.press(screen.getByLabelText("Start recording"));
-  await waitFor(() => expect(screen.getByLabelText("Stop recording")).toBeOnTheScreen());
-  await fireEventAsync.press(screen.getByLabelText("Stop recording"));
-
-  expect(recorder.stopRecording).toHaveBeenCalledTimes(1);
-  expect(await screen.findByText("Scoring your dance…")).toBeOnTheScreen();
-  expect(mockedUploadDanceVideo).toHaveBeenCalledWith(
-    "https://storage.example.test/upload",
-    "file:///tmp/dance-attempt.mp4",
-  );
-});
-
-it("retries a failed upload with the clip already on disk instead of re-recording", async () => {
-  mockCameraPermission.hasPermission = true;
-  mockedCreateDancePost.mockResolvedValue({
-    postId: POST_ID,
-    upload: { signedUrl: "https://storage.example.test/upload", path: "dancer/attempt.mp4" },
-  });
-  mockedUploadDanceVideo.mockRejectedValueOnce(new Error("Unable to upload dance video"));
-  mockedUploadDanceVideo.mockResolvedValueOnce(undefined);
-  mockedMarkDancePostUploaded.mockResolvedValue({ id: POST_ID, status: "uploaded" });
-  mockedGetDanceScoreStatus.mockResolvedValue({
-    status: "scored",
-    hasScore: true,
-    score: 88,
-    isExternalScore: false,
-    jobState: "completed",
-  });
-
-  await mount(move({ bpm: FAST_BPM }));
-  await recordAClip();
-  expect(
-    await screen.findByText("Couldn't submit your dance. Please try again."),
-  ).toBeOnTheScreen();
-
-  await fireEventAsync.press(screen.getByLabelText("Retry submitting your dance"));
-
-  expect(await screen.findByText("You scored 88 points!")).toBeOnTheScreen();
-  expect(mockCreateRecorder).toHaveBeenCalledTimes(1);
-  expect(mockedUploadDanceVideo).toHaveBeenCalledTimes(2);
-});
-
-it("offers no retry for a scan that finished without a score", async () => {
-  mockCameraPermission.hasPermission = true;
-  mockUploadSucceeds();
-  mockedGetDanceScoreStatus.mockResolvedValue({
-    status: "failed",
-    hasScore: false,
-    score: null,
-    isExternalScore: false,
-    jobState: "failed",
-  });
-
-  await mount(move({ bpm: FAST_BPM }));
-  await recordAClip();
-
-  expect(
-    await screen.findByText("Dance scoring failed. Please record another attempt."),
-  ).toBeOnTheScreen();
-  expect(screen.queryByLabelText("Retry submitting your dance")).not.toBeOnTheScreen();
+  expect(mockAudioPlayerPause.mock.calls.length).toBeGreaterThan(audioPauseCalls);
+  expect(mockVideoPlayerPause.mock.calls.length).toBeGreaterThan(videoPauseCalls);
 });
 
 it("records through the simulated adapter, and never the camera, when the dev switch is on", async () => {
   mockCameraPermission.hasPermission = false;
-  mockUploadSucceeds();
-  mockedGetDanceScoreStatus.mockResolvedValue({
-    status: "scoring",
-    hasScore: false,
-    score: null,
-    isExternalScore: false,
-    jobState: "processing",
-  });
   const recorder = stoppableRecorder();
   mockedCreateSimulatedRecorder.mockResolvedValue(recorder);
 
@@ -448,5 +278,5 @@ it("records through the simulated adapter, and never the camera, when the dev sw
 
   expect(mockedCreateSimulatedRecorder).toHaveBeenCalledTimes(1);
   expect(mockCreateRecorder).not.toHaveBeenCalled();
-  expect(await screen.findByText("Scoring your dance…")).toBeOnTheScreen();
+  expect(mockRecordingComplete).toHaveBeenCalledTimes(1);
 });

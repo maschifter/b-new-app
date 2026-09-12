@@ -1,9 +1,9 @@
 import { BouncablePress } from "@/components/bouncable-press";
+import { useFocusedPlayback } from "@/lib/media/use-focused-playback";
 import type { DanceMove } from "@bnewapp/types";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { VideoView, useVideoPlayer } from "expo-video";
-import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 interface DanceMoveCardProps {
@@ -108,13 +108,7 @@ function DanceMoveVideoPreview({ url, playing }: { url: string; playing: boolean
     createdPlayer.loop = true;
     createdPlayer.muted = true;
   });
-  useEffect(() => {
-    if (playing) {
-      player.play();
-      return;
-    }
-    player.pause();
-  }, [player, playing]);
+  useFocusedPlayback(player, playing);
 
   return (
     <VideoView

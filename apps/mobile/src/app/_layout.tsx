@@ -55,6 +55,7 @@ function RootNavigator() {
         <Stack.Screen name="dance" />
         <Stack.Screen name="dance/[moveId]" />
         <Stack.Screen name="dance/[moveId]/record" />
+        <Stack.Screen name="dance/[moveId]/result" options={{ gestureEnabled: false }} />
         <Stack.Screen name="room/[ownerId]" />
       </Stack.Protected>
     </Stack>

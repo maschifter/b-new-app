@@ -7,5 +7,16 @@ import { Redirect, router, useLocalSearchParams } from "expo-router";
 export default function DanceRecordRoute() {
   const { moveId } = useLocalSearchParams<{ moveId: string }>();
   if (!isUuidParam(moveId)) return <Redirect href="/dance" />;
-  return <RecordDanceScreen moveId={moveId} onBack={() => router.back()} />;
+  return (
+    <RecordDanceScreen
+      moveId={moveId}
+      onBack={() => router.back()}
+      onRecordingComplete={({ path, duration }) =>
+        router.replace({
+          pathname: "/dance/[moveId]/result",
+          params: { moveId, clipPath: path, clipDuration: String(duration) },
+        })
+      }
+    />
+  );
 }

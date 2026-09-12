@@ -13,6 +13,8 @@ jest.mock("../../api", () => ({
   getDanceMove: jest.fn(),
   getDanceMoves: jest.fn(),
 }));
+const mockUseIsFocused = jest.fn(() => true);
+jest.mock("@react-navigation/native", () => ({ useIsFocused: () => mockUseIsFocused() }));
 
 jest.mock("expo-video", () => ({
   VideoView: "VideoView",
@@ -78,6 +80,7 @@ async function mount() {
 }
 
 beforeEach(() => {
+  mockUseIsFocused.mockReturnValue(true);
   mockedGetGenres.mockReset();
   mockedGetMoves.mockReset();
   mockedGetGenres.mockResolvedValue([] satisfies DanceGenre[]);

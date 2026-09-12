@@ -10,6 +10,8 @@ import { getDanceMove } from "../../api";
 import { LearnDanceScreen } from "../learn-dance-screen";
 
 jest.mock("../../api", () => ({ getDanceMove: jest.fn() }));
+const mockUseIsFocused = jest.fn(() => true);
+jest.mock("@react-navigation/native", () => ({ useIsFocused: () => mockUseIsFocused() }));
 const videoPlayers: Array<{ url: string; play: jest.Mock; pause: jest.Mock }> = [];
 
 jest.mock("expo-video", () => ({
@@ -52,7 +54,7 @@ async function mount() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY, retry: false } } });
   store.set(queryClientAtom, queryClient);
   store.set(queryAuthAtom, { userId: "dancer", accessToken: "token" });
-  await renderAsync(
+  return renderAsync(
     <QueryClientProvider client={queryClient}>
       <Provider store={store}>
         <LearnDanceScreen moveId="00000000-0000-4000-8000-000000000001" />
@@ -63,6 +65,7 @@ async function mount() {
 
 beforeEach(() => {
   mockedGetDanceMove.mockReset();
+  mockUseIsFocused.mockReturnValue(true);
   videoPlayers.length = 0;
 });
 
@@ -99,6 +102,16 @@ it("plays only the visible lesson page", async () => {
 
   const proPlayer = () => proPlayers().at(-1);
   await waitFor(() => expect(proPlayer()?.play).toHaveBeenCalled());
+});
+
+it("keeps lesson playback paused when the screen is not focused", async () => {
+  mockedGetDanceMove.mockResolvedValue(move());
+  mockUseIsFocused.mockReturnValue(false);
+  await mount();
+  await screen.findByText("Electric Slide");
+  const player = videoPlayers.at(-1);
+
+  expect(player?.pause).toHaveBeenCalled();
 });
 
 it("recovers from an initial detail error", async () => {

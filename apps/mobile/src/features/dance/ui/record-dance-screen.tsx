@@ -1,6 +1,7 @@
 import { BouncablePress } from "@/components/bouncable-press";
 import { MobileQueryErrorBoundary } from "@/components/error-boundary";
 import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
+import { useFocusedPlayback } from "@/lib/media/use-focused-playback";
 import {
   FilmStep,
   countdownCompletionMs,
@@ -12,7 +13,7 @@ import {
 } from "@bnewapp/dance-core";
 import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
 import { VideoView, useVideoPlayer } from "expo-video";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useAtomValue } from "jotai";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -22,27 +23,22 @@ import {
   useCameraPermission,
   useVideoOutput,
 } from "react-native-vision-camera";
-import { submitDanceRecordingMutationAtom } from "../_atoms/mutations";
 import { getDanceMoves } from "../api";
-import { danceMoveDetailAtomFamily, danceScoreAtom } from "../_atoms/queries";
-import { startDanceScorePollingAtom } from "../_atoms/effects";
-import { activeDanceScanAtom, simulatedDanceRecordingEnabledAtom, useBackDanceCameraAtom } from "../_atoms/ui";
+import { danceMoveDetailAtomFamily } from "../_atoms/queries";
+import { simulatedDanceRecordingEnabledAtom, useBackDanceCameraAtom } from "../_atoms/ui";
 import {
   type DanceRecorder,
   chooseSimulatedDanceVideo,
   createSimulatedDanceRecorder,
   preloadSimulatedDanceVideo,
 } from "../recording-adapter";
-import { isScorePollingSlow } from "../score-polling";
 import { CameraPermissionOverlay } from "./camera-permission-overlay";
 import { DanceSkeleton } from "./dance-skeleton";
-import { SubmissionFeedback } from "./submission-feedback";
-import { deriveSubmissionState } from "./submission-state";
 
 const DEFAULT_RECORDING_LENGTH_SECONDS = 60;
 const VIDEO_BIT_RATE = 1_500_000;
 
-interface RecordedClip {
+export interface RecordedDanceClip {
   path: string;
   duration: number;
 }
@@ -50,36 +46,32 @@ interface RecordedClip {
 interface RecordDanceScreenProps {
   moveId: string;
   onBack?: () => void;
+  onRecordingComplete: (clip: RecordedDanceClip) => void;
 }
 
-export function RecordDanceScreen({ moveId, onBack }: RecordDanceScreenProps) {
+export function RecordDanceScreen({ moveId, onBack, onRecordingComplete }: RecordDanceScreenProps) {
   return (
     <SafeAreaView className="flex-1 bg-black" edges={["top", "left", "right", "bottom"]}>
       <MobileQueryErrorBoundary title="Couldn't load this dance" retryLabel="Retry loading dance">
         <Suspense fallback={<DanceSkeleton />}>
-          <RecordDanceContent moveId={moveId} onBack={onBack} />
+          <RecordDanceContent moveId={moveId} onBack={onBack} onRecordingComplete={onRecordingComplete} />
         </Suspense>
       </MobileQueryErrorBoundary>
     </SafeAreaView>
   );
 }
 
-function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
+function RecordDanceContent({ moveId, onBack, onRecordingComplete }: RecordDanceScreenProps) {
   const move = useAtomValue(danceMoveDetailAtomFamily(moveId)).data;
   const [step, setStep] = useState(FilmStep.READY);
   const [referenceOnTop, setReferenceOnTop] = useState(true);
   const [referenceDuration, setReferenceDuration] = useState<number | null>(null);
-  const [recordedClip, setRecordedClip] = useState<RecordedClip | null>(null);
   const [countdownText, setCountdownText] = useState<string | null>(null);
   const [recordingError, setRecordingError] = useState<string | null>(null);
   const [simulatedVideoUrl, setSimulatedVideoUrl] = useState(move.filmYourselfVideoUrl);
   const auth = useAtomValue(queryAuthAtom);
   const simulatedRecordingToggle = useAtomValue(simulatedDanceRecordingEnabledAtom);
   const useBackCameraToggle = useAtomValue(useBackDanceCameraAtom);
-  const [activeScan, setActiveScan] = useAtom(activeDanceScanAtom);
-  const startScorePolling = useSetAtom(startDanceScorePollingAtom);
-  const submit = useAtomValue(submitDanceRecordingMutationAtom);
-  const score = useAtomValue(danceScoreAtom);
   const simulatedRecordingEnabled = __DEV__ && simulatedRecordingToggle;
   const useBackCamera = __DEV__ && useBackCameraToggle;
   const cameraPermission = useCameraPermission();
@@ -100,18 +92,18 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
     },
   );
   const musicPlayer = useAudioPlayer(move.music?.audioUrl);
+  useFocusedPlayback(referencePlayer, step === FilmStep.RECORDING);
+  useFocusedPlayback(simulatedCameraPlayer, simulatedRecordingEnabled && step === FilmStep.RECORDING);
   const videoOutput = useVideoOutput({
     enableAudio: false,
     fileType: "mp4",
     targetBitRate: VIDEO_BIT_RATE,
     targetResolution: CommonResolutions.HD_16_9,
   });
-  const playersRef = useRef({ musicPlayer, referencePlayer, simulatedCameraPlayer });
   const recorderRef = useRef<DanceRecorder | null>(null);
   const stopRequestedRef = useRef(false);
   const isMountedRef = useRef(true);
   const recordingStartedAtRef = useRef<number | null>(null);
-  const submittedClipRef = useRef<RecordedClip | null>(null);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   // One extra second of headroom so the capture never cuts the last beat off.
   const recordingLength =
@@ -123,16 +115,6 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
     move.music?.delayBeforeAvatarDance ?? null,
     move.bpm,
   );
-  const submission = deriveSubmissionState({
-    hasClip: recordedClip !== null,
-    isUploading: submit.isPending,
-    uploadError: submit.error ?? null,
-    isScanning: activeScan !== null,
-    isScorePollingSlow:
-      activeScan !== null && isScorePollingSlow(activeScan.startedAt),
-    score: score.data,
-    scoreError: score.error ?? null,
-  });
 
   const clearTimers = useCallback(() => {
     for (const timer of timersRef.current) clearTimeout(timer);
@@ -179,28 +161,14 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
     };
   }, [auth, move.filmYourselfVideoUrl, simulatedRecordingEnabled]);
 
-  // Latched so the teardown below runs only on unmount: depending on the player
-  // identities directly would tear the flow down mid-countdown whenever a player
-  // is recreated (expo-video rebuilds one when its source changes).
-  useEffect(() => {
-    playersRef.current = { musicPlayer, referencePlayer, simulatedCameraPlayer };
-  }, [musicPlayer, referencePlayer, simulatedCameraPlayer]);
-
   useEffect(() => {
     void setAudioModeAsync({ playsInSilentMode: true });
     return () => {
       clearTimers();
-      playersRef.current.musicPlayer.pause();
-      playersRef.current.referencePlayer.pause();
-      playersRef.current.simulatedCameraPlayer.pause();
       if (recorderRef.current?.isRecording) void recorderRef.current.cancelRecording();
-      // The silent-mode override belongs to this screen only, and the pointer to
-      // the scan must not outlive it or a stale deadline would expire instantly
-      // on the next visit.
       void setAudioModeAsync({ playsInSilentMode: false });
-      setActiveScan(null);
     };
-  }, [clearTimers, setActiveScan]);
+  }, [clearTimers]);
 
   useEffect(() => {
     if (isFilmMusicPlaying(step)) return;
@@ -216,39 +184,15 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
       recordingStartedAtRef.current = null;
       recorderRef.current = null;
       stopRequestedRef.current = false;
+      musicPlayer.pause();
       referencePlayer.pause();
       referencePlayer.currentTime = 0;
       simulatedCameraPlayer.pause();
-      setRecordedClip({ path: path.startsWith("file://") ? path : `file://${path}`, duration });
-      setStep(FilmStep.STOP);
-    },
-    [clearTimers, referencePlayer, simulatedCameraPlayer],
-  );
-
-  const submitClip = useCallback(
-    (clip: RecordedClip) => {
-      setActiveScan(null);
-      // FINISHED is the gate that stops the music: the clip is now the upload
-      // flow's problem, not the camera's.
       setStep(FilmStep.FINISHED);
-      submit.mutate({ danceMoveId: move.id, path: clip.path, videoLength: clip.duration });
+      onRecordingComplete({ path: path.startsWith("file://") ? path : `file://${path}`, duration });
     },
-    [move.id, setActiveScan, submit.mutate],
+    [clearTimers, musicPlayer, onRecordingComplete, referencePlayer, simulatedCameraPlayer],
   );
-
-  useEffect(() => {
-    if (!recordedClip || submittedClipRef.current === recordedClip) return;
-    submittedClipRef.current = recordedClip;
-    submitClip(recordedClip);
-  }, [recordedClip, submitClip]);
-
-  // Mirrors the queued post id into the atom the score query reads, so polling
-  // survives a re-render and starts from a single source of truth.
-  useEffect(() => {
-    const postId = submit.data;
-    if (!submit.isSuccess || postId === undefined) return;
-    startScorePolling(postId);
-  }, [startScorePolling, submit.data, submit.isSuccess]);
 
   const requestStopRecording = useCallback(() => {
     const recorder = recorderRef.current;
@@ -324,10 +268,7 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
       return;
     }
     clearTimers();
-    setRecordedClip(null);
     setRecordingError(null);
-    setActiveScan(null);
-    submit.reset();
     setStep(FilmStep.DELAY_BEFORE_AVATAR_DANCE);
     try {
       await musicPlayer.seekTo(musicSeekSeconds(move.music?.delayBeforeAvatarDance ?? null));
@@ -359,18 +300,10 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
     move.music,
     musicPlayer,
     requestPermission,
-    setActiveScan,
-    submit.reset,
   ]);
 
-  const retrySubmission = useCallback(() => {
-    if (recordedClip) submitClip(recordedClip);
-  }, [recordedClip, submitClip]);
-
   const isRecording = step === FilmStep.RECORDING;
-  const isSubmissionActive = submission.kind === "uploading" || submission.kind === "scanning";
-  const isStartDisabled =
-    !isRecording && ((step !== FilmStep.READY && step !== FilmStep.FINISHED) || isSubmissionActive);
+  const isStartDisabled = !isRecording && step !== FilmStep.READY;
 
   return (
     <View className="flex-1 bg-black">
@@ -449,17 +382,11 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
             DEV · Simulated {simulatedVideoUrl === move.filmYourselfVideoUrl ? "reference" : "catalog"} recording
           </Text>
         ) : null}
-        {recordedClip ? (
-          <Text className="text-sm text-neon">
-            Clip ready: {recordedClip.duration.toFixed(1)} seconds
-          </Text>
-        ) : null}
         {recordingError ? (
           <Text accessibilityLiveRegion="polite" className="text-sm text-red-400">
             {recordingError}
           </Text>
         ) : null}
-        <SubmissionFeedback submission={submission} onRetry={retrySubmission} />
         <View className="flex-row gap-3">
           {onBack ? (
             <BouncablePress
@@ -474,7 +401,6 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
           <BouncablePress
             accessibilityRole="button"
             accessibilityLabel={isRecording ? "Stop recording" : "Start recording"}
-            accessibilityState={{ busy: isSubmissionActive }}
             onPress={isRecording ? requestStopRecording : () => void startDance()}
             disabled={isStartDisabled}
             className="flex-1 items-center rounded-2xl bg-primary py-4"

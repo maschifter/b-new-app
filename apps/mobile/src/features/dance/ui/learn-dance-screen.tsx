@@ -1,5 +1,6 @@
 import { BouncablePress } from "@/components/bouncable-press";
 import { MobileQueryErrorBoundary } from "@/components/error-boundary";
+import { useFocusedPlayback } from "@/lib/media/use-focused-playback";
 import type { DanceMove } from "@bnewapp/types";
 import { Ionicons } from "@expo/vector-icons";
 import { VideoView, useVideoPlayer } from "expo-video";
@@ -161,10 +162,7 @@ function LessonVideo({
   useEffect(() => {
     player.playbackRate = rate;
   }, [player, rate]);
-  useEffect(() => {
-    if (playing) player.play();
-    else player.pause();
-  }, [player, playing]);
+  useFocusedPlayback(player, playing);
   return (
     <View style={{ width, height }} className="gap-2 px-4 pb-2">
       <Text className="text-sm font-bold text-copy">{video.label}</Text>
