@@ -549,23 +549,25 @@ is **done** only when every box under it is checked and its checks pass (typeche
 - [x] Tests: move list loading/empty/data/pagination (§4)
 
 ### Milestone 5 — Mobile record
-- [ ] Add `react-native-vision-camera` + config plugin + camera/mic usage strings; EAS dev-client build (§5)
+- [x] Add `react-native-vision-camera`; configure iOS/Android camera usage and disable captured audio/microphone permission (§5)
+- [ ] Produce and verify an EAS dev-client build (and add a config plugin if the target build requires one) (§5)
 - [ ] Confirm dev-client build owner + physical camera-QA device (§5, §8)
-- [ ] Add `expo-audio`; music streams `audio_url` seeked to beat-drop, coexists with `audio:false` capture (§4.3, §5)
+- [x] Add `expo-audio`; music streams `audio_url` seeked to beat-drop and coexists with `audio:false` capture in the implementation (§4.3, §5)
 - [ ] FILM_STEP state machine ported verbatim incl. `DELAY_BEFORE_AVATAR_DANCE` + `STOP` (§4.3)
 - [ ] Countdown (`countdownSeconds`), camera start at ~50%, PiP reference flip (§4.3)
-- [ ] Recording length = reference `onLoad` duration `floor+1`, fallback 60s; recorded clip duration → `videoLength` (§4.3)
-- [ ] Camera permission handling + blurred overlay when not granted (§4.3)
+- [x] Recording length = reference `onLoad` duration `floor+1`, fallback 60s; recorded clip duration → `videoLength` (§4.3)
+- [x] Camera permission handling + blurred overlay when not granted (§4.3)
 - [ ] Device QA: audio lands on beat-drop, PiP + capture correct (§4.3, §5)
-- [ ] Tests: countdown timing, record state-machine transitions (mock camera) (§4)
+- [x] Tests: countdown timing and record state-machine transitions (mock camera) (§4)
 
 ### Milestone 6 — Mobile result
-- [ ] Result flow: `createPost` → upload to signed URL → `markUploaded` → poll `scoreStatus` until `scored`/`failed` (backoff 2s→5s, no hard cap) (§4.4)
+- [x] Result flow: `createPost` → upload to signed URL → `markUploaded` → poll `scoreStatus`, with upload cleanup/retry and score feedback (§4.4)
+- [ ] Align polling policy with the locked plan: 2s→5s backoff, no hard cap, and terminal `scored`/`failed` behavior (§4.4)
 - [ ] Score-polling effect driver (start on `uploaded`) in `_atoms/effects.ts` (§4)
 - [ ] "Still scoring — check back" affordance past ~90s soft threshold (§4.4)
-- [ ] Explicit loading UI for upload + scanning; Suspense only for initial reads + shared query error boundary + retry (§4.4)
-- [ ] Displayed score = raw match % (§Decisions)
-- [ ] Tests: score-polling resolution incl. fallback (§4)
+- [x] Explicit loading UI for upload + scanning; Suspense only for initial reads + shared query error boundary + retry (§4.4)
+- [x] Displayed score = raw match % (§Decisions)
+- [x] Tests: score-polling resolution, retry, timeout, terminal failure, and successful score (§4)
 - [ ] End-to-end on a physical device
 
 ## 7. Deferred (post-V1, noted for design headroom)
