@@ -30,6 +30,7 @@ function postRow(status = "uploading") {
     owner_id: OWNER_ID,
     dance_move_id: MOVE_ID,
     music_id: null,
+    video_path: `${OWNER_ID}/${POST_ID}.mp4`,
     status,
     score: null,
     video_length_s: 12,
@@ -111,6 +112,36 @@ describe("dance post service", () => {
 
     await expect(service.markUploaded(OWNER_ID, POST_ID)).rejects.toMatchObject({ statusCode: 409 });
     expect(from).toHaveBeenCalledTimes(1);
+  });
+
+  it("removes an owned uploading post and its video after an abandoned upload", async () => {
+    const deleted = queryBuilder({ data: { video_path: `${OWNER_ID}/${POST_ID}.mp4` }, error: null });
+    const remove = vi.fn().mockResolvedValue({ error: null });
+    const from = vi.fn().mockReturnValueOnce(deleted);
+    const service = createDanceService(
+      { from, storage: { from: vi.fn(() => ({ remove })) } } as never,
+      httpErrors as never,
+    );
+
+    await expect(service.discardUploadingPost(OWNER_ID, POST_ID)).resolves.toBeUndefined();
+
+    expect(remove).toHaveBeenCalledWith([`${OWNER_ID}/${POST_ID}.mp4`]);
+    expect(deleted.delete).toHaveBeenCalledOnce();
+    expect(deleted.select).toHaveBeenCalledWith("video_path");
+    expect(deleted.eq).toHaveBeenCalledWith("status", "uploading");
+  });
+
+  it("does not discard a post that has already left the uploading state", async () => {
+    const deleted = queryBuilder({ data: null, error: null });
+    const remove = vi.fn();
+    const service = createDanceService(
+      { from: vi.fn().mockReturnValue(deleted), storage: { from: vi.fn(() => ({ remove })) } } as never,
+      httpErrors as never,
+    );
+
+    await expect(service.discardUploadingPost(OWNER_ID, POST_ID)).resolves.toBeUndefined();
+
+    expect(remove).not.toHaveBeenCalled();
   });
 
   it("returns the normalized score status only for the requesting owner", async () => {

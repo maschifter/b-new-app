@@ -112,15 +112,16 @@ function LearnDanceContent({ moveId, onBack, onStartRecording }: LearnDanceScree
         </View>
       )}
       <PlaybackRateBar rate={rate} onChange={setRate} />
-      <BouncablePress
-        accessibilityRole="button"
-        accessibilityLabel="Scan and get points"
-        onPress={onStartRecording}
-        disabled={!onStartRecording}
-        className="mx-4 items-center rounded-2xl bg-primary px-5 py-4"
-      >
-        <Text className="font-bold text-foreground">Scan and get points</Text>
-      </BouncablePress>
+      {onStartRecording ? (
+        <BouncablePress
+          accessibilityRole="button"
+          accessibilityLabel="Scan and get points"
+          onPress={onStartRecording}
+          className="mx-4 items-center rounded-2xl bg-primary px-5 py-4"
+        >
+          <Text className="font-bold text-foreground">Scan and get points</Text>
+        </BouncablePress>
+      ) : null}
     </View>
   );
 }

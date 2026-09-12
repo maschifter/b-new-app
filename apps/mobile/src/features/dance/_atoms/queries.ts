@@ -1,12 +1,29 @@
 import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
 import { queryErrorResetVersionAtom } from "@/lib/react-query/query-error-reset";
-import type { DanceGenre, DanceMove, DanceMovesCursor, DanceMovesPage } from "@bnewapp/types";
+import { shouldFinishScorePolling } from "@bnewapp/dance-core";
+import type {
+  DanceGenre,
+  DanceMove,
+  DanceMovesCursor,
+  DanceMovesPage,
+  ScanStatus,
+} from "@bnewapp/types";
 import type { InfiniteData } from "@tanstack/react-query";
 import { atom } from "jotai";
 import { atomFamily } from "jotai-family";
-import { atomWithSuspenseInfiniteQuery, atomWithSuspenseQuery } from "jotai-tanstack-query";
-import { getDanceGenres, getDanceMove, getDanceMoves } from "../api";
-import { selectedDanceGenreIdAtom } from "./ui";
+import {
+  atomWithQuery,
+  atomWithSuspenseInfiniteQuery,
+  atomWithSuspenseQuery,
+} from "jotai-tanstack-query";
+import { getDanceGenres, getDanceMove, getDanceMoves, getDanceScoreStatus } from "../api";
+import {
+  DanceScoreTimeoutError,
+  SCORE_POLL_INTERVAL_MS,
+  SCORE_POLL_MAX_ATTEMPTS,
+  SCORE_POLL_TIMEOUT_MS,
+} from "../score-polling";
+import { activeDanceScanAtom, selectedDanceGenreIdAtom } from "./ui";
 
 const DANCE_MOVES_PAGE_LIMIT = 20;
 
@@ -66,3 +83,41 @@ export const danceMoveDetailAtomFamily = atomFamily((moveId: string) =>
     };
   }),
 );
+
+export function danceScoreQueryKey(userId: string | null, postId: string | null) {
+  return ["dance-score", userId, postId] as const;
+}
+
+/**
+ * Polls one queued scan until it reaches a terminal state. The deadline is
+ * enforced inside the query function so expiry surfaces as an error the screen
+ * can render, rather than as a silently stopped interval.
+ */
+export const danceScoreAtom = atomWithQuery<ScanStatus, Error>((get) => {
+  const auth = get(queryAuthAtom);
+  const scan = get(activeDanceScanAtom);
+  return {
+    queryKey: danceScoreQueryKey(auth?.userId ?? null, scan?.postId ?? null),
+    enabled: auth !== null && scan !== null,
+    gcTime: 0,
+    queryFn: async () => {
+      if (!auth || !scan) throw new Error("Not authenticated");
+      const status = await getDanceScoreStatus(auth.accessToken, scan.postId);
+      if (
+        !shouldFinishScorePolling(status) &&
+        Date.now() - scan.startedAt >= SCORE_POLL_TIMEOUT_MS
+      ) {
+        throw new DanceScoreTimeoutError();
+      }
+      return status;
+    },
+    retry: (failureCount, error) =>
+      !(error instanceof DanceScoreTimeoutError) && failureCount < SCORE_POLL_MAX_ATTEMPTS - 1,
+    retryDelay: SCORE_POLL_INTERVAL_MS,
+    refetchInterval: (query) => {
+      if (query.state.status === "error") return false;
+      const status = query.state.data;
+      return status && shouldFinishScorePolling(status) ? false : SCORE_POLL_INTERVAL_MS;
+    },
+  };
+});

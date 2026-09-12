@@ -32,3 +32,14 @@ export function coerceScanStatus(row: ScanStatusRow): ScanStatus {
     jobState: coerceJobState(row.scanStatus),
   };
 }
+
+/** True once the scan reached a terminal state, so the client can stop polling. */
+export function shouldFinishScorePolling(status: ScanStatus): boolean {
+  return (
+    status.hasScore ||
+    status.status === "failed" ||
+    status.status === "scored" ||
+    status.jobState === "failed" ||
+    status.jobState === "completed"
+  );
+}

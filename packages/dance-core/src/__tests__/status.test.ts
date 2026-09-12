@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { coerceScanStatus } from "../status.ts";
+import { coerceScanStatus, shouldFinishScorePolling } from "../status.ts";
+import type { ScanStatus } from "../types.ts";
+
+function status(overrides: Partial<ScanStatus> = {}): ScanStatus {
+  return {
+    status: "scoring",
+    hasScore: false,
+    score: null,
+    isExternalScore: false,
+    jobState: "processing",
+    ...overrides,
+  };
+}
 
 describe("coerceScanStatus", () => {
   it("normalizes a scored post with an external score", () => {
@@ -51,5 +63,20 @@ describe("coerceScanStatus", () => {
       isExternalScore: false,
       jobState: "pending",
     });
+  });
+});
+
+describe("shouldFinishScorePolling", () => {
+  it("keeps polling while the scan is still in flight", () => {
+    expect(shouldFinishScorePolling(status())).toBe(false);
+    expect(shouldFinishScorePolling(status({ jobState: "pending" }))).toBe(false);
+  });
+
+  it("stops for every terminal state, including failures without a score", () => {
+    expect(shouldFinishScorePolling(status({ hasScore: true, score: 96 }))).toBe(true);
+    expect(shouldFinishScorePolling(status({ status: "failed" }))).toBe(true);
+    expect(shouldFinishScorePolling(status({ status: "scored" }))).toBe(true);
+    expect(shouldFinishScorePolling(status({ jobState: "failed" }))).toBe(true);
+    expect(shouldFinishScorePolling(status({ jobState: "completed" }))).toBe(true);
   });
 });

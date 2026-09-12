@@ -65,6 +65,13 @@ export async function danceRoutes(app: FastifyInstance, options: DanceRouteOptio
     return { data: await dance.markUploaded(request.user.sub, params.data.id) };
   });
 
+  app.delete("/posts/:id", { preHandler: app.authenticate }, async (request): Promise<ApiSuccess<null>> => {
+    const params = DancePostIdParams.safeParse(request.params);
+    if (!params.success) throw app.httpErrors.badRequest("Invalid dance post id");
+    await dance.discardUploadingPost(request.user.sub, params.data.id);
+    return { data: null };
+  });
+
   app.get("/posts/:id/score", { preHandler: app.authenticate }, async (request): Promise<ApiSuccess<ScanStatus>> => {
     const params = DancePostIdParams.safeParse(request.params);
     if (!params.success) throw app.httpErrors.badRequest("Invalid dance post id");

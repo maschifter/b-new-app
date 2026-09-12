@@ -274,6 +274,26 @@ export function createDanceService(
       return toDancePost(post, httpErrors);
     },
 
+    async discardUploadingPost(ownerId: string, postId: string): Promise<void> {
+      const { data: deletedPost, error: deleteError } = await supabase
+        .from("dance_posts")
+        .delete()
+        .eq("id", postId)
+        .eq("owner_id", ownerId)
+        .eq("status", "uploading")
+        .select("video_path")
+        .maybeSingle();
+      if (deleteError) throw httpErrors.internalServerError("Could not discard dance post");
+      if (!deletedPost) return;
+
+      if (deletedPost.video_path !== null) {
+        const { error: storageError } = await supabase.storage
+          .from(danceVideoBucket)
+          .remove([deletedPost.video_path]);
+        if (storageError) throw httpErrors.internalServerError("Could not remove dance video");
+      }
+    },
+
     async getScoreStatus(ownerId: string, postId: string): Promise<ScanStatus> {
       const { data: post, error: postError } = await supabase
         .from("dance_posts")

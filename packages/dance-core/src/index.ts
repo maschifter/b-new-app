@@ -22,4 +22,11 @@ export {
   musicSeekSeconds,
   delayBeforeTimerMs,
 } from "./timing.ts";
-export { coerceScanStatus } from "./status.ts";
+export { coerceScanStatus, shouldFinishScorePolling } from "./status.ts";
+export type { CountdownPhase } from "./record-flow.ts";
+export {
+  FilmStep,
+  countdownCompletionMs,
+  countdownPhases,
+  isFilmMusicPlaying,
+} from "./record-flow.ts";

@@ -34,6 +34,9 @@ function registerDance(supabase: Record<string, unknown>) {
     post: vi.fn((path: string, _options: unknown, handler: Handler) => {
       handlers[`POST ${path}`] = handler;
     }),
+    delete: vi.fn((path: string, _options: unknown, handler: Handler) => {
+      handlers[`DELETE ${path}`] = handler;
+    }),
     httpErrors: {
       badRequest: (message: string) => httpError(400, message),
       notFound: (message: string) => httpError(404, message),
@@ -98,9 +101,11 @@ describe("dance consumer routes", () => {
     const app = await buildApp(testConfig);
     const create = await app.inject({ method: "POST", url: "/api/dance/posts", payload: {} });
     const uploaded = await app.inject({ method: "POST", url: `/api/dance/posts/${MOVE_ID}/uploaded` });
+    const discard = await app.inject({ method: "DELETE", url: `/api/dance/posts/${MOVE_ID}` });
     const score = await app.inject({ method: "GET", url: `/api/dance/posts/${MOVE_ID}/score` });
     expect(create.statusCode).toBe(401);
     expect(uploaded.statusCode).toBe(401);
+    expect(discard.statusCode).toBe(401);
     expect(score.statusCode).toBe(401);
     await app.close();
   });
@@ -225,6 +230,9 @@ describe("dance consumer routes", () => {
     ).rejects.toMatchObject({ statusCode: 400, message: "Invalid dance post" });
     await expect(
       handlers["GET /posts/:id/score"]?.({ params: { id: "not-a-uuid" }, user: { sub: GENRE_ID } }),
+    ).rejects.toMatchObject({ statusCode: 400, message: "Invalid dance post id" });
+    await expect(
+      handlers["DELETE /posts/:id"]?.({ params: { id: "not-a-uuid" }, user: { sub: GENRE_ID } }),
     ).rejects.toMatchObject({ statusCode: 400, message: "Invalid dance post id" });
     expect(from).not.toHaveBeenCalled();
   });
