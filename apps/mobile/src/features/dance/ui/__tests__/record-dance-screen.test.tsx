@@ -74,6 +74,8 @@ const mockedMarkDancePostUploaded = markDancePostUploaded as jest.Mock;
 const mockedGetDanceScoreStatus = getDanceScoreStatus as jest.Mock;
 const mockUseVideoOutput = useVideoOutput as jest.Mock;
 const mockedCreateSimulatedRecorder = createSimulatedDanceRecorder as jest.Mock;
+const queryClients: QueryClient[] = [];
+const mountedScreens: Array<{ unmountAsync: () => Promise<void> }> = [];
 
 const MOVE_ID = "00000000-0000-4000-8000-000000000001";
 const POST_ID = "00000000-0000-4000-8000-000000000010";
@@ -115,19 +117,25 @@ async function mount(danceMove: DanceMove = move(), configure?: (store: JotaiSto
   mockedGetDanceMove.mockResolvedValue(danceMove);
   const store = createStore();
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY, retry: false } },
+    defaultOptions: {
+      queries: { gcTime: Number.POSITIVE_INFINITY, retry: false },
+      mutations: { gcTime: 0 },
+    },
   });
+  queryClients.push(queryClient);
   store.set(queryClientAtom, queryClient);
   store.set(queryAuthAtom, { userId: "dancer", accessToken: "token" });
   configure?.(store);
 
-  return renderAsync(
+  const result = await renderAsync(
     <QueryClientProvider client={queryClient}>
       <Provider store={store}>
         <RecordDanceScreen moveId={MOVE_ID} />
       </Provider>
     </QueryClientProvider>,
   );
+  mountedScreens.push(result);
+  return result;
 }
 
 /** A recorder that only finishes when the user presses Stop. */
@@ -199,6 +207,14 @@ beforeEach(() => {
   mockedMarkDancePostUploaded.mockReset();
   mockedGetDanceScoreStatus.mockReset();
   mockedCreateSimulatedRecorder.mockReset();
+});
+
+afterEach(async () => {
+  await act(async () => {
+    await Promise.all(queryClients.map((queryClient) => queryClient.cancelQueries()));
+  });
+  for (const screenResult of mountedScreens.splice(0)) await screenResult.unmountAsync();
+  for (const queryClient of queryClients.splice(0)) queryClient.clear();
 });
 
 it("uses the mocked camera permission flow and configures capture without audio", async () => {
@@ -283,16 +299,34 @@ it("surfaces a failed upload without queueing the post for scanning", async () =
 });
 
 it("keeps polling after a single failed score check instead of giving up", async () => {
-  mockCameraPermission.hasPermission = true;
-  mockUploadSucceeds();
-  mockedGetDanceScoreStatus.mockRejectedValue(new Error("network blip"));
+  jest.useFakeTimers();
+  try {
+    mockCameraPermission.hasPermission = true;
+    mockUploadSucceeds();
+    mockedGetDanceScoreStatus
+      .mockRejectedValueOnce(new Error("network blip"))
+      .mockResolvedValueOnce({
+        status: "scored",
+        hasScore: true,
+        score: 92,
+        isExternalScore: false,
+        jobState: "completed",
+      });
 
-  await mount(move({ bpm: FAST_BPM }));
-  await recordAClip();
+    await mount(move({ bpm: FAST_BPM }));
+    await recordAClip();
 
-  await waitFor(() => expect(mockedGetDanceScoreStatus).toHaveBeenCalledTimes(1));
-  expect(screen.getByText("Scoring your dance…")).toBeOnTheScreen();
-  expect(screen.queryByText("Couldn't check your dance score.")).not.toBeOnTheScreen();
+    await waitFor(() => expect(mockedGetDanceScoreStatus).toHaveBeenCalledTimes(1));
+    expect(screen.getByText("Scoring your dance…")).toBeOnTheScreen();
+    expect(screen.queryByText("Couldn't check your dance score.")).not.toBeOnTheScreen();
+
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(2_000);
+    });
+    expect(await screen.findByText("You scored 92 points!")).toBeOnTheScreen();
+  } finally {
+    jest.useRealTimers();
+  }
 });
 
 it("hands the clip to the upload flow when the user stops the recording early", async () => {

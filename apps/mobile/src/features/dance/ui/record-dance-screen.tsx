@@ -11,7 +11,7 @@ import {
 } from "@bnewapp/dance-core";
 import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
 import { VideoView, useVideoPlayer } from "expo-video";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -23,12 +23,14 @@ import {
 } from "react-native-vision-camera";
 import { submitDanceRecordingMutationAtom } from "../_atoms/mutations";
 import { danceMoveDetailAtomFamily, danceScoreAtom } from "../_atoms/queries";
+import { startDanceScorePollingAtom } from "../_atoms/effects";
 import { activeDanceScanAtom, simulatedDanceRecordingEnabledAtom } from "../_atoms/ui";
 import {
   type DanceRecorder,
   createSimulatedDanceRecorder,
   preloadSimulatedDanceVideo,
 } from "../recording-adapter";
+import { isScorePollingSlow } from "../score-polling";
 import { CameraPermissionOverlay } from "./camera-permission-overlay";
 import { DanceSkeleton } from "./dance-skeleton";
 import { SubmissionFeedback } from "./submission-feedback";
@@ -69,6 +71,7 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
   const [recordingError, setRecordingError] = useState<string | null>(null);
   const simulatedRecordingToggle = useAtomValue(simulatedDanceRecordingEnabledAtom);
   const [activeScan, setActiveScan] = useAtom(activeDanceScanAtom);
+  const startScorePolling = useSetAtom(startDanceScorePollingAtom);
   const submit = useAtomValue(submitDanceRecordingMutationAtom);
   const score = useAtomValue(danceScoreAtom);
   const simulatedRecordingEnabled = __DEV__ && simulatedRecordingToggle;
@@ -118,6 +121,8 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
     isUploading: submit.isPending,
     uploadError: submit.error ?? null,
     isScanning: activeScan !== null,
+    isScorePollingSlow:
+      activeScan !== null && isScorePollingSlow(activeScan.startedAt),
     score: score.data,
     scoreError: score.error ?? null,
   });
@@ -177,6 +182,7 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
   const finishRecording = useCallback(
     (path: string) => {
       if (!isMountedRef.current) return;
+      clearTimers();
       const startedAt = recordingStartedAtRef.current;
       const duration = Math.max(startedAt === null ? 0 : (Date.now() - startedAt) / 1_000, 0.1);
       recordingStartedAtRef.current = null;
@@ -188,7 +194,7 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
       setRecordedClip({ path: path.startsWith("file://") ? path : `file://${path}`, duration });
       setStep(FilmStep.STOP);
     },
-    [referencePlayer, simulatedCameraPlayer],
+    [clearTimers, referencePlayer, simulatedCameraPlayer],
   );
 
   const submitClip = useCallback(
@@ -213,10 +219,23 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
   useEffect(() => {
     const postId = submit.data;
     if (!submit.isSuccess || postId === undefined) return;
-    setActiveScan((current) =>
-      current?.postId === postId ? current : { postId, startedAt: Date.now() },
-    );
-  }, [submit.data, submit.isSuccess, setActiveScan]);
+    startScorePolling(postId);
+  }, [startScorePolling, submit.data, submit.isSuccess]);
+
+  const requestStopRecording = useCallback(() => {
+    const recorder = recorderRef.current;
+    if (stopRequestedRef.current || !recorder?.isRecording) return;
+    clearTimers();
+    stopRequestedRef.current = true;
+    setStep(FilmStep.STOP);
+    void recorder.stopRecording().catch(() => {
+      if (!isMountedRef.current) return;
+      recordingStartedAtRef.current = null;
+      recorderRef.current = null;
+      stopRequestedRef.current = false;
+      setStep(FilmStep.READY);
+    });
+  }, [clearTimers]);
 
   const beginRecording = useCallback(async () => {
     setStep(FilmStep.START_CAMERA);
@@ -251,6 +270,7 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
       setStep(FilmStep.RECORDING);
       referencePlayer.play();
       if (simulatedRecordingEnabled) simulatedCameraPlayer.play();
+      timersRef.current.push(setTimeout(requestStopRecording, recordingLength * 1_000));
     } catch {
       if (!isMountedRef.current) return;
       recordingStartedAtRef.current = null;
@@ -264,6 +284,7 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
     move.filmYourselfVideoUrl,
     recordingLength,
     referencePlayer,
+    requestStopRecording,
     simulatedCameraPlayer,
     simulatedRecordingEnabled,
     videoOutput,
@@ -296,7 +317,7 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
           setTimeout(() => setCountdownText(null), countdownCompletionMs(countDown)),
         );
         timersRef.current.push(
-          setTimeout(() => void beginRecording(), countdownCompletionMs(countDown)),
+          setTimeout(() => void beginRecording(), countdownCompletionMs(countDown) / 2),
         );
       }, delayBeforeCountdown),
     );
@@ -313,21 +334,6 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
     setActiveScan,
     submit.reset,
   ]);
-
-  const stopDance = useCallback(() => {
-    const recorder = recorderRef.current;
-    if (stopRequestedRef.current || !recorder?.isRecording) return;
-    clearTimers();
-    stopRequestedRef.current = true;
-    setStep(FilmStep.STOP);
-    void recorder.stopRecording().catch(() => {
-      if (!isMountedRef.current) return;
-      recordingStartedAtRef.current = null;
-      recorderRef.current = null;
-      stopRequestedRef.current = false;
-      setStep(FilmStep.READY);
-    });
-  }, [clearTimers]);
 
   const retrySubmission = useCallback(() => {
     if (recordedClip) submitClip(recordedClip);
@@ -439,7 +445,7 @@ function RecordDanceContent({ moveId, onBack }: RecordDanceScreenProps) {
             accessibilityRole="button"
             accessibilityLabel={isRecording ? "Stop recording" : "Start recording"}
             accessibilityState={{ busy: isSubmissionActive }}
-            onPress={isRecording ? stopDance : () => void startDance()}
+            onPress={isRecording ? requestStopRecording : () => void startDance()}
             disabled={isStartDisabled}
             className="flex-1 items-center rounded-2xl bg-primary py-4"
           >

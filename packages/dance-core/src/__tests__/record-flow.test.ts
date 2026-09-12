@@ -7,6 +7,20 @@ import {
 } from "../record-flow.ts";
 
 describe("record flow", () => {
+  it("preserves the Boogiz film-step values for interoperable flow sequencing", () => {
+    expect(FilmStep).toMatchObject({
+      NONE: 0,
+      BEFORE_CONFIRM: 1,
+      READY: 2,
+      DELAY_BEFORE_AVATAR_DANCE: 3,
+      TIMER: 4,
+      START_CAMERA: 5,
+      RECORDING: 6,
+      STOP: 7,
+      FINISHED: 8,
+    });
+  });
+
   it("orders the steps so the camera starts only after the countdown", () => {
     expect(FilmStep.READY).toBeLessThan(FilmStep.DELAY_BEFORE_AVATAR_DANCE);
     expect(FilmStep.DELAY_BEFORE_AVATAR_DANCE).toBeLessThan(FilmStep.TIMER);

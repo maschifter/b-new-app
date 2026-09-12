@@ -3,13 +3,15 @@
 
 /** The recording flow is deliberately explicit so timing and audio gates stay in sync. */
 export enum FilmStep {
-  READY = 0,
-  DELAY_BEFORE_AVATAR_DANCE = 1,
-  TIMER = 2,
-  START_CAMERA = 3,
-  RECORDING = 4,
-  STOP = 5,
-  FINISHED = 6,
+  NONE = 0,
+  BEFORE_CONFIRM = 1,
+  READY = 2,
+  DELAY_BEFORE_AVATAR_DANCE = 3,
+  TIMER = 4,
+  START_CAMERA = 5,
+  RECORDING = 6,
+  STOP = 7,
+  FINISHED = 8,
 }
 
 /** Music runs from the beat-drop gate until the clip is handed to the upload flow. */

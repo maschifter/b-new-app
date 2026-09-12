@@ -18,10 +18,7 @@ import {
 } from "jotai-tanstack-query";
 import { getDanceGenres, getDanceMove, getDanceMoves, getDanceScoreStatus } from "../api";
 import {
-  DanceScoreTimeoutError,
-  SCORE_POLL_INTERVAL_MS,
-  SCORE_POLL_MAX_ATTEMPTS,
-  SCORE_POLL_TIMEOUT_MS,
+  scorePollIntervalMs,
 } from "../score-polling";
 import { activeDanceScanAtom, selectedDanceGenreIdAtom } from "./ui";
 
@@ -89,9 +86,8 @@ export function danceScoreQueryKey(userId: string | null, postId: string | null)
 }
 
 /**
- * Polls one queued scan until it reaches a terminal state. The deadline is
- * enforced inside the query function so expiry surfaces as an error the screen
- * can render, rather than as a silently stopped interval.
+ * Polls one queued scan until it reaches a terminal state. The server guarantees
+ * a fallback result, so this intentionally has no client-side deadline.
  */
 export const danceScoreAtom = atomWithQuery<ScanStatus, Error>((get) => {
   const auth = get(queryAuthAtom);
@@ -102,22 +98,15 @@ export const danceScoreAtom = atomWithQuery<ScanStatus, Error>((get) => {
     gcTime: 0,
     queryFn: async () => {
       if (!auth || !scan) throw new Error("Not authenticated");
-      const status = await getDanceScoreStatus(auth.accessToken, scan.postId);
-      if (
-        !shouldFinishScorePolling(status) &&
-        Date.now() - scan.startedAt >= SCORE_POLL_TIMEOUT_MS
-      ) {
-        throw new DanceScoreTimeoutError();
-      }
-      return status;
+      return getDanceScoreStatus(auth.accessToken, scan.postId);
     },
-    retry: (failureCount, error) =>
-      !(error instanceof DanceScoreTimeoutError) && failureCount < SCORE_POLL_MAX_ATTEMPTS - 1,
-    retryDelay: SCORE_POLL_INTERVAL_MS,
+    retry: true,
+    retryDelay: (failureCount) => scorePollIntervalMs(failureCount + 1),
     refetchInterval: (query) => {
-      if (query.state.status === "error") return false;
       const status = query.state.data;
-      return status && shouldFinishScorePolling(status) ? false : SCORE_POLL_INTERVAL_MS;
+      return status && shouldFinishScorePolling(status)
+        ? false
+        : scorePollIntervalMs(query.state.dataUpdateCount);
     },
   };
 });

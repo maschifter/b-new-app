@@ -12,7 +12,16 @@ export function SubmissionFeedback({ submission, onRetry }: SubmissionFeedbackPr
   if (submission.kind === "uploading")
     return <Text className="text-sm text-muted">Uploading your dance…</Text>;
   if (submission.kind === "scanning")
-    return <Text className="text-sm text-muted">Scoring your dance…</Text>;
+    return (
+      <View className="gap-1">
+        <Text className="text-sm text-muted">Scoring your dance…</Text>
+        {submission.isSlow ? (
+          <Text accessibilityLiveRegion="polite" className="text-sm text-muted">
+            Still scoring — you can check back here shortly.
+          </Text>
+        ) : null}
+      </View>
+    );
   if (submission.kind === "scored")
     return <Text className="text-sm text-neon">You scored {submission.score} points!</Text>;
   return (

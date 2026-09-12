@@ -1,5 +1,4 @@
 import type { ScanStatus } from "@bnewapp/types";
-import { DanceScoreTimeoutError } from "../../score-polling";
 import { type SubmissionInput, deriveSubmissionState } from "../submission-state";
 
 function input(overrides: Partial<SubmissionInput> = {}): SubmissionInput {
@@ -8,6 +7,7 @@ function input(overrides: Partial<SubmissionInput> = {}): SubmissionInput {
     isUploading: false,
     uploadError: null,
     isScanning: false,
+    isScorePollingSlow: false,
     score: undefined,
     scoreError: null,
     ...overrides,
@@ -31,7 +31,10 @@ it("stays idle until a clip exists", () => {
 
 it("reports the upload before the scan", () => {
   expect(deriveSubmissionState(input({ isUploading: true }))).toEqual({ kind: "uploading" });
-  expect(deriveSubmissionState(input({ isScanning: true }))).toEqual({ kind: "scanning" });
+  expect(deriveSubmissionState(input({ isScanning: true }))).toEqual({
+    kind: "scanning",
+    isSlow: false,
+  });
 });
 
 it("treats a clip waiting on its mutation as uploading", () => {
@@ -46,13 +49,12 @@ it("offers a retry only for a failed upload", () => {
   });
 });
 
-it("distinguishes a polling timeout from a polling failure", () => {
+it("keeps scanning with a non-blocking hint after the soft threshold", () => {
   expect(
-    deriveSubmissionState(input({ isScanning: true, scoreError: new DanceScoreTimeoutError() })),
+    deriveSubmissionState(input({ isScanning: true, isScorePollingSlow: true })),
   ).toEqual({
-    kind: "failed",
-    message: "Scoring is taking longer than usual. It keeps running in the background.",
-    canRetry: false,
+    kind: "scanning",
+    isSlow: true,
   });
   expect(
     deriveSubmissionState(input({ isScanning: true, scoreError: new Error("network blip") })),
@@ -95,5 +97,5 @@ it("keeps showing scanning while a score response is still in flight", () => {
         }),
       }),
     ),
-  ).toEqual({ kind: "scanning" });
+  ).toEqual({ kind: "scanning", isSlow: false });
 });

@@ -553,8 +553,8 @@ is **done** only when every box under it is checked and its checks pass (typeche
 - [ ] Produce and verify an EAS dev-client build (and add a config plugin if the target build requires one) (§5)
 - [ ] Confirm dev-client build owner + physical camera-QA device (§5, §8)
 - [x] Add `expo-audio`; music streams `audio_url` seeked to beat-drop and coexists with `audio:false` capture in the implementation (§4.3, §5)
-- [ ] FILM_STEP state machine ported verbatim incl. `DELAY_BEFORE_AVATAR_DANCE` + `STOP` (§4.3)
-- [ ] Countdown (`countdownSeconds`), camera start at ~50%, PiP reference flip (§4.3)
+- [x] FILM_STEP state machine ported verbatim incl. `DELAY_BEFORE_AVATAR_DANCE` + `STOP` (§4.3)
+- [x] Countdown (`countdownSeconds`), camera start at ~50%, PiP reference flip (§4.3)
 - [x] Recording length = reference `onLoad` duration `floor+1`, fallback 60s; recorded clip duration → `videoLength` (§4.3)
 - [x] Camera permission handling + blurred overlay when not granted (§4.3)
 - [ ] Device QA: audio lands on beat-drop, PiP + capture correct (§4.3, §5)
@@ -562,12 +562,12 @@ is **done** only when every box under it is checked and its checks pass (typeche
 
 ### Milestone 6 — Mobile result
 - [x] Result flow: `createPost` → upload to signed URL → `markUploaded` → poll `scoreStatus`, with upload cleanup/retry and score feedback (§4.4)
-- [ ] Align polling policy with the locked plan: 2s→5s backoff, no hard cap, and terminal `scored`/`failed` behavior (§4.4)
-- [ ] Score-polling effect driver (start on `uploaded`) in `_atoms/effects.ts` (§4)
-- [ ] "Still scoring — check back" affordance past ~90s soft threshold (§4.4)
+- [x] Align polling policy with the locked plan: 2s→5s backoff, no hard cap, and terminal `scored`/`failed` behavior (§4.4)
+- [x] Score-polling effect driver (start on `uploaded`) in `_atoms/effects.ts` (§4)
+- [x] "Still scoring — check back" affordance past ~90s soft threshold (§4.4)
 - [x] Explicit loading UI for upload + scanning; Suspense only for initial reads + shared query error boundary + retry (§4.4)
 - [x] Displayed score = raw match % (§Decisions)
-- [x] Tests: score-polling resolution, retry, timeout, terminal failure, and successful score (§4)
+- [x] Tests: score-polling resolution, retry, slow-score affordance, terminal failure, and successful score (§4)
 - [ ] End-to-end on a physical device
 
 ## 7. Deferred (post-V1, noted for design headroom)

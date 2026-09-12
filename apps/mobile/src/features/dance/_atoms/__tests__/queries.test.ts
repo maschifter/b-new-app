@@ -6,10 +6,9 @@ import { createStore } from "jotai";
 import { queryClientAtom } from "jotai-tanstack-query";
 import { getDanceScoreStatus } from "../../api";
 import {
-  DanceScoreTimeoutError,
-  SCORE_POLL_INTERVAL_MS,
-  SCORE_POLL_MAX_ATTEMPTS,
-  SCORE_POLL_TIMEOUT_MS,
+  SCORE_POLL_INITIAL_INTERVAL_MS,
+  SCORE_POLL_MAX_INTERVAL_MS,
+  scorePollIntervalMs,
 } from "../../score-polling";
 import { danceScoreAtom } from "../queries";
 import { activeDanceScanAtom } from "../ui";
@@ -74,37 +73,20 @@ it("keeps the in-flight status while the scan has not reached a terminal state",
   unsubscribe();
 });
 
-it("surfaces a timeout once the scan outlives the polling deadline", async () => {
+it("keeps polling an old in-flight scan instead of imposing a client deadline", async () => {
   mockedGetDanceScoreStatus.mockResolvedValue(status());
-  const { store, unsubscribe } = scanStore(Date.now() - SCORE_POLL_TIMEOUT_MS - 1);
+  const { store, unsubscribe } = scanStore(Date.now() - 10 * 60_000);
 
-  await waitFor(() =>
-    expect(store.get(danceScoreAtom).error).toBeInstanceOf(DanceScoreTimeoutError),
-  );
-  // A deadline is final: retrying would only re-raise it.
+  await waitFor(() => expect(store.get(danceScoreAtom).data).toEqual(status()));
+  expect(store.get(danceScoreAtom).error).toBeNull();
   expect(mockedGetDanceScoreStatus).toHaveBeenCalledTimes(1);
   unsubscribe();
 });
 
-it("gives up only after the configured number of consecutive request failures", async () => {
-  // Fake timers so the real retry backoff between attempts costs no wall clock.
-  jest.useFakeTimers();
-  try {
-    mockedGetDanceScoreStatus.mockRejectedValue(new Error("network blip"));
-    const { store, unsubscribe } = scanStore(Date.now());
-
-    await waitFor(() => expect(mockedGetDanceScoreStatus).toHaveBeenCalledTimes(1));
-    expect(store.get(danceScoreAtom).error).toBeNull();
-
-    await jest.advanceTimersByTimeAsync(SCORE_POLL_INTERVAL_MS * SCORE_POLL_MAX_ATTEMPTS);
-
-    expect(mockedGetDanceScoreStatus).toHaveBeenCalledTimes(SCORE_POLL_MAX_ATTEMPTS);
-    expect(store.get(danceScoreAtom).error).toBeInstanceOf(Error);
-    expect(store.get(danceScoreAtom).error).not.toBeInstanceOf(DanceScoreTimeoutError);
-    unsubscribe();
-  } finally {
-    jest.useRealTimers();
-  }
+it("backs off polling from two seconds to five seconds", () => {
+  expect(scorePollIntervalMs(1)).toBe(SCORE_POLL_INITIAL_INTERVAL_MS);
+  expect(scorePollIntervalMs(2)).toBe(3_000);
+  expect(scorePollIntervalMs(10)).toBe(SCORE_POLL_MAX_INTERVAL_MS);
 });
 
 it("stops polling as soon as the scan reports a score", async () => {

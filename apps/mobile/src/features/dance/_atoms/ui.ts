@@ -14,8 +14,8 @@ export const selectedDanceMoveIdAtom = atom<string | null>(null);
 export const danceVideoRateAtom = atom(1);
 
 /**
- * The scan the record screen is currently waiting on. `startedAt` is the moment
- * the post was queued, which bounds how long the score query keeps polling.
+ * The scan the record screen is currently waiting on. `startedAt` powers the
+ * non-blocking slow-score hint while the query continues until a terminal result.
  */
 export interface ActiveDanceScan {
   postId: string;
