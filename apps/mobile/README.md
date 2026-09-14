@@ -62,9 +62,8 @@ configuration:
   it for a shared, tunnelled, or production backend.
 - The server port is assumed to be `3000`.
 
-Staging and production builds require `EXPO_PUBLIC_API_URL` to be an HTTPS URL. The
-Expo config rejects a build with a missing, malformed, or HTTP API URL rather than
-shipping a client that falls back to `localhost`.
+Release builds require `EXPO_PUBLIC_API_URL` to be an HTTPS URL rather than falling
+back to `localhost`.
 
 ## Authentication flow
 
