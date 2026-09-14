@@ -1,9 +1,31 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
 const APP_NAME = "BNewApp";
+const BUILD_PROFILE = process.env.EAS_BUILD_PROFILE;
+
+function validatePublishedBuildApiUrl(): void {
+  if (BUILD_PROFILE !== "staging" && BUILD_PROFILE !== "production") return;
+
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
+  if (!apiUrl) {
+    throw new Error(
+      "EXPO_PUBLIC_API_URL must be set to an HTTPS URL for staging and production builds.",
+    );
+  }
+
+  try {
+    if (new URL(apiUrl).protocol !== "https:") {
+      throw new Error();
+    }
+  } catch {
+    throw new Error("EXPO_PUBLIC_API_URL must be a valid HTTPS URL for staging and production builds.");
+  }
+}
+
+validatePublishedBuildApiUrl();
 
 const BUNDLE_ID_SUFFIX = (() => {
-  switch (process.env.EAS_BUILD_PROFILE) {
+  switch (BUILD_PROFILE) {
     case "development":
       return ".dev";
     case "staging":
@@ -14,7 +36,7 @@ const BUNDLE_ID_SUFFIX = (() => {
 })();
 
 const APP_DISPLAY_NAME = (() => {
-  switch (process.env.EAS_BUILD_PROFILE) {
+  switch (BUILD_PROFILE) {
     case "development":
       return `${APP_NAME} (Dev)`;
     case "staging":

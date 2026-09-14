@@ -8,16 +8,9 @@ import type {
 } from "@bnewapp/types";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
+import { resolveApiUrl as resolveConfiguredApiUrl } from "./api-url";
 
 const API_PORT = 3000;
-const defaultApiUrl =
-  Platform.OS === "android" ? `http://10.0.2.2:${API_PORT}` : `http://localhost:${API_PORT}`;
-
-function rewriteAndroidLocalhost(url: string): string {
-  return Platform.OS === "android"
-    ? url.replace(/\/\/(localhost|127\.0\.0\.1)(?=[:/]|$)/, "//10.0.2.2")
-    : url;
-}
 
 function getMetroHost(): string | undefined {
   const hostUri =
@@ -27,13 +20,13 @@ function getMetroHost(): string | undefined {
 }
 
 function resolveApiUrl(): string {
-  const configuredUrl = process.env.EXPO_PUBLIC_API_URL;
-
-  if (!__DEV__) return configuredUrl ?? defaultApiUrl;
-  if (configuredUrl) return rewriteAndroidLocalhost(configuredUrl);
-
-  const metroHost = getMetroHost();
-  return metroHost ? rewriteAndroidLocalhost(`http://${metroHost}:${API_PORT}`) : defaultApiUrl;
+  return resolveConfiguredApiUrl({
+    configuredUrl: process.env.EXPO_PUBLIC_API_URL,
+    isDevelopment: __DEV__,
+    metroHost: getMetroHost(),
+    platform: Platform.OS,
+    port: API_PORT,
+  });
 }
 
 // Resolved once at module load. Exported so feature-local api modules build their
