@@ -18,9 +18,10 @@ const GRID_GAP = 2;
 
 interface DancePostGridProps {
   header?: ReactElement;
+  onOpenPost?: (postId: string) => void;
 }
 
-export function DancePostGrid({ header }: DancePostGridProps) {
+export function DancePostGrid({ header, onOpenPost }: DancePostGridProps) {
   const [gridWidth, setGridWidth] = useState(0);
   const posts = useAtomValue(dancePostsAtom);
   const query = useAtomValue(dancePostsInfiniteAtom);
@@ -32,8 +33,10 @@ export function DancePostGrid({ header }: DancePostGridProps) {
     if (query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();
   }, [query.fetchNextPage, query.hasNextPage, query.isFetchingNextPage]);
   const renderItem = useCallback(
-    ({ item }: { item: DancePostHistoryItem }) => <DancePostCell post={item} size={cellSize} />,
-    [cellSize],
+    ({ item }: { item: DancePostHistoryItem }) => (
+      <DancePostCell post={item} size={cellSize} onPress={onOpenPost} />
+    ),
+    [cellSize, onOpenPost],
   );
 
   return (
@@ -92,12 +95,27 @@ export function DancePostGrid({ header }: DancePostGridProps) {
   );
 }
 
-function DancePostCell({ post, size }: { post: DancePostHistoryItem; size: number }) {
+function DancePostCell({
+  post,
+  size,
+  onPress,
+}: {
+  post: DancePostHistoryItem;
+  size: number;
+  onPress?: (postId: string) => void;
+}) {
   const player = useVideoPlayer(post.videoUrl, (createdPlayer) => {
     createdPlayer.muted = true;
   });
   return (
-    <View style={{ width: size, height: size }} className="overflow-hidden bg-panel-raised">
+    <BouncablePress
+      accessibilityRole="button"
+      accessibilityLabel="Open recorded dance"
+      onPress={onPress ? () => onPress(post.id) : undefined}
+      disabled={!onPress}
+      style={{ width: size, height: size }}
+      className="overflow-hidden bg-panel-raised"
+    >
       <VideoView
         testID="profile-dance-video"
         player={player}
@@ -110,6 +128,6 @@ function DancePostCell({ post, size }: { post: DancePostHistoryItem; size: numbe
           <Text className="text-[10px] font-extrabold text-foreground">{post.score}%</Text>
         </View>
       ) : null}
-    </View>
+    </BouncablePress>
   );
 }

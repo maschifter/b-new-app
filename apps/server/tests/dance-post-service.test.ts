@@ -4,6 +4,7 @@ import { createDanceService } from "../src/modules/dance/service.js";
 const OWNER_ID = "11111111-1111-4111-8111-111111111111";
 const MOVE_ID = "22222222-2222-4222-8222-222222222222";
 const POST_ID = "33333333-3333-4333-8333-333333333333";
+const MUSIC_ID = "44444444-4444-4444-8444-444444444444";
 const CREATED_AT = "2026-09-11T00:00:00.000Z";
 
 const httpErrors = {
@@ -53,7 +54,53 @@ function postRow(status = "uploading") {
   };
 }
 
+const postMove = {
+  title: "Electric Slide",
+  description: "Start with the groove.",
+};
+const postMusic = { title: "The Track", artist: "The Artist" };
+
 describe("dance post service", () => {
+  it("returns an owned recorded post with metadata even when its move is no longer published", async () => {
+    const post = queryBuilder({ data: { ...postRow("scored"), music_id: MUSIC_ID }, error: null });
+    const move = queryBuilder({ data: postMove, error: null });
+    const music = queryBuilder({ data: postMusic, error: null });
+    const createSignedUrl = vi.fn().mockResolvedValue({
+      data: { signedUrl: "https://storage.example/read" },
+      error: null,
+    });
+    const service = createDanceService(
+      {
+        from: vi.fn().mockReturnValueOnce(post).mockReturnValueOnce(move).mockReturnValueOnce(music),
+        storage: { from: vi.fn(() => ({ createSignedUrl })) },
+      } as never,
+      httpErrors as never,
+    );
+
+    await expect(service.getPost(OWNER_ID, POST_ID)).resolves.toMatchObject({
+      id: POST_ID,
+      videoUrl: "https://storage.example/read",
+      danceMove: { title: "Electric Slide", music: { title: "The Track" } },
+    });
+    expect(post.eq).toHaveBeenCalledWith("id", POST_ID);
+    expect(post.eq).toHaveBeenCalledWith("owner_id", OWNER_ID);
+    expect(post.neq).toHaveBeenCalledWith("status", "uploading");
+    expect(move.eq).toHaveBeenCalledWith("id", MOVE_ID);
+    expect(music.eq).toHaveBeenCalledWith("id", MUSIC_ID);
+  });
+
+  it("does not expose a recorded post that is absent or owned by another user", async () => {
+    const post = queryBuilder({ data: null, error: null });
+    const service = createDanceService(
+      { from: vi.fn(() => post), storage: { from: vi.fn() } } as never,
+      httpErrors as never,
+    );
+
+    await expect(service.getPost(OWNER_ID, POST_ID)).rejects.toMatchObject({ statusCode: 404 });
+    expect(post.eq).toHaveBeenCalledWith("id", POST_ID);
+    expect(post.eq).toHaveBeenCalledWith("owner_id", OWNER_ID);
+  });
+
   it("returns only the owner's posts with short-lived signed video URLs", async () => {
     const posts = queryBuilder({ data: [postRow("scored")], error: null });
     const createSignedUrl = vi.fn().mockResolvedValue({

@@ -267,6 +267,20 @@ export interface DancePostHistoryItem extends DancePost {
   videoUrl: string;
 }
 
+/** Move metadata available with an owned recording, even when the move is no longer published. */
+export interface DancePostMoveDetail {
+  title: string;
+  description: string | null;
+  music: {
+    title: string;
+    artist: string | null;
+  } | null;
+}
+
+export interface DancePostDetail extends DancePostHistoryItem {
+  danceMove: DancePostMoveDetail;
+}
+
 export interface DancePostsPage {
   items: DancePostHistoryItem[];
   nextCursor: DancePostsCursor | null;

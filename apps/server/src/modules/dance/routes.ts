@@ -5,6 +5,7 @@ import type {
   DanceMove,
   DanceMovesPage,
   DancePost,
+  DancePostDetail,
   DancePostsPage,
   ScanStatus,
 } from "@bnewapp/types";
@@ -96,6 +97,16 @@ export async function danceRoutes(app: FastifyInstance, options: DanceRouteOptio
       const body = CreateDancePostRequest.safeParse(request.body);
       if (!body.success) throw app.httpErrors.badRequest("Invalid dance post");
       return { data: await dance.createPost(request.user.sub, body.data) };
+    },
+  );
+
+  app.get(
+    "/posts/:id",
+    { preHandler: app.authenticate },
+    async (request): Promise<ApiSuccess<DancePostDetail>> => {
+      const params = DancePostIdParams.safeParse(request.params);
+      if (!params.success) throw app.httpErrors.badRequest("Invalid dance post id");
+      return { data: await dance.getPost(request.user.sub, params.data.id) };
     },
   );
 

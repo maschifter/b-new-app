@@ -6,7 +6,9 @@ import type {
   DanceMove,
   DanceMovesPage,
   DancePost,
+  DancePostDetail,
   DancePostHistoryItem,
+  DancePostMoveDetail,
   DancePostsPage,
   Database,
   ScanStatus,
@@ -142,6 +144,49 @@ export function createDanceService(
   httpErrors: HttpErrors,
   danceVideoBucket = "dance-videos",
 ) {
+  async function withSignedVideoUrl(
+    row: Database["public"]["Tables"]["dance_posts"]["Row"],
+  ): Promise<DancePostHistoryItem> {
+    if (!row.video_path) throw httpErrors.internalServerError("Dance post video is missing");
+    const { data: signedVideo, error: signedVideoError } = await supabase.storage
+      .from(danceVideoBucket)
+      .createSignedUrl(row.video_path, PROFILE_VIDEO_URL_TTL_SECONDS);
+    if (signedVideoError || !signedVideo) {
+      throw httpErrors.internalServerError("Could not load dance post video");
+    }
+    return { ...toDancePost(row, httpErrors), videoUrl: signedVideo.signedUrl };
+  }
+
+  async function loadPostMoveDetail(
+    post: Pick<Database["public"]["Tables"]["dance_posts"]["Row"], "dance_move_id" | "music_id">,
+  ): Promise<DancePostMoveDetail> {
+    const { data: move, error: moveError } = await supabase
+      .from("dance_moves")
+      .select("title, description")
+      .eq("id", post.dance_move_id)
+      .maybeSingle();
+    if (moveError) throw httpErrors.internalServerError("Could not load dance post move");
+    if (!move) throw httpErrors.internalServerError("Dance post move is missing");
+
+    if (post.music_id === null) {
+      return { title: move.title, description: move.description, music: null };
+    }
+
+    const { data: music, error: musicError } = await supabase
+      .from("music_tracks")
+      .select("title, artist")
+      .eq("id", post.music_id)
+      .maybeSingle();
+    if (musicError) throw httpErrors.internalServerError("Could not load dance post music");
+    if (!music) throw httpErrors.internalServerError("Dance post music is missing");
+
+    return {
+      title: move.title,
+      description: move.description,
+      music: { title: music.title, artist: music.artist },
+    };
+  }
+
   return {
     async listGenres(): Promise<DanceGenre[]> {
       const { data, error } = await supabase
@@ -225,23 +270,33 @@ export function createDanceService(
       if (error) throw httpErrors.internalServerError("Could not load dance posts");
       const rows = data ?? [];
       const pageRows = rows.slice(0, options.limit);
-      const items = await Promise.all(
-        pageRows.map(async (row): Promise<DancePostHistoryItem> => {
-          if (!row.video_path) throw httpErrors.internalServerError("Dance post video is missing");
-          const { data: signedVideo, error: signedVideoError } = await supabase.storage
-            .from(danceVideoBucket)
-            .createSignedUrl(row.video_path, PROFILE_VIDEO_URL_TTL_SECONDS);
-          if (signedVideoError || !signedVideo) {
-            throw httpErrors.internalServerError("Could not load dance post video");
-          }
-          return { ...toDancePost(row, httpErrors), videoUrl: signedVideo.signedUrl };
-        }),
-      );
+      const items = await Promise.all(pageRows.map(withSignedVideoUrl));
       const last = items.at(-1);
       return {
         items,
         nextCursor:
           rows.length > options.limit && last ? { createdAt: last.createdAt, id: last.id } : null,
+      };
+    },
+
+    async getPost(ownerId: string, postId: string): Promise<DancePostDetail> {
+      const { data, error } = await supabase
+        .from("dance_posts")
+        .select(DANCE_POST_SELECT)
+        .eq("id", postId)
+        .eq("owner_id", ownerId)
+        .not("video_path", "is", null)
+        .neq("status", "uploading")
+        .maybeSingle();
+      if (error) throw httpErrors.internalServerError("Could not load dance post");
+      if (!data) throw httpErrors.notFound("Dance post not found");
+      const [postWithVideoUrl, danceMove] = await Promise.all([
+        withSignedVideoUrl(data),
+        loadPostMoveDetail(data),
+      ]);
+      return {
+        ...postWithVideoUrl,
+        danceMove,
       };
     },
 

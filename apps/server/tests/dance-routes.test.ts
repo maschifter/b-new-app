@@ -6,6 +6,7 @@ import { createDanceService } from "../src/modules/dance/service.js";
 
 const GENRE_ID = "11111111-1111-4111-8111-111111111111";
 const MOVE_ID = "22222222-2222-4222-8222-222222222222";
+const MUSIC_ID = "33333333-3333-4333-8333-333333333333";
 const CREATED_AT = "2026-09-11T00:00:00.000Z";
 
 const testConfig = {
@@ -94,6 +95,22 @@ const moveRow = {
   dance_move_genres: [{ genre_id: GENRE_ID }],
 };
 
+const postRow = {
+  id: MOVE_ID,
+  owner_id: GENRE_ID,
+  dance_move_id: MOVE_ID,
+  music_id: MUSIC_ID,
+  video_path: `${GENRE_ID}/${MOVE_ID}.mp4`,
+  status: "scored",
+  score: 92,
+  video_length_s: 12,
+  created_at: CREATED_AT,
+  updated_at: CREATED_AT,
+};
+
+const postMove = { title: "Body Roll", description: "A smooth move" };
+const postMusic = { title: "Track", artist: "Artist" };
+
 describe("dance consumer routes", () => {
   it("requires authentication for catalog reads", async () => {
     const app = await buildApp(testConfig);
@@ -106,6 +123,7 @@ describe("dance consumer routes", () => {
     const app = await buildApp(testConfig);
     const create = await app.inject({ method: "POST", url: "/api/dance/posts", payload: {} });
     const list = await app.inject({ method: "GET", url: "/api/dance/posts" });
+    const detail = await app.inject({ method: "GET", url: `/api/dance/posts/${MOVE_ID}` });
     const uploaded = await app.inject({
       method: "POST",
       url: `/api/dance/posts/${MOVE_ID}/uploaded`,
@@ -114,6 +132,7 @@ describe("dance consumer routes", () => {
     const score = await app.inject({ method: "GET", url: `/api/dance/posts/${MOVE_ID}/score` });
     expect(create.statusCode).toBe(401);
     expect(list.statusCode).toBe(401);
+    expect(detail.statusCode).toBe(401);
     expect(uploaded.statusCode).toBe(401);
     expect(discard.statusCode).toBe(401);
     expect(score.statusCode).toBe(401);
@@ -165,6 +184,33 @@ describe("dance consumer routes", () => {
       message: "Invalid dance posts cursor",
     });
     expect(from).not.toHaveBeenCalled();
+  });
+
+  it("returns an owned recorded dance with a signed video URL", async () => {
+    const query = queryBuilder({ data: postRow, error: null });
+    const move = queryBuilder({ data: postMove, error: null });
+    const music = queryBuilder({ data: postMusic, error: null });
+    const createSignedUrl = vi.fn().mockResolvedValue({
+      data: { signedUrl: "https://storage.example/read" },
+      error: null,
+    });
+    const { app, handlers } = registerDance({
+      from: vi.fn().mockReturnValueOnce(query).mockReturnValueOnce(move).mockReturnValueOnce(music),
+      storage: { from: vi.fn(() => ({ createSignedUrl })) },
+    });
+    await danceRoutes(app as never);
+
+    await expect(
+      handlers["GET /posts/:id"]?.({ params: { id: MOVE_ID }, user: { sub: GENRE_ID } }),
+    ).resolves.toMatchObject({
+      data: {
+        id: MOVE_ID,
+        videoUrl: "https://storage.example/read",
+        danceMove: { title: "Body Roll", music: { title: "Track", artist: "Artist" } },
+      },
+    });
+    expect(query.eq).toHaveBeenCalledWith("owner_id", GENRE_ID);
+    expect(createSignedUrl).toHaveBeenCalledWith(`${GENRE_ID}/${MOVE_ID}.mp4`, 3600);
   });
 
   it("returns only eligible published moves and maps joined music", async () => {
@@ -258,6 +304,9 @@ describe("dance consumer routes", () => {
         user: { sub: GENRE_ID },
       }),
     ).rejects.toMatchObject({ statusCode: 400, message: "Invalid dance post" });
+    await expect(
+      handlers["GET /posts/:id"]?.({ params: { id: "not-a-uuid" }, user: { sub: GENRE_ID } }),
+    ).rejects.toMatchObject({ statusCode: 400, message: "Invalid dance post id" });
     await expect(
       handlers["GET /posts/:id/score"]?.({ params: { id: "not-a-uuid" }, user: { sub: GENRE_ID } }),
     ).rejects.toMatchObject({ statusCode: 400, message: "Invalid dance post id" });

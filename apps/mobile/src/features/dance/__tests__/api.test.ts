@@ -23,6 +23,7 @@ jest.mock("expo/fetch", () => ({
 import {
   createDancePost,
   discardUploadingDancePost,
+  getDancePost,
   getDancePosts,
   getDanceScoreStatus,
   markDancePostUploaded,
@@ -153,6 +154,32 @@ it("requests the owner-only dance history with its opaque cursor", async () => {
 
   expect(fetchMock).toHaveBeenCalledWith(
     expect.stringContaining("/api/dance/posts?limit=18&cursor="),
+    expect.objectContaining({
+      headers: expect.objectContaining({ Authorization: "Bearer token" }),
+    }),
+  );
+});
+
+it("requests one owner-only recorded dance by id", async () => {
+  const postId = "00000000-0000-4000-8000-000000000010";
+  fetchMock.mockResolvedValueOnce(
+    success({
+      id: postId,
+      danceMoveId: "00000000-0000-4000-8000-000000000001",
+      musicId: null,
+      status: "scored",
+      score: 92,
+      videoLengthS: 12,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+      videoUrl: "https://storage.example.test/attempt.mp4",
+    }),
+  );
+
+  await getDancePost("token", postId);
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    expect.stringContaining(`/api/dance/posts/${postId}`),
     expect.objectContaining({
       headers: expect.objectContaining({ Authorization: "Bearer token" }),
     }),

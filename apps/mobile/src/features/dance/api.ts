@@ -7,6 +7,7 @@ import type {
   DanceMovesCursor,
   DanceMovesPage,
   DancePost,
+  DancePostDetail,
   DancePostsCursor,
   DancePostsPage,
   ScanStatus,
@@ -57,6 +58,16 @@ export async function getDancePosts(
     headers: authHeaders(accessToken),
   });
   return unwrapApiSuccess<DancePostsPage>(response, "Unable to load your dances");
+}
+
+export async function getDancePost(
+  accessToken: string,
+  postId: string,
+): Promise<DancePostDetail> {
+  const response = await fetch(`${apiUrl}/api/dance/posts/${postId}`, {
+    headers: authHeaders(accessToken),
+  });
+  return unwrapApiSuccess<DancePostDetail>(response, "Unable to load this recorded dance");
 }
 
 export async function createDancePost(

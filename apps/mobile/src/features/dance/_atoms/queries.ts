@@ -6,6 +6,7 @@ import type {
   DanceMove,
   DanceMovesCursor,
   DanceMovesPage,
+  DancePostDetail,
   DancePostHistoryItem,
   DancePostsCursor,
   DancePostsPage,
@@ -23,6 +24,7 @@ import {
 import {
   getDanceGenres,
   getDanceMove,
+  getDancePost,
   getDanceMoves,
   getDancePosts,
   getDanceScoreStatus,
@@ -114,6 +116,20 @@ export const dancePostsAtom = atom((get): DancePostHistoryItem[] => {
   const query = get(dancePostsInfiniteAtom);
   return query.data?.pages.flatMap((page) => page.items) ?? [];
 });
+
+export const dancePostDetailAtomFamily = atomFamily((postId: string) =>
+  atomWithSuspenseQuery<DancePostDetail>((get) => {
+    const auth = get(queryAuthAtom);
+    get(queryErrorResetVersionAtom);
+    return {
+      queryKey: ["dance-post", auth?.userId ?? null, postId],
+      queryFn: async () => {
+        if (!auth) throw new Error("Not authenticated");
+        return getDancePost(auth.accessToken, postId);
+      },
+    };
+  }),
+);
 
 export function danceScoreQueryKey(userId: string | null, postId: string | null) {
   return ["dance-score", userId, postId] as const;
