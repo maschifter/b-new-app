@@ -1,5 +1,6 @@
 import { ProfileScreen } from "@/features/auth";
+import { router } from "expo-router";
 
 export default function ProfileRoute() {
-  return <ProfileScreen />;
+  return <ProfileScreen onOpenSettings={() => router.push("/settings")} />;
 }

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { coerceScanStatus } from "@bnewapp/dance-core";
 import type {
   CreateDancePostResult,
@@ -5,13 +6,14 @@ import type {
   DanceMove,
   DanceMovesPage,
   DancePost,
+  DancePostHistoryItem,
+  DancePostsPage,
   Database,
   ScanStatus,
 } from "@bnewapp/types";
-import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyInstance } from "fastify";
-import type { DanceMovesCursor } from "./schemas.js";
+import type { DanceMovesCursor, DancePostsCursor } from "./schemas.js";
 
 const MOVE_SELECT =
   "id, title, description, level, bpm, thumbnail_url, main_video_url, pro_dancer_video_url, pro_dancer_image_url, dancer_tip_video_url, dancer_tip_image_url, presentation_video_url, film_yourself_video_url, sort_order, created_at, music_tracks(id, title, artist, audio_url, delay_before_avatar_dance), dance_move_genres(genre_id)";
@@ -92,6 +94,9 @@ function cursorFilter(cursor: DanceMovesCursor): string {
 }
 
 const POST_STATUSES = ["uploading", "uploaded", "scoring", "scored", "failed"] as const;
+const DANCE_POST_SELECT =
+  "id, owner_id, dance_move_id, music_id, video_path, status, score, video_length_s, created_at, updated_at";
+const PROFILE_VIDEO_URL_TTL_SECONDS = 60 * 60;
 
 function toDancePostStatus(value: string): DancePost["status"] | null {
   return POST_STATUSES.find((status) => status === value) ?? null;
@@ -125,6 +130,13 @@ function toDancePost(
   };
 }
 
+function postsCursorFilter(cursor: DancePostsCursor): string {
+  return [
+    `created_at.lt.${cursor.createdAt}`,
+    `and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`,
+  ].join(",");
+}
+
 export function createDanceService(
   supabase: SupabaseClient<Database>,
   httpErrors: HttpErrors,
@@ -152,9 +164,8 @@ export function createDanceService(
       limit: number;
     }): Promise<DanceMovesPage> {
       const baseQuery = supabase.from("dance_moves");
-      let query = (options.genreId
-        ? baseQuery.select(MOVE_SELECT_WITH_GENRE)
-        : baseQuery.select(MOVE_SELECT)
+      let query = (
+        options.genreId ? baseQuery.select(MOVE_SELECT_WITH_GENRE) : baseQuery.select(MOVE_SELECT)
       )
         .eq("status", "published")
         .not("film_yourself_video_url", "is", null)
@@ -193,6 +204,45 @@ export function createDanceService(
       if (error) throw httpErrors.internalServerError("Could not load dance move");
       if (!data) throw httpErrors.notFound("Dance move not found");
       return toDanceMove(data as DanceMoveWithRelations);
+    },
+
+    async listPosts(
+      ownerId: string,
+      options: { cursor?: DancePostsCursor; limit: number },
+    ): Promise<DancePostsPage> {
+      let query = supabase
+        .from("dance_posts")
+        .select(DANCE_POST_SELECT)
+        .eq("owner_id", ownerId)
+        .not("video_path", "is", null)
+        .neq("status", "uploading")
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(options.limit + 1);
+      if (options.cursor) query = query.or(postsCursorFilter(options.cursor));
+
+      const { data, error } = await query;
+      if (error) throw httpErrors.internalServerError("Could not load dance posts");
+      const rows = data ?? [];
+      const pageRows = rows.slice(0, options.limit);
+      const items = await Promise.all(
+        pageRows.map(async (row): Promise<DancePostHistoryItem> => {
+          if (!row.video_path) throw httpErrors.internalServerError("Dance post video is missing");
+          const { data: signedVideo, error: signedVideoError } = await supabase.storage
+            .from(danceVideoBucket)
+            .createSignedUrl(row.video_path, PROFILE_VIDEO_URL_TTL_SECONDS);
+          if (signedVideoError || !signedVideo) {
+            throw httpErrors.internalServerError("Could not load dance post video");
+          }
+          return { ...toDancePost(row, httpErrors), videoUrl: signedVideo.signedUrl };
+        }),
+      );
+      const last = items.at(-1);
+      return {
+        items,
+        nextCursor:
+          rows.length > options.limit && last ? { createdAt: last.createdAt, id: last.id } : null,
+      };
     },
 
     async createPost(
@@ -235,7 +285,7 @@ export function createDanceService(
     async markUploaded(ownerId: string, postId: string): Promise<DancePost> {
       const { data: existing, error: existingError } = await supabase
         .from("dance_posts")
-        .select("id, owner_id, dance_move_id, music_id, status, score, video_length_s, created_at, updated_at")
+        .select(DANCE_POST_SELECT)
         .eq("id", postId)
         .eq("owner_id", ownerId)
         .maybeSingle();
@@ -259,17 +309,19 @@ export function createDanceService(
           .eq("id", postId)
           .eq("owner_id", ownerId)
           .eq("status", "uploading")
-          .select("id, owner_id, dance_move_id, music_id, status, score, video_length_s, created_at, updated_at")
+          .select(DANCE_POST_SELECT)
           .maybeSingle();
         if (updateError) throw httpErrors.internalServerError("Could not update dance post");
         if (!updated) throw httpErrors.conflict("Dance post upload state changed");
         post = updated;
       }
 
-      const { error: scanError } = await supabase.from("dance_scans").upsert(
-        { post_id: postId, owner_id: ownerId, status: "pending" },
-        { onConflict: "post_id", ignoreDuplicates: true },
-      );
+      const { error: scanError } = await supabase
+        .from("dance_scans")
+        .upsert(
+          { post_id: postId, owner_id: ownerId, status: "pending" },
+          { onConflict: "post_id", ignoreDuplicates: true },
+        );
       if (scanError) throw httpErrors.internalServerError("Could not queue dance scan");
       return toDancePost(post, httpErrors);
     },

@@ -244,8 +244,8 @@ export interface DanceMovesPage {
   nextCursor: DanceMovesCursor | null;
 }
 
-/** A user's recorded attempt. The amateur video URL is never stored — only the
- * Storage object path — so it is not part of the DTO. */
+/** A user's recorded attempt. `videoUrl` is a short-lived signed read URL for
+ * display only; the private Storage object path remains the source of truth. */
 export interface DancePost {
   id: string;
   danceMoveId: string;
@@ -255,6 +255,21 @@ export interface DancePost {
   videoLengthS: number | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Keyset cursor for the owner's post history, ordered by (createdAt desc, id desc). */
+export interface DancePostsCursor {
+  createdAt: string;
+  id: string;
+}
+
+export interface DancePostHistoryItem extends DancePost {
+  videoUrl: string;
+}
+
+export interface DancePostsPage {
+  items: DancePostHistoryItem[];
+  nextCursor: DancePostsCursor | null;
 }
 
 /** Body for POST /api/dance/posts — musicId is resolved server-side from the move. */

@@ -7,6 +7,8 @@ import type {
   DanceMovesCursor,
   DanceMovesPage,
   DancePost,
+  DancePostsCursor,
+  DancePostsPage,
   ScanStatus,
 } from "@bnewapp/types";
 import { File } from "expo-file-system";
@@ -43,6 +45,18 @@ export async function getDanceMove(accessToken: string, moveId: string): Promise
     headers: authHeaders(accessToken),
   });
   return unwrapApiSuccess<DanceMove>(response, "Unable to load this dance move");
+}
+
+export async function getDancePosts(
+  accessToken: string,
+  { cursor, limit = 18 }: { cursor?: DancePostsCursor | null; limit?: number } = {},
+): Promise<DancePostsPage> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (cursor) params.set("cursor", JSON.stringify(cursor));
+  const response = await fetch(`${apiUrl}/api/dance/posts?${params.toString()}`, {
+    headers: authHeaders(accessToken),
+  });
+  return unwrapApiSuccess<DancePostsPage>(response, "Unable to load your dances");
 }
 
 export async function createDancePost(
@@ -96,7 +110,10 @@ export async function markDancePostUploaded(
   return unwrapApiSuccess<DancePost>(response, "Unable to queue dance scan");
 }
 
-export async function discardUploadingDancePost(accessToken: string, postId: string): Promise<void> {
+export async function discardUploadingDancePost(
+  accessToken: string,
+  postId: string,
+): Promise<void> {
   const response = await fetch(`${apiUrl}/api/dance/posts/${postId}`, {
     method: "DELETE",
     headers: authHeaders(accessToken),

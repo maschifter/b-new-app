@@ -18,7 +18,12 @@ const testConfig = {
   SUPABASE_SECRET_KEY: "test-secret-key",
 } as const;
 
-type Handler = (request: { body?: unknown; query?: unknown; params?: unknown; user?: { sub: string } }) => Promise<unknown>;
+type Handler = (request: {
+  body?: unknown;
+  query?: unknown;
+  params?: unknown;
+  user?: { sub: string };
+}) => Promise<unknown>;
 
 function httpError(statusCode: number, message: string) {
   return Object.assign(new Error(message), { statusCode });
@@ -52,7 +57,7 @@ type QueryResult = { data: unknown; error: unknown };
 function queryBuilder(result: QueryResult) {
   const query: Record<string, ReturnType<typeof vi.fn>> = {};
   const chain = () => query;
-  for (const method of ["select", "eq", "not", "order", "limit", "or"]) {
+  for (const method of ["select", "eq", "neq", "not", "order", "limit", "or"]) {
     query[method] = vi.fn(chain);
   }
   query.maybeSingle = vi.fn(() => Promise.resolve(result));
@@ -100,10 +105,15 @@ describe("dance consumer routes", () => {
   it("requires authentication for every dance post endpoint", async () => {
     const app = await buildApp(testConfig);
     const create = await app.inject({ method: "POST", url: "/api/dance/posts", payload: {} });
-    const uploaded = await app.inject({ method: "POST", url: `/api/dance/posts/${MOVE_ID}/uploaded` });
+    const list = await app.inject({ method: "GET", url: "/api/dance/posts" });
+    const uploaded = await app.inject({
+      method: "POST",
+      url: `/api/dance/posts/${MOVE_ID}/uploaded`,
+    });
     const discard = await app.inject({ method: "DELETE", url: `/api/dance/posts/${MOVE_ID}` });
     const score = await app.inject({ method: "GET", url: `/api/dance/posts/${MOVE_ID}/score` });
     expect(create.statusCode).toBe(401);
+    expect(list.statusCode).toBe(401);
     expect(uploaded.statusCode).toBe(401);
     expect(discard.statusCode).toBe(401);
     expect(score.statusCode).toBe(401);
@@ -133,6 +143,26 @@ describe("dance consumer routes", () => {
     await expect(handlers["GET /moves"]?.({ query: { limit: "0" } })).rejects.toMatchObject({
       statusCode: 400,
       message: "Invalid dance moves query",
+    });
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("validates dance post history queries before querying Supabase", async () => {
+    const from = vi.fn();
+    const { app, handlers } = registerDance({ from });
+    await danceRoutes(app as never);
+
+    await expect(
+      handlers["GET /posts"]?.({ query: { limit: "0" }, user: { sub: GENRE_ID } }),
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: "Invalid dance posts query",
+    });
+    await expect(
+      handlers["GET /posts"]?.({ query: { cursor: "not-a-cursor" }, user: { sub: GENRE_ID } }),
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: "Invalid dance posts cursor",
     });
     expect(from).not.toHaveBeenCalled();
   });
@@ -172,9 +202,7 @@ describe("dance consumer routes", () => {
     await handlers["GET /moves"]?.({ query: { genre_id: GENRE_ID, cursor, limit: "10" } });
 
     expect(query.eq).toHaveBeenCalledWith("matching_genres.genre_id", GENRE_ID);
-    expect(query.or).toHaveBeenCalledWith(
-      expect.stringContaining("sort_order.gt.4"),
-    );
+    expect(query.or).toHaveBeenCalledWith(expect.stringContaining("sort_order.gt.4"));
   });
 
   it("returns a cursor from the final item when another page exists", async () => {
@@ -210,7 +238,9 @@ describe("dance consumer routes", () => {
     const { app, handlers } = registerDance({ from });
     await danceRoutes(app as never);
 
-    await expect(handlers["GET /moves/:id"]?.({ params: { id: "not-a-uuid" } })).rejects.toMatchObject({
+    await expect(
+      handlers["GET /moves/:id"]?.({ params: { id: "not-a-uuid" } }),
+    ).rejects.toMatchObject({
       statusCode: 400,
       message: "Invalid dance move id",
     });

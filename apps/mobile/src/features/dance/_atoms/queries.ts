@@ -6,23 +6,32 @@ import type {
   DanceMove,
   DanceMovesCursor,
   DanceMovesPage,
+  DancePostHistoryItem,
+  DancePostsCursor,
+  DancePostsPage,
   ScanStatus,
 } from "@bnewapp/types";
 import type { InfiniteData } from "@tanstack/react-query";
 import { atom } from "jotai";
 import { atomFamily } from "jotai-family";
 import {
+  atomWithInfiniteQuery,
   atomWithQuery,
   atomWithSuspenseInfiniteQuery,
   atomWithSuspenseQuery,
 } from "jotai-tanstack-query";
-import { getDanceGenres, getDanceMove, getDanceMoves, getDanceScoreStatus } from "../api";
 import {
-  scorePollIntervalMs,
-} from "../score-polling";
+  getDanceGenres,
+  getDanceMove,
+  getDanceMoves,
+  getDancePosts,
+  getDanceScoreStatus,
+} from "../api";
+import { scorePollIntervalMs } from "../score-polling";
 import { activeDanceScanAtom, selectedDanceGenreIdAtom } from "./ui";
 
 const DANCE_MOVES_PAGE_LIMIT = 20;
+const DANCE_POSTS_PAGE_LIMIT = 18;
 
 export const danceGenresAtom = atomWithSuspenseQuery<DanceGenre[]>((get) => {
   const auth = get(queryAuthAtom);
@@ -80,6 +89,31 @@ export const danceMoveDetailAtomFamily = atomFamily((moveId: string) =>
     };
   }),
 );
+
+export const dancePostsInfiniteAtom = atomWithInfiniteQuery<
+  DancePostsPage,
+  Error,
+  InfiniteData<DancePostsPage>,
+  (string | null)[],
+  DancePostsCursor | null
+>((get) => {
+  const auth = get(queryAuthAtom);
+  return {
+    queryKey: ["dance-posts", auth?.userId ?? null],
+    enabled: auth !== null,
+    initialPageParam: null,
+    queryFn: async ({ pageParam }) => {
+      if (!auth) throw new Error("Not authenticated");
+      return getDancePosts(auth.accessToken, { cursor: pageParam, limit: DANCE_POSTS_PAGE_LIMIT });
+    },
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+  };
+});
+
+export const dancePostsAtom = atom((get): DancePostHistoryItem[] => {
+  const query = get(dancePostsInfiniteAtom);
+  return query.data?.pages.flatMap((page) => page.items) ?? [];
+});
 
 export function danceScoreQueryKey(userId: string | null, postId: string | null) {
   return ["dance-score", userId, postId] as const;

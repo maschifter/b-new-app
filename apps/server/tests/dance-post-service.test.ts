@@ -15,12 +15,26 @@ const httpErrors = {
 function queryBuilder(result: { count?: number; data?: unknown; error: unknown }) {
   const query: Record<string, ReturnType<typeof vi.fn>> = {};
   const chain = () => query;
-  for (const method of ["delete", "eq", "insert", "not", "select", "update", "upsert"]) {
+  for (const method of [
+    "delete",
+    "eq",
+    "insert",
+    "limit",
+    "neq",
+    "not",
+    "or",
+    "order",
+    "select",
+    "update",
+    "upsert",
+  ]) {
     query[method] = vi.fn(chain);
   }
   query.maybeSingle = vi.fn(() => Promise.resolve(result));
   // biome-ignore lint/suspicious/noThenProperty: mirrors Supabase's awaitable query builder
-  query.then = vi.fn((onfulfilled: (value: unknown) => unknown) => Promise.resolve(result).then(onfulfilled));
+  query.then = vi.fn((onfulfilled: (value: unknown) => unknown) =>
+    Promise.resolve(result).then(onfulfilled),
+  );
   return query;
 }
 
@@ -40,6 +54,60 @@ function postRow(status = "uploading") {
 }
 
 describe("dance post service", () => {
+  it("returns only the owner's posts with short-lived signed video URLs", async () => {
+    const posts = queryBuilder({ data: [postRow("scored")], error: null });
+    const createSignedUrl = vi.fn().mockResolvedValue({
+      data: { signedUrl: "https://storage.example/read" },
+      error: null,
+    });
+    const service = createDanceService(
+      { from: vi.fn(() => posts), storage: { from: vi.fn(() => ({ createSignedUrl })) } } as never,
+      httpErrors as never,
+    );
+
+    await expect(service.listPosts(OWNER_ID, { limit: 18 })).resolves.toMatchObject({
+      items: [expect.objectContaining({ id: POST_ID, videoUrl: "https://storage.example/read" })],
+      nextCursor: null,
+    });
+    expect(posts.eq).toHaveBeenCalledWith("owner_id", OWNER_ID);
+    expect(posts.neq).toHaveBeenCalledWith("status", "uploading");
+    expect(posts.order).toHaveBeenNthCalledWith(1, "created_at", { ascending: false });
+    expect(createSignedUrl).toHaveBeenCalledWith(`${OWNER_ID}/${POST_ID}.mp4`, 3600);
+  });
+
+  it("uses the final returned post as the descending keyset cursor", async () => {
+    const nextPostId = "44444444-4444-4444-8444-444444444444";
+    const posts = queryBuilder({
+      data: [postRow("scored"), { ...postRow("scored"), id: nextPostId }],
+      error: null,
+    });
+    const createSignedUrl = vi.fn().mockResolvedValue({
+      data: { signedUrl: "https://storage.example/read" },
+      error: null,
+    });
+    const service = createDanceService(
+      { from: vi.fn(() => posts), storage: { from: vi.fn(() => ({ createSignedUrl })) } } as never,
+      httpErrors as never,
+    );
+
+    await expect(
+      service.listPosts(OWNER_ID, {
+        limit: 1,
+        cursor: { createdAt: CREATED_AT, id: POST_ID },
+      }),
+    ).resolves.toMatchObject({
+      items: [expect.objectContaining({ id: POST_ID })],
+      nextCursor: { createdAt: CREATED_AT, id: POST_ID },
+    });
+    expect(posts.order).toHaveBeenNthCalledWith(1, "created_at", { ascending: false });
+    expect(posts.order).toHaveBeenNthCalledWith(2, "id", { ascending: false });
+    expect(posts.limit).toHaveBeenCalledWith(2);
+    expect(posts.or).toHaveBeenCalledWith(
+      `created_at.lt.${CREATED_AT},and(created_at.eq.${CREATED_AT},id.lt.${POST_ID})`,
+    );
+    expect(createSignedUrl).toHaveBeenCalledOnce();
+  });
+
   it("creates an owned post and signed upload target for an eligible move", async () => {
     const move = queryBuilder({ data: { id: MOVE_ID, music_id: null }, error: null });
     const insert = queryBuilder({ error: null });
@@ -66,16 +134,26 @@ describe("dance post service", () => {
     const move = queryBuilder({ data: { id: MOVE_ID, music_id: null }, error: null });
     const insert = queryBuilder({ error: null });
     const cleanup = queryBuilder({ error: null });
-    const from = vi.fn().mockReturnValueOnce(move).mockReturnValueOnce(insert).mockReturnValueOnce(cleanup);
+    const from = vi
+      .fn()
+      .mockReturnValueOnce(move)
+      .mockReturnValueOnce(insert)
+      .mockReturnValueOnce(cleanup);
     const service = createDanceService(
       {
         from,
-        storage: { from: vi.fn(() => ({ createSignedUploadUrl: vi.fn().mockResolvedValue({ data: null, error: {} }) })) },
+        storage: {
+          from: vi.fn(() => ({
+            createSignedUploadUrl: vi.fn().mockResolvedValue({ data: null, error: {} }),
+          })),
+        },
       } as never,
       httpErrors as never,
     );
 
-    await expect(service.createPost(OWNER_ID, { danceMoveId: MOVE_ID, videoLength: 12 })).rejects.toMatchObject({
+    await expect(
+      service.createPost(OWNER_ID, { danceMoveId: MOVE_ID, videoLength: 12 }),
+    ).rejects.toMatchObject({
       statusCode: 500,
     });
     expect(cleanup.delete).toHaveBeenCalledOnce();
@@ -87,13 +165,19 @@ describe("dance post service", () => {
     const uploaded = queryBuilder({ data: postRow("uploaded"), error: null });
     const queued = queryBuilder({ error: null });
     const list = vi.fn().mockResolvedValue({ data: [{ name: `${POST_ID}.mp4` }], error: null });
-    const from = vi.fn().mockReturnValueOnce(existing).mockReturnValueOnce(uploaded).mockReturnValueOnce(queued);
+    const from = vi
+      .fn()
+      .mockReturnValueOnce(existing)
+      .mockReturnValueOnce(uploaded)
+      .mockReturnValueOnce(queued);
     const service = createDanceService(
       { from, storage: { from: vi.fn(() => ({ list })) } } as never,
       httpErrors as never,
     );
 
-    await expect(service.markUploaded(OWNER_ID, POST_ID)).resolves.toMatchObject({ status: "uploaded" });
+    await expect(service.markUploaded(OWNER_ID, POST_ID)).resolves.toMatchObject({
+      status: "uploaded",
+    });
     expect(list).toHaveBeenCalledWith(OWNER_ID, { limit: 1, search: `${POST_ID}.mp4` });
     expect(queued.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ owner_id: OWNER_ID, post_id: POST_ID, status: "pending" }),
@@ -110,12 +194,17 @@ describe("dance post service", () => {
       httpErrors as never,
     );
 
-    await expect(service.markUploaded(OWNER_ID, POST_ID)).rejects.toMatchObject({ statusCode: 409 });
+    await expect(service.markUploaded(OWNER_ID, POST_ID)).rejects.toMatchObject({
+      statusCode: 409,
+    });
     expect(from).toHaveBeenCalledTimes(1);
   });
 
   it("removes an owned uploading post and its video after an abandoned upload", async () => {
-    const deleted = queryBuilder({ data: { video_path: `${OWNER_ID}/${POST_ID}.mp4` }, error: null });
+    const deleted = queryBuilder({
+      data: { video_path: `${OWNER_ID}/${POST_ID}.mp4` },
+      error: null,
+    });
     const remove = vi.fn().mockResolvedValue({ error: null });
     const from = vi.fn().mockReturnValueOnce(deleted);
     const service = createDanceService(
@@ -135,7 +224,10 @@ describe("dance post service", () => {
     const deleted = queryBuilder({ data: null, error: null });
     const remove = vi.fn();
     const service = createDanceService(
-      { from: vi.fn().mockReturnValue(deleted), storage: { from: vi.fn(() => ({ remove })) } } as never,
+      {
+        from: vi.fn().mockReturnValue(deleted),
+        storage: { from: vi.fn(() => ({ remove })) },
+      } as never,
       httpErrors as never,
     );
 
@@ -146,7 +238,10 @@ describe("dance post service", () => {
 
   it("returns the normalized score status only for the requesting owner", async () => {
     const post = queryBuilder({ data: { status: "scored", score: 72 }, error: null });
-    const scan = queryBuilder({ data: { status: "completed", is_external_score: true }, error: null });
+    const scan = queryBuilder({
+      data: { status: "completed", is_external_score: true },
+      error: null,
+    });
     const from = vi.fn().mockReturnValueOnce(scan).mockReturnValueOnce(post);
     const service = createDanceService({ from } as never, httpErrors as never);
 
@@ -163,7 +258,10 @@ describe("dance post service", () => {
 
   it("reads the scan before the post so a completed scan cannot race its score write", async () => {
     let scanWasRead = false;
-    const scan = queryBuilder({ data: { status: "processing", is_external_score: false }, error: null });
+    const scan = queryBuilder({
+      data: { status: "processing", is_external_score: false },
+      error: null,
+    });
     const post = queryBuilder({ data: undefined, error: null });
     const scanMaybeSingle = scan.maybeSingle;
     const postMaybeSingle = post.maybeSingle;
@@ -198,6 +296,8 @@ describe("dance post service", () => {
       httpErrors as never,
     );
 
-    await expect(service.getScoreStatus(OWNER_ID, POST_ID)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(service.getScoreStatus(OWNER_ID, POST_ID)).rejects.toMatchObject({
+      statusCode: 404,
+    });
   });
 });

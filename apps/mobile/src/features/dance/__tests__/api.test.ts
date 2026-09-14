@@ -23,6 +23,7 @@ jest.mock("expo/fetch", () => ({
 import {
   createDancePost,
   discardUploadingDancePost,
+  getDancePosts,
   getDanceScoreStatus,
   markDancePostUploaded,
   uploadDanceVideo,
@@ -112,7 +113,10 @@ it("discards an incomplete post with the caller's authorization", async () => {
 
   expect(fetchMock).toHaveBeenCalledWith(
     expect.stringContaining("/api/dance/posts/00000000-0000-4000-8000-000000000010"),
-    expect.objectContaining({ method: "DELETE", headers: expect.objectContaining({ Authorization: "Bearer token" }) }),
+    expect.objectContaining({
+      method: "DELETE",
+      headers: expect.objectContaining({ Authorization: "Bearer token" }),
+    }),
   );
 });
 
@@ -138,6 +142,21 @@ it("returns the normalized score status", async () => {
   await expect(
     getDanceScoreStatus("token", "00000000-0000-4000-8000-000000000010"),
   ).resolves.toMatchObject({ status: "scored", score: 96 });
+});
+
+it("requests the owner-only dance history with its opaque cursor", async () => {
+  fetchMock.mockResolvedValueOnce(success({ items: [], nextCursor: null }));
+
+  await getDancePosts("token", {
+    cursor: { createdAt: "2026-01-01T00:00:00.000Z", id: "00000000-0000-4000-8000-000000000010" },
+  });
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    expect.stringContaining("/api/dance/posts?limit=18&cursor="),
+    expect.objectContaining({
+      headers: expect.objectContaining({ Authorization: "Bearer token" }),
+    }),
+  );
 });
 
 it("refuses a clip larger than the upload ceiling before reading it into memory", async () => {

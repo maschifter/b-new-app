@@ -24,6 +24,12 @@ Feature parity with the Boogiz **core** journey, but cleaner and more performant
 - **Camera = react-native-vision-camera** (fps/bitrate control, future frame
   processors). Requires an EAS dev client build — not Expo Go.
 - **Entry point = top-right button on the My Studio tab** (see §4 Entry point).
+- **Profile history is in V1.** The current user's Profile shows their recorded
+  dances in a paginated three-column video grid, matching Boogiz's profile
+  presentation. `dance-videos` remains private: `GET /api/dance/posts` returns
+  a short-lived signed read URL for each owned post; that URL is display-only
+  and is never persisted in `dance_posts`. A cog in the Profile header opens a
+  dedicated Settings screen; Sign out lives there, rather than on Profile.
 - **Defaults (confirmed):**
   - Video mapping (from `scripts/import-boogiz-dancemoves.mjs`): `main_video_url`
     = learning video (Learn screen), `dancer_tip_video_url` = pro tip,
@@ -216,6 +222,15 @@ Unique `(post_id)`. Partial index for the worker claim:
 All tables: `enable row level security` with **no client policy** (consumed via
 the server secret-key client), matching the existing dance tables.
 
+### Profile post history read
+
+`GET /api/dance/posts?cursor=&limit=` is an authenticated, owner-scoped cursor
+feed ordered by `(created_at desc, id desc)`. Each item has the persisted post
+fields plus a freshly minted short-lived `video_url` for its private object.
+The response is strictly for the requesting owner; it does not turn the bucket
+public or store signed URLs. The profile uses `numColumns={3}` with stable square
+cells, pagination, pull-to-refresh, and an empty state.
+
 ---
 
 ## 2. Server — consumer module `modules/dance`
@@ -386,6 +401,15 @@ left / Visitors pill right). Add a Dance button to the right cluster via a new
 `app/(tabs)/studio.tsx` as `router.push("/dance")` (same callback pattern as the
 existing `onOpenShop`/`onOpenProfile` — studio does not import the dance feature,
 so the inward-dependency boundary holds). No nav-header work (`headerShown:false`).
+
+### Profile and settings
+
+- `GET /api/dance/posts` supplies the current owner's cursor-paginated attempts
+  to a feature-owned `DancePostGrid`. The Profile route composes that grid below
+  account information; it does not duplicate dance API or query logic.
+- Profile's top row is **Back / cog**. The cog opens the protected `/settings`
+  route. Settings has a Back control and contains the auth feature's Sign out
+  control. The account action is deliberately absent from Profile.
 
 ### Screens & navigation (`app/dance/…`, thin route files; declared inside the
 `Stack.Protected` session block of the root `_layout.tsx`)
@@ -570,6 +594,12 @@ is **done** only when every box under it is checked and its checks pass (typeche
 - [x] Tests: score-polling resolution, retry, slow-score affordance, terminal failure, and successful score (§4)
 - [ ] End-to-end on a physical device
 
+### Milestone 7 — Profile history and settings
+- [x] `GET /api/dance/posts` owner-scoped cursor API + short-lived signed read URLs
+- [x] `DancePost` history DTO, dance API/query, and three-column Profile grid
+- [x] Protected Settings route; Profile cog opens it; Sign out moved to Settings
+- [x] Focused API/UI tests and iOS simulator verification
+
 ## 7. Deferred (post-V1, noted for design headroom)
 
 Battles, AI filters/skins, avatar videos, coins/monetization, rank-points UI
@@ -608,12 +638,13 @@ flips to `scoring` on worker claim and always terminates at `scored` in V1 (`fai
 kept for headroom); `dance_posts.score = dance_scans.original_score` (raw match %),
 not `updated_score` (§1).
 
-Also resolved (review #4, confirmed with product):
+Also resolved (review #4, updated by product):
 
-- **No post history in V1 — Result screen only.** A recorded attempt is shown once on
-  the Result screen right after scoring; there is **no "my dances" list/feed** and no
-  `GET /api/dance/posts` list endpoint in V1. `dance_posts` rows are still persisted
-  (source of truth for the scan + score), but browsing past attempts is post-V1 (§7).
+- **Profile post history is in V1.** A recorded attempt remains available after
+  Result on the owner's Profile as a three-column video grid. The owner-scoped
+  `GET /api/dance/posts` endpoint serves short-lived signed read URLs for the
+  private recordings; no signed URL is persisted. The Profile cog opens Settings,
+  which owns Sign out.
 - **Worker runs on a single pinned replica in V1.** The in-process `setInterval` worker
   stays, but only **one replica runs it**, so the concurrency cap `N` is the *global*
   bound on the fragile scan server (avoids `N × replicas` overloading it). Enforce via a
