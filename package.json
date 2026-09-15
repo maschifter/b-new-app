@@ -38,6 +38,13 @@
   },
   "pnpm": {
     "overrides": { "react": "19.2.0", "react-dom": "19.2.0" },
-    "onlyBuiltDependencies": ["@biomejs/biome", "esbuild", "ffmpeg-static"]
+    "onlyBuiltDependencies": [
+      "@biomejs/biome",
+      "@ffprobe-installer/darwin-arm64",
+      "@ffprobe-installer/darwin-x64",
+      "@ffprobe-installer/linux-x64",
+      "esbuild",
+      "ffmpeg-static"
+    ]
   }
 }

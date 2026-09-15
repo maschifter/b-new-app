@@ -1,13 +1,18 @@
 import { execFile } from "node:child_process";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import ffprobeInstaller from "@ffprobe-installer/ffprobe";
 import { encode } from "blurhash";
 import ffmpegStatic from "ffmpeg-static";
-import ffprobeStatic from "ffprobe-static";
 import sharp from "sharp";
 import { AUDIO_OFFSET_CEILING_MS } from "./config.js";
 
 const run = promisify(execFile);
+
+// ffprobe comes from @ffprobe-installer, not ffprobe-static: the latter ships an
+// x86_64 binary even under bin/darwin/arm64, which macOS 27 can no longer run since
+// it dropped Rosetta 2. Its platform package chmods the binary in a postinstall, so
+// each target must also be listed in the root package.json onlyBuiltDependencies.
 
 const BLURHASH_EDGE = 32;
 const BLURHASH_COMPONENTS = 4;
@@ -157,7 +162,7 @@ interface ProbeStream {
 
 export async function probeMedia(path: string, timeoutMs: number): Promise<MediaProbe> {
   const { stdout } = await run(
-    binaryPath(ffprobeStatic.path, "ffprobe"),
+    binaryPath(ffprobeInstaller.path, "ffprobe"),
     ["-v", "error", "-print_format", "json", "-show_format", "-show_streams", "-i", path],
     { timeout: timeoutMs },
   );
