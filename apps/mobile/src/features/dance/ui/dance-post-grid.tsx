@@ -1,8 +1,9 @@
 import { BouncablePress } from "@/components/bouncable-press";
 import type { DancePostHistoryItem } from "@bnewapp/types";
+import { Image } from "expo-image";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useAtomValue } from "jotai";
-import { type ReactElement, useCallback, useState } from "react";
+import { type ReactElement, type ReactNode, useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -95,18 +96,31 @@ export function DancePostGrid({ header, onOpenPost }: DancePostGridProps) {
   );
 }
 
-function DancePostCell({
-  post,
-  size,
-  onPress,
-}: {
+interface DancePostCellProps {
   post: DancePostHistoryItem;
   size: number;
   onPress?: (postId: string) => void;
-}) {
-  const player = useVideoPlayer(post.videoUrl, (createdPlayer) => {
-    createdPlayer.muted = true;
-  });
+}
+
+/**
+ * Two sibling cells rather than one component with a branch: `useVideoPlayer` is a hook
+ * and cannot be called conditionally. Once the media job lands, the poster cell replaces a
+ * mounted video player per grid cell, which is the point of the whole poster pipeline.
+ */
+function DancePostCell(props: DancePostCellProps) {
+  return props.post.thumbnailUrl === null ? (
+    <DanceVideoCell {...props} />
+  ) : (
+    <DancePosterCell {...props} thumbnailUrl={props.post.thumbnailUrl} />
+  );
+}
+
+function DancePostCellShell({
+  post,
+  size,
+  onPress,
+  children,
+}: DancePostCellProps & { children: ReactNode }) {
   return (
     <BouncablePress
       accessibilityRole="button"
@@ -116,6 +130,47 @@ function DancePostCell({
       style={{ width: size, height: size }}
       className="overflow-hidden bg-panel-raised"
     >
+      {children}
+      {post.score !== null ? (
+        <View className="absolute bottom-1 right-1 rounded-full bg-black/65 px-2 py-1">
+          <Text className="text-[10px] font-extrabold text-foreground">{post.score}%</Text>
+        </View>
+      ) : null}
+    </BouncablePress>
+  );
+}
+
+function DancePosterCell({
+  thumbnailUrl,
+  ...props
+}: DancePostCellProps & { thumbnailUrl: string }) {
+  const { post } = props;
+  return (
+    <DancePostCellShell {...props}>
+      <Image
+        testID="profile-dance-poster"
+        // The bucket is private, so every refetch mints a fresh signed URL for the same
+        // object. expo-image caches by URI, so without `cacheKey` pinned to the stable
+        // storage path the poster is re-downloaded on every pull-to-refresh and remount.
+        source={{
+          uri: thumbnailUrl,
+          ...(post.thumbnailPath === null ? {} : { cacheKey: post.thumbnailPath }),
+        }}
+        {...(post.blurhash === null ? {} : { placeholder: { blurhash: post.blurhash } })}
+        contentFit="cover"
+        style={StyleSheet.absoluteFill}
+      />
+    </DancePostCellShell>
+  );
+}
+
+/** Fallback until the media job produces a poster: today's behaviour. */
+function DanceVideoCell(props: DancePostCellProps) {
+  const player = useVideoPlayer(props.post.videoUrl, (createdPlayer) => {
+    createdPlayer.muted = true;
+  });
+  return (
+    <DancePostCellShell {...props}>
       <VideoView
         testID="profile-dance-video"
         player={player}
@@ -123,11 +178,6 @@ function DancePostCell({
         contentFit="cover"
         style={StyleSheet.absoluteFill}
       />
-      {post.score !== null ? (
-        <View className="absolute bottom-1 right-1 rounded-full bg-black/65 px-2 py-1">
-          <Text className="text-[10px] font-extrabold text-foreground">{post.score}%</Text>
-        </View>
-      ) : null}
-    </BouncablePress>
+    </DancePostCellShell>
   );
 }

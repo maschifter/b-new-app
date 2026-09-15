@@ -25,6 +25,27 @@ function page(items: DancePostsPage["items"]): DancePostsPage {
   return { items, nextCursor: null };
 }
 
+function post(
+  overrides: Partial<DancePostsPage["items"][number]> = {},
+): DancePostsPage["items"][number] {
+  return {
+    id: "one",
+    danceMoveId: "move",
+    musicId: null,
+    status: "scored",
+    score: 92,
+    videoLengthS: 12,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    mergedVideoUrl: null,
+    thumbnailUrl: null,
+    thumbnailPath: null,
+    blurhash: null,
+    videoUrl: "https://storage.example.test/one.mp4",
+    ...overrides,
+  };
+}
+
 async function mount(header?: ReactElement, onOpenPost?: (postId: string) => void) {
   const store = createStore();
   const queryClient = new QueryClient({
@@ -62,25 +83,7 @@ it("shows loading feedback while the profile history is loading", async () => {
 });
 
 it("renders the recorded dances as a three-column video grid", async () => {
-  mockedGetDancePosts.mockResolvedValue(
-    page([
-      {
-        id: "one",
-        danceMoveId: "move",
-        musicId: null,
-        status: "scored",
-        score: 92,
-        videoLengthS: 12,
-        createdAt: "2026-01-01T00:00:00.000Z",
-        updatedAt: "2026-01-01T00:00:00.000Z",
-        mergedVideoUrl: null,
-        thumbnailUrl: null,
-        thumbnailPath: null,
-        blurhash: null,
-        videoUrl: "https://storage.example.test/one.mp4",
-      },
-    ]),
-  );
+  mockedGetDancePosts.mockResolvedValue(page([post()]));
 
   await mount(<Text>Profile header</Text>);
 
@@ -92,25 +95,7 @@ it("renders the recorded dances as a three-column video grid", async () => {
 
 it("opens the selected recorded dance when a profile cell is pressed", async () => {
   const onOpenPost = jest.fn();
-  mockedGetDancePosts.mockResolvedValue(
-    page([
-      {
-        id: "one",
-        danceMoveId: "move",
-        musicId: null,
-        status: "scored",
-        score: 92,
-        videoLengthS: 12,
-        createdAt: "2026-01-01T00:00:00.000Z",
-        updatedAt: "2026-01-01T00:00:00.000Z",
-        mergedVideoUrl: null,
-        thumbnailUrl: null,
-        thumbnailPath: null,
-        blurhash: null,
-        videoUrl: "https://storage.example.test/one.mp4",
-      },
-    ]),
-  );
+  mockedGetDancePosts.mockResolvedValue(page([post()]));
 
   await mount(undefined, onOpenPost);
 
@@ -122,4 +107,45 @@ it("explains an empty profile history", async () => {
   mockedGetDancePosts.mockResolvedValue(page([]));
   await mount();
   expect(await screen.findByText("No dances yet")).toBeOnTheScreen();
+});
+
+it("renders a poster cell instead of a video player once the media job lands", async () => {
+  mockedGetDancePosts.mockResolvedValue(
+    page([
+      post({
+        thumbnailUrl: "https://storage.example.test/one.jpg?token=first",
+        thumbnailPath: "dancer/one.jpg",
+        blurhash: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+      }),
+    ]),
+  );
+
+  await mount();
+
+  const poster = await screen.findByTestId("profile-dance-poster");
+  expect(poster).toBeOnTheScreen();
+  // The whole point: no mounted video player per grid cell.
+  expect(screen.queryByTestId("profile-dance-video")).not.toBeOnTheScreen();
+  // expo-image normalizes a blurhash placeholder into its own source URI.
+  expect(poster.props.placeholder[0].uri).toContain("LEHV6nWB2yk8pyo0adR*.7kCMdnj");
+});
+
+it("keys the poster cache on the storage path, not the rotating signed URL", async () => {
+  mockedGetDancePosts.mockResolvedValue(
+    page([
+      post({
+        thumbnailUrl: "https://storage.example.test/one.jpg?token=rotates-every-request",
+        thumbnailPath: "dancer/one.jpg",
+      }),
+    ]),
+  );
+
+  await mount();
+
+  expect((await screen.findByTestId("profile-dance-poster")).props.source).toEqual([
+    {
+      uri: "https://storage.example.test/one.jpg?token=rotates-every-request",
+      cacheKey: "dancer/one.jpg",
+    },
+  ]);
 });

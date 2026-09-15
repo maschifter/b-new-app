@@ -1,9 +1,10 @@
 import { AppHeader } from "@/components/app-header";
 import { MobileQueryErrorBoundary } from "@/components/error-boundary";
 import { useFocusedPlayback } from "@/lib/media/use-focused-playback";
+import { Image } from "expo-image";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useAtomValue } from "jotai";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { dancePostDetailAtomFamily } from "../_atoms/queries";
@@ -30,8 +31,14 @@ export function DancePostDetailScreen({ postId, onBack }: DancePostDetailScreenP
 
 function DancePostDetailContent({ postId, onBack }: DancePostDetailScreenProps) {
   const post = useAtomValue(dancePostDetailAtomFamily(postId)).data;
-  const player = useVideoPlayer(post.videoUrl);
+  // The merged file carries the music; the original silent recording is what plays until
+  // the media job lands, and stays the fallback if it never does.
+  const player = useVideoPlayer(post.mergedVideoUrl ?? post.videoUrl);
+  const [hasFirstFrame, setHasFirstFrame] = useState(false);
   useFocusedPlayback(player, true);
+  // VideoView has no poster or placeholder prop, so the poster is an overlay dismissed on
+  // the first decoded frame rather than something the player owns.
+  const showPoster = !hasFirstFrame && post.thumbnailUrl !== null;
 
   return (
     <ScrollView className="flex-1" contentContainerClassName="gap-6 px-4 pb-8 pt-3">
@@ -42,8 +49,22 @@ function DancePostDetailContent({ postId, onBack }: DancePostDetailScreenProps) 
           player={player}
           nativeControls
           contentFit="contain"
+          onFirstFrameRender={() => setHasFirstFrame(true)}
           style={StyleSheet.absoluteFill}
         />
+        {showPoster && post.thumbnailUrl !== null ? (
+          <Image
+            testID="dance-post-detail-poster"
+            pointerEvents="none"
+            source={{
+              uri: post.thumbnailUrl,
+              ...(post.thumbnailPath === null ? {} : { cacheKey: post.thumbnailPath }),
+            }}
+            {...(post.blurhash === null ? {} : { placeholder: { blurhash: post.blurhash } })}
+            contentFit="contain"
+            style={StyleSheet.absoluteFill}
+          />
+        ) : null}
       </View>
       <View className="gap-2">
         <Text accessibilityRole="header" className="text-2xl font-extrabold text-foreground">

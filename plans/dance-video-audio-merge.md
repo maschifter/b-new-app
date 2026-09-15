@@ -1,8 +1,8 @@
 # Dance Post Media — Music Merge, Thumbnail, Blurhash (Plan)
 
-Status: **in progress**. Milestones 1 and 2 shipped (2026-09-15); milestone 3 (mobile
-consumption: poster/blurhash grid, merged playback) is next. Proposed 2026-09-14 and revised
-four times after review. Follow-up to `plans/dance-flow.md`, which shipped V1 with the
+Status: **in progress**. Milestones 1-3 shipped (2026-09-15); what remains is device
+verification, the staging container check in §5, the §8 sign-offs, and the optional queue
+extraction. Proposed 2026-09-14 and revised four times after review. Follow-up to `plans/dance-flow.md`, which shipped V1 with the
 *original, silent* recording as the only stored artifact.
 
 ## Goal
@@ -679,6 +679,10 @@ Three pieces of server plumbing this implies, none of which are optional:
    container check above.
 3. **Mobile consumption** — poster/blurhash grid, merged playback in the detail screen, tests,
    device verification.
+
+   *Shipped 2026-09-15*, device verification still owed. The detail screen's poster overlay
+   is dismissed by `VideoView`'s `onFirstFrameRender` — the prop that stands in for the
+   `poster` this component does not have.
 4. **Optional** — extract the shared queue loop.
 
 ## 7. Deferred

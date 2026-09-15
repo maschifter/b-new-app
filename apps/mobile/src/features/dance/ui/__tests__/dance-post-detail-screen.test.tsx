@@ -11,14 +11,19 @@ jest.mock("../../api", () => ({ getDancePost: jest.fn() }));
 jest.mock("@react-navigation/native", () => ({ useIsFocused: () => true }));
 jest.mock("expo-video", () => ({
   VideoView: "VideoView",
-  useVideoPlayer: () => ({ play: jest.fn(), pause: jest.fn() }),
+  useVideoPlayer: (source: string | null) => {
+    mockPlayerSources.push(source);
+    return { play: jest.fn(), pause: jest.fn() };
+  },
 }));
+
+const mockPlayerSources: Array<string | null> = [];
 
 const POST_ID = "00000000-0000-4000-8000-000000000010";
 const MOVE_ID = "00000000-0000-4000-8000-000000000001";
 const mockedGetDancePost = getDancePost as jest.Mock;
 
-function post(): DancePostDetail {
+function post(overrides: Partial<DancePostDetail> = {}): DancePostDetail {
   return {
     id: POST_ID,
     danceMoveId: MOVE_ID,
@@ -38,6 +43,7 @@ function post(): DancePostDetail {
       description: "Start with the groove.",
       music: { title: "The Track", artist: "The Artist" },
     },
+    ...overrides,
   };
 }
 
@@ -99,4 +105,42 @@ it("shows an error and retries the detail request", async () => {
   } finally {
     consoleError.mockRestore();
   }
+});
+
+it("plays the merged video and covers the player with the poster until the first frame", async () => {
+  mockPlayerSources.length = 0;
+  mockedGetDancePost.mockResolvedValue(
+    post({
+      mergedVideoUrl: "https://storage.example.test/attempt-merged.mp4",
+      thumbnailUrl: "https://storage.example.test/attempt.jpg?token=rotates",
+      thumbnailPath: "dancer/attempt.jpg",
+      blurhash: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+    }),
+  );
+
+  await mount();
+
+  expect(await screen.findByTestId("dance-post-detail-video")).toBeOnTheScreen();
+  expect(mockPlayerSources).toContain("https://storage.example.test/attempt-merged.mp4");
+  const poster = screen.getByTestId("dance-post-detail-poster");
+  expect(poster.props.source).toEqual([
+    {
+      uri: "https://storage.example.test/attempt.jpg?token=rotates",
+      cacheKey: "dancer/attempt.jpg",
+    },
+  ]);
+
+  await fireEventAsync(screen.getByTestId("dance-post-detail-video"), "firstFrameRender");
+  expect(screen.queryByTestId("dance-post-detail-poster")).not.toBeOnTheScreen();
+});
+
+it("keeps playing the original silent recording until the merge lands", async () => {
+  mockPlayerSources.length = 0;
+  mockedGetDancePost.mockResolvedValue(post());
+
+  await mount();
+
+  expect(await screen.findByTestId("dance-post-detail-video")).toBeOnTheScreen();
+  expect(mockPlayerSources).toContain("https://storage.example.test/attempt.mp4");
+  expect(screen.queryByTestId("dance-post-detail-poster")).not.toBeOnTheScreen();
 });
