@@ -26,6 +26,14 @@ changes. Every phase must land with the same observable behavior it started with
   differ genuinely in retry and failure semantics. Leave it alone.
 - react-admin `Create`/`Edit` component pairs. They are near-identical by
   framework idiom, and collapsing them buys less than it costs in readability.
+- `createAdminResourceService` (was Phase 3c). Only 2 of the 4 admin services could
+  be rebuilt on it — this plan already excludes `dance-moves` and `catalog` from it —
+  so the config surface (table, columns, `toDto`, six message strings, plus the
+  music-track FK-conflict hook) would be about nine fields serving two call sites to
+  save ~70 lines. Supabase also infers the Result type from the *select string
+  literal*, so a generic factory either loses that inference or makes each caller
+  thread the row type by hand, which is the boilerplate it set out to delete. The
+  two services are flat, obvious CRUD; that duplication is the boring, stable kind.
 - Generated files, especially `packages/types/src/database.generated.ts`.
 
 ---
@@ -169,25 +177,20 @@ same `{ rows, total }` return, same error ladder.
       Zod `status` enum already defined there instead of restating the literals;
       `DanceContentStatus` never leaves the server, so `packages/types` was not
       needed. All three copies replaced.
-- [ ] Step 3b — extract the list-query builder:
-      `applyListQuery(query, { ids, start, end, sort, order, sortable, defaultSort })`.
-      Adopt it in genres, tracks, moves, and the catalog service. Keep each
-      service's own search clause (they differ: `ilike` on one column, `or` across
-      two, `or` across three plus a JSON path) — pass it in as a callback.
-- [ ] Step 3c — extract `createAdminResourceService({ table, columns, sortable, defaultSort, notFoundMessage, errorMessages, toDto })`
-      covering `list` / `get` / `create` / `update` / `delete`.
-- [ ] Rebuild `dance-genres-service` on it (simplest, no special cases).
-- [ ] Rebuild `music-tracks-service` on it. Its `delete` has an extra FK-violation
-      → `conflict` branch; express that as an optional per-service hook, not an
-      `if (table === …)` inside the shared factory.
-- [ ] Leave `dance-moves-service` and `catalog-service` on the shared **list** and
-      **status** helpers only. Their create/update carry real extra logic
-      (genre join replacement, required-video validation, art upload,
-      check-constraint mapping) — forcing them into the factory would make it
-      worse, not better.
-- [ ] Re-read the resulting factory. If it has grown more than two boolean or
-      optional-hook parameters, stop and keep the services separate. A config
-      object with six escape hatches is worse than the duplication it replaced.
+- [x] Step 3b — **reduced in scope.** The plan assumed all four services shared one
+      list-query block differing only in the search clause. Re-reading them, only the
+      three pure expressions are shared 4/4: the `SORTABLE_COLUMNS` guard, the
+      `[,%]` sanitizer, and `max(end - 1, start)`. The `ids` short-circuit and the
+      `{ rows, total }` return are 3/4 — `catalog-service` has no `ids` branch at all —
+      and `dance-moves-service` picks its select string *before* `.order()` based on
+      `genreId`, so the two branches produce different `PostgrestFilterBuilder` types.
+      A builder-threading `applyListQuery` would therefore have to be generic over
+      Supabase's inference, where a loose constraint silently widens the Result type
+      flowing into `toAdminMove`.
+      Shipped instead: `lib/admin-list.ts` with `sortColumn`, `searchTerm` and
+      `rangeEnd` — plain functions, adopted by all four services, unit-tested. The
+      filter chaining stays explicit in each service, where it genuinely differs.
+- [x] Step 3c — **dropped.** See "What is explicitly NOT in scope".
 
 **Acceptance:** `admin*.test.ts` green with **no test edits**. If a test has to
 change, the refactor changed behavior — investigate before proceeding.
@@ -456,7 +459,7 @@ the Studio/Explore/Shop screens render a real room end to end on device.
 | 0 | Dead code removal | none | [x] |
 | 1 | Server test helpers | low | [x] |
 | 2 | `pickDefined` | low | [x] |
-| 3 | Shared admin resource service | medium | 3a done; 3b/3c pending |
+| 3 | Shared admin resource service | medium | [x] 3a + reduced 3b; 3c dropped |
 | 4 | Server constants & select strings | low | [ ] |
 | 5 | Admin app constants | very low | [ ] |
 | 6 | Mobile query-atom helper | medium | [ ] |

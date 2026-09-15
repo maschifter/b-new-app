@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { Database } from "@bnewapp/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyInstance } from "fastify";
+import { rangeEnd, searchTerm, sortColumn } from "../../lib/admin-list.js";
 import { pickDefined } from "../../lib/pick-defined.js";
 import { processCatalogArt } from "../catalog/art.js";
 import {
@@ -71,14 +72,14 @@ export function createAdminCatalogService(
 
   return {
     async list(options: ListCatalogOptions) {
-      const sortColumn = SORTABLE_COLUMNS.has(options.sort) ? options.sort : "sort_order";
+      const column = sortColumn(options.sort, SORTABLE_COLUMNS, "sort_order");
       let query = supabase
         .from("catalog_items")
         .select(CATALOG_COLUMNS, { count: "exact" })
-        .order(sortColumn, { ascending: options.order === "asc" })
-        .range(options.start, Math.max(options.end - 1, options.start));
+        .order(column, { ascending: options.order === "asc" })
+        .range(options.start, rangeEnd(options.start, options.end));
 
-      const search = options.q?.replace(/[,%]/g, "").trim();
+      const search = searchTerm(options.q);
       if (search) {
         query = query.or(
           `display_name.ilike.%${search}%,id.ilike.%${search}%,tags->>type.ilike.%${search}%`,

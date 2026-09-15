@@ -1,6 +1,7 @@
 import type { AdminDanceMove, DanceContentStatus, Database } from "@bnewapp/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyInstance } from "fastify";
+import { rangeEnd, searchTerm, sortColumn } from "../../lib/admin-list.js";
 import { pickDefined } from "../../lib/pick-defined.js";
 import {
   type CreateDanceMoveBody,
@@ -135,17 +136,17 @@ export function createAdminDanceMovesService(
   return {
     async list(options: ListDanceMovesOptions) {
       if (options.ids?.length === 0) return { rows: [], total: 0 };
-      const sortColumn = SORTABLE_COLUMNS.has(options.sort) ? options.sort : "sort_order";
+      const column = sortColumn(options.sort, SORTABLE_COLUMNS, "sort_order");
       const baseQuery = supabase.from("dance_moves");
       let query = (
         options.genreId
           ? baseQuery.select(MOVE_WITH_GENRES_AND_FILTER, { count: "exact" })
           : baseQuery.select(MOVE_WITH_GENRES, { count: "exact" })
-      ).order(sortColumn, { ascending: options.order === "asc" });
+      ).order(column, { ascending: options.order === "asc" });
 
       if (options.ids) query = query.in("id", options.ids);
-      else query = query.range(options.start, Math.max(options.end - 1, options.start));
-      const search = options.q?.replace(/[,%]/g, "").trim();
+      else query = query.range(options.start, rangeEnd(options.start, options.end));
+      const search = searchTerm(options.q);
       if (search) query = query.ilike("title", `%${search}%`);
       if (options.status) query = query.eq("status", options.status);
       if (options.level !== undefined) query = query.eq("level", options.level);
