@@ -92,6 +92,26 @@ export const danceMoveDetailAtomFamily = atomFamily((moveId: string) =>
   }),
 );
 
+/**
+ * Non-suspense twin of `danceMoveDetailAtomFamily`, sharing its query key so the Record
+ * screen's cached move is reused rather than refetched. The Result screen reads the move
+ * only for its music: suspending there would hold the upload behind a fetch the dance
+ * does not need, and a failed fetch must cost the music, not the screen.
+ */
+export const optionalDanceMoveAtomFamily = atomFamily((moveId: string) =>
+  atomWithQuery<DanceMove>((get) => {
+    const auth = get(queryAuthAtom);
+    return {
+      queryKey: ["dance-move", auth?.userId ?? null, moveId],
+      enabled: auth !== null,
+      queryFn: async () => {
+        if (!auth) throw new Error("Not authenticated");
+        return getDanceMove(auth.accessToken, moveId);
+      },
+    };
+  }),
+);
+
 export const dancePostsInfiniteAtom = atomWithInfiniteQuery<
   DancePostsPage,
   Error,

@@ -1,4 +1,5 @@
 import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
+import { mergeAudioOffsetMs } from "@bnewapp/dance-core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEventAsync, renderAsync, screen } from "@testing-library/react-native";
 import { Provider, createStore } from "jotai";
@@ -6,6 +7,7 @@ import { queryClientAtom } from "jotai-tanstack-query";
 import {
   createDancePost,
   discardUploadingDancePost,
+  getDanceMove,
   getDanceScoreStatus,
   markDancePostUploaded,
   uploadDanceVideo,
@@ -16,14 +18,23 @@ const MOVE_ID = "00000000-0000-4000-8000-000000000001";
 const POST_ID = "00000000-0000-4000-8000-000000000010";
 const onRecordAgain = jest.fn();
 const onDone = jest.fn();
+const MUSIC_URL = "https://cdn.test/track.mp3";
+const MOVE_BPM = 120;
+const DELAY_BEFORE_AVATAR_DANCE = 8_000;
 const mockUseIsFocused = jest.fn(() => true);
+const mockUseSyncedMusicTrack = jest.fn();
 
 jest.mock("../../api", () => ({
   createDancePost: jest.fn(),
   discardUploadingDancePost: jest.fn(),
+  getDanceMove: jest.fn(),
   getDanceScoreStatus: jest.fn(),
   markDancePostUploaded: jest.fn(),
   uploadDanceVideo: jest.fn(),
+}));
+jest.mock("@/lib/media/use-synced-music-track", () => ({
+  useSyncedMusicTrack: (player: unknown, options: unknown) =>
+    mockUseSyncedMusicTrack(player, options),
 }));
 jest.mock("@react-navigation/native", () => ({ useIsFocused: () => mockUseIsFocused() }));
 jest.mock("expo-video", () => ({
@@ -44,6 +55,7 @@ jest.mock("expo-video", () => ({
 }));
 
 const mockedCreateDancePost = createDancePost as jest.Mock;
+const mockedGetDanceMove = getDanceMove as jest.Mock;
 const mockedDiscardUploadingDancePost = discardUploadingDancePost as jest.Mock;
 const mockedGetDanceScoreStatus = getDanceScoreStatus as jest.Mock;
 const mockedMarkDancePostUploaded = markDancePostUploaded as jest.Mock;
@@ -52,7 +64,7 @@ const mockedUploadDanceVideo = uploadDanceVideo as jest.Mock;
 async function mount(clipAudioOffsetMs?: number) {
   const store = createStore();
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { gcTime: 0 } },
+    defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { gcTime: 0 } },
   });
   store.set(queryClientAtom, queryClient);
   store.set(queryAuthAtom, { userId: "dancer", accessToken: "token" });
@@ -74,6 +86,19 @@ async function mount(clipAudioOffsetMs?: number) {
 
 beforeEach(() => {
   mockUseIsFocused.mockReturnValue(true);
+  mockUseSyncedMusicTrack.mockReset();
+  mockedGetDanceMove.mockReset();
+  mockedGetDanceMove.mockResolvedValue({
+    id: MOVE_ID,
+    bpm: MOVE_BPM,
+    music: {
+      id: "track",
+      title: "Track",
+      artist: null,
+      audioUrl: MUSIC_URL,
+      delayBeforeAvatarDance: DELAY_BEFORE_AVATAR_DANCE,
+    },
+  });
   onRecordAgain.mockReset();
   onDone.mockReset();
   mockedCreateDancePost.mockReset();
@@ -189,4 +214,80 @@ it("omits the offset from the create call when the clip carries none", async () 
 
   expect(await screen.findByText("You scored 90 points!")).toBeOnTheScreen();
   expect(mockedCreateDancePost.mock.calls[0]?.[1]).not.toHaveProperty("audioOffsetMs");
+});
+
+it("replays the move's track seeked to the offset measured while recording", async () => {
+  mockedCreateDancePost.mockResolvedValue({
+    postId: POST_ID,
+    upload: { signedUrl: "https://storage.example.test/upload", path: "dancer/attempt.mp4" },
+  });
+  mockedUploadDanceVideo.mockResolvedValue(undefined);
+  mockedMarkDancePostUploaded.mockResolvedValue({ id: POST_ID, status: "uploaded" });
+  mockedGetDanceScoreStatus.mockResolvedValue({
+    status: "scored",
+    hasScore: true,
+    score: 91,
+    isExternalScore: true,
+    jobState: "completed",
+  });
+
+  await mount(9_000);
+
+  expect(await screen.findByText("You scored 91 points!")).toBeOnTheScreen();
+  expect(mockUseSyncedMusicTrack).toHaveBeenLastCalledWith(expect.anything(), {
+    audioUrl: MUSIC_URL,
+    offsetMs: 9_000,
+  });
+});
+
+it("falls back to the computed timeline offset when the clip carries none", async () => {
+  mockedCreateDancePost.mockResolvedValue({
+    postId: POST_ID,
+    upload: { signedUrl: "https://storage.example.test/upload", path: "dancer/attempt.mp4" },
+  });
+  mockedUploadDanceVideo.mockResolvedValue(undefined);
+  mockedMarkDancePostUploaded.mockResolvedValue({ id: POST_ID, status: "uploaded" });
+  mockedGetDanceScoreStatus.mockResolvedValue({
+    status: "scored",
+    hasScore: true,
+    score: 91,
+    isExternalScore: true,
+    jobState: "completed",
+  });
+  const expected = mergeAudioOffsetMs(MOVE_BPM, DELAY_BEFORE_AVATAR_DANCE);
+
+  await mount();
+
+  expect(await screen.findByText("You scored 91 points!")).toBeOnTheScreen();
+  expect(expected).toBeGreaterThan(0);
+  expect(mockUseSyncedMusicTrack).toHaveBeenLastCalledWith(expect.anything(), {
+    audioUrl: MUSIC_URL,
+    offsetMs: expected,
+  });
+});
+
+it("stays silent for a move that has no music", async () => {
+  mockedGetDanceMove.mockResolvedValue({ id: MOVE_ID, bpm: MOVE_BPM, music: null });
+  mockedCreateDancePost.mockResolvedValue({
+    postId: POST_ID,
+    upload: { signedUrl: "https://storage.example.test/upload", path: "dancer/attempt.mp4" },
+  });
+  mockedUploadDanceVideo.mockResolvedValue(undefined);
+  mockedMarkDancePostUploaded.mockResolvedValue({ id: POST_ID, status: "uploaded" });
+  mockedGetDanceScoreStatus.mockResolvedValue({
+    status: "scored",
+    hasScore: true,
+    score: 91,
+    isExternalScore: true,
+    jobState: "completed",
+  });
+
+  await mount(9_000);
+
+  expect(await screen.findByText("You scored 91 points!")).toBeOnTheScreen();
+  expect(mockedGetDanceMove).toHaveBeenCalled();
+  expect(mockUseSyncedMusicTrack).toHaveBeenLastCalledWith(expect.anything(), {
+    audioUrl: null,
+    offsetMs: 9_000,
+  });
 });

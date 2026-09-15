@@ -1,5 +1,7 @@
 import { BouncablePress } from "@/components/bouncable-press";
 import { useFocusedPlayback } from "@/lib/media/use-focused-playback";
+import { useSyncedMusicTrack } from "@/lib/media/use-synced-music-track";
+import { mergeAudioOffsetMs } from "@bnewapp/dance-core";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useEffect, useMemo } from "react";
@@ -7,7 +9,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { startDanceScorePollingAtom } from "../_atoms/effects";
 import { submitDanceRecordingMutationAtom } from "../_atoms/mutations";
-import { danceScoreAtom } from "../_atoms/queries";
+import { danceScoreAtom, optionalDanceMoveAtomFamily } from "../_atoms/queries";
 import { activeDanceScanAtom } from "../_atoms/ui";
 import { isScorePollingSlow } from "../score-polling";
 import { SubmissionFeedback } from "./submission-feedback";
@@ -37,6 +39,17 @@ export function DanceResultScreen({
     videoPlayer.muted = true;
   });
   useFocusedPlayback(player, true);
+  // The clip is silent by design, so the move's track is replayed beside it. The measured
+  // offset is what the dancer actually heard; older clips and a player that never started
+  // fall back to the same computed timeline the merge worker uses.
+  const move = useAtomValue(optionalDanceMoveAtomFamily(moveId)).data;
+  const music = move?.music ?? null;
+  useSyncedMusicTrack(player, {
+    audioUrl: music?.audioUrl ?? null,
+    offsetMs:
+      clipAudioOffsetMs ??
+      mergeAudioOffsetMs(move?.bpm ?? null, music?.delayBeforeAvatarDance ?? null),
+  });
   const [activeScan, setActiveScan] = useAtom(activeDanceScanAtom);
   const startScorePolling = useSetAtom(startDanceScorePollingAtom);
   const submit = useAtomValue(submitDanceRecordingMutationAtom);
