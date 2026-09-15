@@ -9,17 +9,11 @@ import {
   TextField,
 } from "react-admin";
 import { MediaPreview } from "../../components/media-url-input";
+import { STATUS_CHOICES } from "../choices";
 
 const filters = [
   <SearchInput key="q" source="q" alwaysOn />,
-  <SelectInput
-    key="status"
-    source="status"
-    choices={[
-      { id: "draft", name: "Draft" },
-      { id: "published", name: "Published" },
-    ]}
-  />,
+  <SelectInput key="status" source="status" choices={STATUS_CHOICES} />,
 ];
 
 export function MusicTrackList() {

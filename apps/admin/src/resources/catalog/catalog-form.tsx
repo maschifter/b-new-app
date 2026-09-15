@@ -1,5 +1,6 @@
 import { Stack, Typography } from "@mui/material";
 import { NumberInput, SelectInput, TextInput, required, useRecordContext } from "react-admin";
+import { STATUS_CHOICES } from "../choices";
 import { CatalogTagsInput } from "./catalog-tags-input";
 import type { CatalogRecord } from "./catalog-types";
 
@@ -52,15 +53,7 @@ export function CatalogFormFields({ includeId = false }: { includeId?: boolean }
         Valid type tags: video, preview, tall, low, lounge, ceiling, floor, wall, decor. An item
         appears in a picker only when its tags satisfy that spot&apos;s accept rule.
       </Typography>
-      <SelectInput
-        source="status"
-        choices={[
-          { id: "draft", name: "Draft" },
-          { id: "published", name: "Published" },
-        ]}
-        validate={required()}
-        fullWidth
-      />
+      <SelectInput source="status" choices={STATUS_CHOICES} validate={required()} fullWidth />
       <SelectInput
         source="access"
         choices={[

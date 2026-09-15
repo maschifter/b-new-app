@@ -228,11 +228,17 @@ change, the refactor changed behavior — investigate before proceeding.
 
 **Risk:** very low. **Depends on:** nothing.
 
-- [ ] Add `STATUS_CHOICES = [{ id: "draft", name: "Draft" }, { id: "published", name: "Published" }]`
+- [x] Add `STATUS_CHOICES = [{ id: "draft", name: "Draft" }, { id: "published", name: "Published" }]`
       to a shared module under `apps/admin/src/`. It is currently repeated in
       eight files: `catalog-list`, `catalog-form`, `genre-list`, `genre-form`,
-      `move-list`, `move-form`, `track-list`, `track-form`.
-- [ ] Add `ACCESS_CHOICES` for the free/premium pair in the catalog resource.
+      `move-list`, `move-form`, `track-list`, `track-form`. Landed in
+      `apps/admin/src/resources/choices.ts`; all eight adopted.
+- [x] Add `ACCESS_CHOICES` for the free/premium pair in the catalog resource.
+      **Dropped.** The two lists share ids but not labels: `catalog-list` filters on
+      `Free` / `Premium`, while `catalog-form` deliberately explains the choice
+      (`Free (granted to every user)` / `Premium (requires purchase)`). One shared
+      constant would change visible text, and two constants would serve one call site
+      each. Left as is.
 
 **Acceptance:** `corepack pnpm --filter @bnewapp/admin test` green; admin UI
 renders the same filter and form options.
@@ -463,7 +469,7 @@ the Studio/Explore/Shop screens render a real room end to end on device.
 | 2 | `pickDefined` | low | [x] |
 | 3 | Shared admin resource service | medium | [x] 3a + reduced 3b; 3c dropped |
 | 4 | Server constants & select strings | low | [x] |
-| 5 | Admin app constants | very low | [ ] |
+| 5 | Admin app constants | very low | [x] STATUS_CHOICES only |
 | 6 | Mobile query-atom helper | medium | [ ] |
 | 7 | Mobile test render helper | low | [ ] |
 | 8 | Mobile color tokens | low | [ ] |

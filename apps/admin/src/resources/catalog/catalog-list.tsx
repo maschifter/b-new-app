@@ -7,6 +7,7 @@ import {
   SelectInput,
   TextField,
 } from "react-admin";
+import { STATUS_CHOICES } from "../choices";
 import { CatalogArtCell } from "./catalog-art-upload";
 import { CATALOG_ITEM_TYPES, type CatalogRecord } from "./catalog-types";
 
@@ -18,14 +19,7 @@ const filters = [
     label="Type"
     choices={CATALOG_ITEM_TYPES.map((type) => ({ id: type, name: type }))}
   />,
-  <SelectInput
-    key="status"
-    source="status"
-    choices={[
-      { id: "draft", name: "Draft" },
-      { id: "published", name: "Published" },
-    ]}
-  />,
+  <SelectInput key="status" source="status" choices={STATUS_CHOICES} />,
   <SelectInput
     key="access"
     source="access"

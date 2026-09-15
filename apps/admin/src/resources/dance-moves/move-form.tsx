@@ -12,6 +12,7 @@ import {
 } from "react-admin";
 import { MediaUploadInput } from "../../components/media-upload-input";
 import { parseNullableUrl } from "../../components/media-url-input";
+import { STATUS_CHOICES } from "../choices";
 
 export const PRO_DANCER_VIDEO_ERROR = "A dance move requires a pro dancer video URL";
 export const DANCER_TIP_VIDEO_ERROR = "A dance move requires a dancer tip video URL";
@@ -80,15 +81,7 @@ export function MoveFormFields() {
         <NumberInput source="bpm" min={1} />
         <NumberInput source="sort_order" validate={required()} />
       </Stack>
-      <SelectInput
-        source="status"
-        choices={[
-          { id: "draft", name: "Draft" },
-          { id: "published", name: "Published" },
-        ]}
-        validate={required()}
-        fullWidth
-      />
+      <SelectInput source="status" choices={STATUS_CHOICES} validate={required()} fullWidth />
       <ReferenceArrayInput source="genre_ids" reference="dance-genres">
         <AutocompleteArrayInput label="Genres" optionText="name" />
       </ReferenceArrayInput>

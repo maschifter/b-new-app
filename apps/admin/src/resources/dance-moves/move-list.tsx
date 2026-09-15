@@ -14,19 +14,13 @@ import {
   TextField,
 } from "react-admin";
 import { MediaPreview } from "../../components/media-url-input";
+import { STATUS_CHOICES } from "../choices";
 
 const levelChoices = [1, 2, 3, 4].map((level) => ({ id: level, name: `Level ${level}` }));
 
 const filters = [
   <SearchInput key="q" source="q" alwaysOn />,
-  <SelectInput
-    key="status"
-    source="status"
-    choices={[
-      { id: "draft", name: "Draft" },
-      { id: "published", name: "Published" },
-    ]}
-  />,
+  <SelectInput key="status" source="status" choices={STATUS_CHOICES} />,
   <SelectInput key="level" source="level" choices={levelChoices} />,
   <ReferenceInput key="genre_id" source="genre_id" reference="dance-genres">
     <SelectInput label="Genre" optionText="name" />

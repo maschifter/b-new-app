@@ -2,6 +2,7 @@ import type { AdminMusicTrack } from "@bnewapp/types";
 import { Stack } from "@mui/material";
 import { NumberInput, SelectInput, TextInput, required } from "react-admin";
 import { MediaUploadInput } from "../../components/media-upload-input";
+import { STATUS_CHOICES } from "../choices";
 
 export const musicTrackCreateDefaults = {
   artist: null,
@@ -47,15 +48,7 @@ export function TrackFormFields() {
         validate={required()}
       />
       <NumberInput source="delay_before_avatar_dance" label="Choreography offset (ms)" min={0} />
-      <SelectInput
-        source="status"
-        choices={[
-          { id: "draft", name: "Draft" },
-          { id: "published", name: "Published" },
-        ]}
-        validate={required()}
-        fullWidth
-      />
+      <SelectInput source="status" choices={STATUS_CHOICES} validate={required()} fullWidth />
       <NumberInput source="sort_order" validate={required()} />
     </Stack>
   );

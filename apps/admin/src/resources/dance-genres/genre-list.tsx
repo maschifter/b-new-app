@@ -7,17 +7,11 @@ import {
   SelectInput,
   TextField,
 } from "react-admin";
+import { STATUS_CHOICES } from "../choices";
 
 const filters = [
   <SearchInput key="q" source="q" alwaysOn />,
-  <SelectInput
-    key="status"
-    source="status"
-    choices={[
-      { id: "draft", name: "Draft" },
-      { id: "published", name: "Published" },
-    ]}
-  />,
+  <SelectInput key="status" source="status" choices={STATUS_CHOICES} />,
 ];
 
 export function DanceGenreList() {
