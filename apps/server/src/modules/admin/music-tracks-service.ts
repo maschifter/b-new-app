@@ -1,7 +1,12 @@
 import type { AdminMusicTrack, DanceContentStatus, Database } from "@bnewapp/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyInstance } from "fastify";
-import type { CreateMusicTrackBody, UpdateMusicTrackBody } from "./dance-content-schemas.js";
+import { pickDefined } from "../../lib/pick-defined.js";
+import {
+  type CreateMusicTrackBody,
+  MUSIC_TRACK_UPDATE_COLUMNS,
+  type UpdateMusicTrackBody,
+} from "./dance-content-schemas.js";
 
 const COLUMNS =
   "id, legacy_id, title, artist, audio_url, delay_before_avatar_dance, thumbnail_url, status, sort_order, created_at, updated_at";
@@ -38,17 +43,7 @@ function toAdminTrack(row: Database["public"]["Tables"]["music_tracks"]["Row"]):
 }
 
 function trackUpdate(body: UpdateMusicTrackBody) {
-  return {
-    ...(body.title === undefined ? {} : { title: body.title }),
-    ...(body.artist === undefined ? {} : { artist: body.artist }),
-    ...(body.audio_url === undefined ? {} : { audio_url: body.audio_url }),
-    ...(body.delay_before_avatar_dance === undefined
-      ? {}
-      : { delay_before_avatar_dance: body.delay_before_avatar_dance }),
-    ...(body.thumbnail_url === undefined ? {} : { thumbnail_url: body.thumbnail_url }),
-    ...(body.status === undefined ? {} : { status: body.status }),
-    ...(body.sort_order === undefined ? {} : { sort_order: body.sort_order }),
-  };
+  return pickDefined(body, MUSIC_TRACK_UPDATE_COLUMNS);
 }
 
 export function createAdminMusicTracksService(

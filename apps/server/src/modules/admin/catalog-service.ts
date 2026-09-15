@@ -3,7 +3,12 @@ import type { Database } from "@bnewapp/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyInstance } from "fastify";
 import { processCatalogArt } from "../catalog/art.js";
-import type { CreateCatalogItemBody, UpdateCatalogItemBody } from "./catalog-schemas.js";
+import { pickDefined } from "../../lib/pick-defined.js";
+import {
+  CATALOG_ITEM_UPDATE_COLUMNS,
+  type CreateCatalogItemBody,
+  type UpdateCatalogItemBody,
+} from "./catalog-schemas.js";
 
 const CATALOG_COLUMNS =
   "id, tags, display_name, art_url, art_hitbox, blurhash, status, access, price, sort_order, created_at, updated_at";
@@ -45,14 +50,7 @@ interface AdminCatalogService {
 }
 
 function catalogUpdate(body: UpdateCatalogItemBody) {
-  return {
-    ...(body.tags === undefined ? {} : { tags: body.tags }),
-    ...(body.display_name === undefined ? {} : { display_name: body.display_name }),
-    ...(body.status === undefined ? {} : { status: body.status }),
-    ...(body.access === undefined ? {} : { access: body.access }),
-    ...(body.price === undefined ? {} : { price: body.price }),
-    ...(body.sort_order === undefined ? {} : { sort_order: body.sort_order }),
-  };
+  return pickDefined(body, CATALOG_ITEM_UPDATE_COLUMNS);
 }
 
 export function createAdminCatalogService(

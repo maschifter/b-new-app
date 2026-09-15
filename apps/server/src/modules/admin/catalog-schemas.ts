@@ -34,6 +34,10 @@ const editableCatalogFields = z.object({
   sort_order: z.number().int(),
 });
 
+// Derived from the schema above so a new editable field cannot be accepted by the
+// request and then silently dropped from the row update.
+export const CATALOG_ITEM_UPDATE_COLUMNS = editableCatalogFields.keyof().options;
+
 export const CatalogIdParam = z.object({ id: catalogId });
 
 export const CreateCatalogItemRequest = editableCatalogFields

@@ -1,7 +1,12 @@
 import type { AdminDanceGenre, DanceContentStatus, Database } from "@bnewapp/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyInstance } from "fastify";
-import type { CreateDanceGenreBody, UpdateDanceGenreBody } from "./dance-content-schemas.js";
+import { pickDefined } from "../../lib/pick-defined.js";
+import {
+  type CreateDanceGenreBody,
+  DANCE_GENRE_UPDATE_COLUMNS,
+  type UpdateDanceGenreBody,
+} from "./dance-content-schemas.js";
 
 const COLUMNS = "id, legacy_id, name, status, sort_order, created_at, updated_at";
 const SORTABLE_COLUMNS = new Set([
@@ -35,11 +40,7 @@ function toAdminGenre(row: Database["public"]["Tables"]["dance_genres"]["Row"]):
 }
 
 function genreUpdate(body: UpdateDanceGenreBody) {
-  return {
-    ...(body.name === undefined ? {} : { name: body.name }),
-    ...(body.status === undefined ? {} : { status: body.status }),
-    ...(body.sort_order === undefined ? {} : { sort_order: body.sort_order }),
-  };
+  return pickDefined(body, DANCE_GENRE_UPDATE_COLUMNS);
 }
 
 export function createAdminDanceGenresService(

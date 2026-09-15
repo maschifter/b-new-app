@@ -130,16 +130,19 @@ Four hand-written builders repeat `...(body.x === undefined ? {} : { x: body.x }
 The failure mode being removed: adding a field to the Zod update schema and
 forgetting to add it to the builder, so the API silently accepts and drops it.
 
-- [ ] Add `pickDefined<T, K extends keyof T>(source: T, keys: readonly K[])` to a
+- [x] Add `pickDefined<T, K extends keyof T>(source: T, keys: readonly K[])` to a
       new `apps/server/src/lib/pick-defined.ts`. It must satisfy
       `exactOptionalPropertyTypes` and return a type Supabase's `.update()`
       accepts — verify against the strictest caller (`moveUpdate`) first.
-- [ ] Add a unit test: omitted key absent from the result, explicit `null`
+- [x] Add a unit test: omitted key absent from the result, explicit `null`
       preserved, explicit `undefined` dropped.
-- [ ] Replace `moveUpdate` first (biggest win, strictest types).
-- [ ] Replace `trackUpdate`, `catalogUpdate`, `genreUpdate`.
-- [ ] Derive each key list from the update schema where possible
+- [x] Replace `moveUpdate` first (biggest win, strictest types).
+- [x] Replace `trackUpdate`, `catalogUpdate`, `genreUpdate`.
+- [x] Derive each key list from the update schema where possible
       (`UpdateDanceMoveBody`) rather than retyping it, so the two cannot drift.
+      Done via `<schema>.keyof().options`, so each list *is* the schema's key set at
+      runtime. `danceMoveFields` was split into `danceMoveColumns` plus a `genre_ids`
+      extension, because that field is written to the join table rather than the row.
 
 **Acceptance:** admin route tests green unchanged; `moveUpdate` down to ~2 lines.
 
@@ -449,7 +452,7 @@ the Studio/Explore/Shop screens render a real room end to end on device.
 |---|---|---|---|
 | 0 | Dead code removal | none | [x] |
 | 1 | Server test helpers | low | [x] |
-| 2 | `pickDefined` | low | [ ] |
+| 2 | `pickDefined` | low | [x] |
 | 3 | Shared admin resource service | medium | [ ] |
 | 4 | Server constants & select strings | low | [ ] |
 | 5 | Admin app constants | very low | [ ] |

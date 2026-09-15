@@ -1,8 +1,10 @@
 import type { AdminDanceMove, DanceContentStatus, Database } from "@bnewapp/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyInstance } from "fastify";
+import { pickDefined } from "../../lib/pick-defined.js";
 import {
   type CreateDanceMoveBody,
+  DANCE_MOVE_UPDATE_COLUMNS,
   DANCER_TIP_VIDEO_ERROR,
   PRO_DANCER_VIDEO_ERROR,
   type UpdateDanceMoveBody,
@@ -61,35 +63,7 @@ function toAdminMove(row: DanceMoveWithGenres): AdminDanceMove {
 }
 
 function moveUpdate(body: UpdateDanceMoveBody) {
-  return {
-    ...(body.title === undefined ? {} : { title: body.title }),
-    ...(body.description === undefined ? {} : { description: body.description }),
-    ...(body.level === undefined ? {} : { level: body.level }),
-    ...(body.bpm === undefined ? {} : { bpm: body.bpm }),
-    ...(body.thumbnail_url === undefined ? {} : { thumbnail_url: body.thumbnail_url }),
-    ...(body.main_video_url === undefined ? {} : { main_video_url: body.main_video_url }),
-    ...(body.pro_dancer_video_url === undefined
-      ? {}
-      : { pro_dancer_video_url: body.pro_dancer_video_url }),
-    ...(body.pro_dancer_image_url === undefined
-      ? {}
-      : { pro_dancer_image_url: body.pro_dancer_image_url }),
-    ...(body.dancer_tip_video_url === undefined
-      ? {}
-      : { dancer_tip_video_url: body.dancer_tip_video_url }),
-    ...(body.dancer_tip_image_url === undefined
-      ? {}
-      : { dancer_tip_image_url: body.dancer_tip_image_url }),
-    ...(body.presentation_video_url === undefined
-      ? {}
-      : { presentation_video_url: body.presentation_video_url }),
-    ...(body.film_yourself_video_url === undefined
-      ? {}
-      : { film_yourself_video_url: body.film_yourself_video_url }),
-    ...(body.music_id === undefined ? {} : { music_id: body.music_id }),
-    ...(body.status === undefined ? {} : { status: body.status }),
-    ...(body.sort_order === undefined ? {} : { sort_order: body.sort_order }),
-  };
+  return pickDefined(body, DANCE_MOVE_UPDATE_COLUMNS);
 }
 
 function validateRequiredVideos(

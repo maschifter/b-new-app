@@ -24,7 +24,9 @@ const musicTrackFields = z.object({
   sort_order: z.number().int(),
 });
 
-const danceMoveFields = z.object({
+// Split from genre_ids because these are the dance_moves columns; genre_ids is
+// written to the dance_move_genres join table instead.
+const danceMoveColumns = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().nullable(),
   level: z.number().int().min(1),
@@ -38,10 +40,19 @@ const danceMoveFields = z.object({
   presentation_video_url: nullableUrl,
   film_yourself_video_url: nullableUrl,
   music_id: uuid.nullable(),
-  genre_ids: z.array(uuid).max(500),
   status,
   sort_order: z.number().int(),
 });
+
+const danceMoveFields = danceMoveColumns.extend({
+  genre_ids: z.array(uuid).max(500),
+});
+
+// Derived from the schemas above so a new editable field cannot be accepted by the
+// request and then silently dropped from the row update.
+export const DANCE_GENRE_UPDATE_COLUMNS = genreFields.keyof().options;
+export const MUSIC_TRACK_UPDATE_COLUMNS = musicTrackFields.keyof().options;
+export const DANCE_MOVE_UPDATE_COLUMNS = danceMoveColumns.keyof().options;
 
 export const DanceContentIdParam = z.object({ id: uuid });
 
