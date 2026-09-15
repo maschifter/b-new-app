@@ -1,9 +1,4 @@
-import type {
-  ApiSuccess,
-  SaveStudioRoomBody,
-  StudioRoom,
-  StudioRoomWithVisitorCount,
-} from "@bnewapp/types";
+import type { ApiSuccess } from "@bnewapp/types";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { resolveApiUrl as resolveConfiguredApiUrl } from "./api-url";
@@ -42,35 +37,47 @@ export function jsonHeaders(accessToken: string): Record<string, string> {
   return { ...authHeaders(accessToken), "Content-Type": "application/json" };
 }
 
-// Unwrap the shared `ApiSuccess<T>` envelope, throwing `errorMessage` on a
-// non-2xx response. For endpoints whose failures need the server's message or
-// custom validation, read the response directly instead.
-export async function unwrapApiSuccess<T>(response: Response, errorMessage: string): Promise<T> {
-  if (!response.ok) throw new Error(errorMessage);
-  const body = (await response.json()) as ApiSuccess<T>;
+function envelopeData(body: unknown): unknown {
+  if (typeof body !== "object" || body === null || !("data" in body)) {
+    throw new Error("Invalid API response");
+  }
   return body.data;
 }
 
-export async function getStudioRoom(
-  accessToken: string,
-): Promise<StudioRoomWithVisitorCount | null> {
-  const response = await fetch(`${apiUrl}/api/studio/room`, {
-    headers: authHeaders(accessToken),
-  });
-  return unwrapApiSuccess<StudioRoomWithVisitorCount | null>(
-    response,
-    "Unable to load your studio room",
-  );
+async function failureMessage(response: Response, fallback: string): Promise<string> {
+  try {
+    const body: unknown = await response.json();
+    if (
+      typeof body === "object" &&
+      body !== null &&
+      "message" in body &&
+      typeof body.message === "string"
+    ) {
+      return body.message;
+    }
+  } catch {
+    // A non-JSON failure body carries nothing worth showing; use the fallback.
+  }
+  return fallback;
 }
 
-export async function saveStudioRoom(
-  accessToken: string,
-  snapshot: SaveStudioRoomBody,
-): Promise<StudioRoom> {
-  const response = await fetch(`${apiUrl}/api/studio/room`, {
-    method: "PUT",
-    headers: jsonHeaders(accessToken),
-    body: JSON.stringify(snapshot),
-  });
-  return unwrapApiSuccess<StudioRoom>(response, "Unable to save your studio room");
+interface UnwrapApiSuccessOptions<T> {
+  /** Validate `data` at the boundary instead of trusting the declared type. */
+  parse?: (value: unknown) => T;
+  /** Raise the server's own `{ message }` when it sent one, for an actionable failure. */
+  serverError?: boolean;
+}
+
+// Unwrap the shared `ApiSuccess<T>` envelope, throwing `errorMessage` on a non-2xx
+// response. See CLAUDE.md §6 for when an endpoint needs `parse` or `serverError`.
+export async function unwrapApiSuccess<T>(
+  response: Response,
+  errorMessage: string,
+  { parse, serverError = false }: UnwrapApiSuccessOptions<T> = {},
+): Promise<T> {
+  if (!response.ok) {
+    throw new Error(serverError ? await failureMessage(response, errorMessage) : errorMessage);
+  }
+  const body = (await response.json()) as ApiSuccess<T>;
+  return parse ? parse(envelopeData(body)) : body.data;
 }

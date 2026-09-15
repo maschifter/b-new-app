@@ -165,14 +165,22 @@ Rules:
 - Query atoms and React Query hooks must use the same `QueryClient`. Keep the root
   `QueryClientProvider` and hydrate that exact stable client into
   `jotai-tanstack-query`'s `queryClientAtom`; never let the two APIs create separate caches.
-- Authenticated query atoms read `{ userId, accessToken }` from the query-auth atom owned by
-  `apps/mobile/src/lib/auth/`. `AuthSessionProvider` keeps that single projection synchronized
+- Authenticated query atoms read `{ userId, accessToken }` through `readQueryAuth` /
+  `requireAuth` (`apps/mobile/src/lib/jotai/authed-query.ts`), which wrap the query-auth atom
+  owned by `apps/mobile/src/lib/auth/`. `AuthSessionProvider` keeps that single projection synchronized
   with the Supabase session; feature atoms must not call React auth hooks or create another auth
   source. Include `userId` in every user-scoped query key so cache identity does not depend on
   cleanup timing. When an authenticated session ends or changes user, disable those queries,
   cancel in-flight requests, and remove the previous user's query entries before enabling the
   next identity. A same-user token refresh updates the token without changing the key or cache.
 - **Client state** = plain Jotai atoms (`atom`, `atomFamily`).
+- **HTTP** = a feature-local `api.ts` calling `apiUrl` / `authHeaders` / `jsonHeaders` /
+  `unwrapApiSuccess` from `apps/mobile/src/lib/api/client.ts`; no feature builds its own
+  envelope reader. Pass `unwrapApiSuccess` a `parse` validator when a wrong payload shape
+  would be expensive rather than merely broken — a wallet balance, an entitlement, anything
+  the user is charged for — and `serverError: true` when the endpoint's failures are
+  actionable and the server's own message should reach the user. Plain reads trust the
+  declared type.
 - **Local persistence** = `createAtomWithMMKV` (`apps/mobile/src/lib/jotai/atom-with-mmkv.ts`),
   keyed by `ownerId`, under a **versioned namespace** (`<feature>:v1:`), with an
   `MMKV` instance scoped per feature (`new MMKV({ id: "<feature>" })`).

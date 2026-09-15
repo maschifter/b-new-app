@@ -14,13 +14,13 @@ import { Provider } from "jotai";
 import { queryClientAtom } from "jotai-tanstack-query";
 import type { ReactNode } from "react";
 
-import { getStudioRoom, saveStudioRoom } from "@/lib/api/client";
 import { useAuthSession } from "@/lib/auth/session-provider";
+import { getStudioRoom, saveStudioRoom } from "../../api";
 import { decorationAtom, syncedSnapshotAtom } from "../atoms";
 import { StudioSync, useStudioVisitorCount } from "../studio-sync";
 
 jest.mock("@/lib/auth/session-provider", () => ({ useAuthSession: jest.fn() }));
-jest.mock("@/lib/api/client", () => ({ getStudioRoom: jest.fn(), saveStudioRoom: jest.fn() }));
+jest.mock("../../api", () => ({ getStudioRoom: jest.fn(), saveStudioRoom: jest.fn() }));
 const mockedUseFocusEffect = jest.fn();
 jest.mock("expo-router", () => ({
   useFocusEffect: (effect: () => void) => mockedUseFocusEffect(effect),

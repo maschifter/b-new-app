@@ -380,25 +380,21 @@ hex in TS, at places where NativeWind `className` does not reach (`tintColor`,
 
 **Risk:** low. **Depends on:** Phase 0.
 
-- [ ] Move `getStudioRoom` and `saveStudioRoom` out of
-      `apps/mobile/src/lib/api/client.ts` into `features/studio/api.ts`, matching
-      the per-feature `api.ts` convention in CLAUDE.md §6 that every other
-      feature already follows. `client.ts` keeps only `apiUrl`, `authHeaders`,
-      `jsonHeaders`, `unwrapApiSuccess`.
-- [ ] Update `studio-sync.tsx` and its tests to import from the feature module.
-- [ ] Decide the runtime-validation standard and write it down in CLAUDE.md §4 or
-      §6. Today `features/shop/api.ts` hand-rolls `errorMessage` /
-      `responseData` / `readResponse` and validates every field, while every
-      other feature casts straight through `unwrapApiSuccess`. The duplication is
-      secondary — the inconsistency is the actual problem. Pick one:
-      - (a) promote a validating `unwrapApiSuccess(response, message, parse)`
-        overload to the shared client and give shop's parsers a home there, or
-      - (b) accept trusting our own server and simplify shop onto plain
-        `unwrapApiSuccess`.
-      Recommendation: (a) — keep the validation, share the plumbing. The shop
-      response carries a wallet balance, which is the one payload where a silent
-      shape mismatch is expensive.
-- [ ] Apply the decision to `features/shop/api.ts`.
+- [x] Move `getStudioRoom` and `saveStudioRoom` into `features/studio/api.ts`.
+      `client.ts` now keeps only `apiUrl`, `authHeaders`, `jsonHeaders`,
+      `unwrapApiSuccess`.
+- [x] Update `studio-sync.tsx` and its tests to import from the feature module.
+- [x] Decide the runtime-validation standard and write it down. **Chose (a).**
+      `unwrapApiSuccess(response, errorMessage, options)` gained two opt-ins:
+      `parse` (validate the envelope's `data` at the boundary) and `serverError`
+      (raise the server's own `{ message }` on a failure instead of the fallback).
+      Both default off, so every existing caller behaves exactly as before. The
+      standard is recorded as the **HTTP** bullet in CLAUDE.md §6: validate what is
+      expensive to get wrong — a balance, an entitlement, anything the user is
+      charged for — and surface server messages where the failure is actionable.
+- [x] Apply the decision to `features/shop/api.ts`. Its `errorMessage`,
+      `responseData` and `readResponse` are gone; the five field parsers stay,
+      which is the part that was never duplication.
 
 **Acceptance:** shop and studio tests green; no feature deep-imports another
 feature's `api.ts`.
@@ -502,7 +498,7 @@ the Studio/Explore/Shop screens render a real room end to end on device.
 | 6 | Mobile query-atom helper | medium | [x] reduced |
 | 7 | Mobile test render helper | low | [x] |
 | 8 | Mobile color tokens | low | [x] code; device check pending |
-| 9 | Mobile API layer consistency | low | [ ] |
+| 9 | Mobile API layer consistency | low | [x] |
 | 10 | Shared package boundaries | medium-high | [ ] |
 
 Phases 0, 1, 5 and 8 are independent and can be done in any order or in

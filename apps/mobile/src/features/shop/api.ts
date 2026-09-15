@@ -1,4 +1,4 @@
-import { apiUrl, authHeaders, jsonHeaders } from "@/lib/api/client";
+import { apiUrl, authHeaders, jsonHeaders, unwrapApiSuccess } from "@/lib/api/client";
 import type {
   Inventory,
   InventoryItem,
@@ -6,25 +6,6 @@ import type {
   PurchaseItemResult,
   Wallet,
 } from "@bnewapp/types";
-
-function errorMessage(value: unknown, fallback: string): string {
-  if (
-    typeof value === "object" &&
-    value !== null &&
-    "message" in value &&
-    typeof value.message === "string"
-  ) {
-    return value.message;
-  }
-  return fallback;
-}
-
-function responseData(value: unknown): unknown {
-  if (typeof value !== "object" || value === null || !("data" in value)) {
-    throw new Error("Invalid shop response");
-  }
-  return value.data;
-}
 
 function parseWallet(value: unknown): Wallet {
   if (
@@ -73,28 +54,24 @@ function parsePurchaseResult(value: unknown): PurchaseItemResult {
   return { wallet: parseWallet(value.wallet), item: parseInventoryItem(value.item) };
 }
 
-async function readResponse<T>(
-  response: Response,
-  fallbackError: string,
-  parse: (value: unknown) => T,
-): Promise<T> {
-  const body: unknown = await response.json();
-  if (!response.ok) throw new Error(errorMessage(body, fallbackError));
-  return parse(responseData(body));
-}
-
 export async function getWallet(accessToken: string): Promise<Wallet> {
   const response = await fetch(`${apiUrl}/api/shop/wallet`, {
     headers: authHeaders(accessToken),
   });
-  return readResponse(response, "Unable to load your Glow balance", parseWallet);
+  return unwrapApiSuccess(response, "Unable to load your Glow balance", {
+    parse: parseWallet,
+    serverError: true,
+  });
 }
 
 export async function getInventory(accessToken: string): Promise<Inventory> {
   const response = await fetch(`${apiUrl}/api/shop/inventory`, {
     headers: authHeaders(accessToken),
   });
-  return readResponse(response, "Unable to load your inventory", parseInventory);
+  return unwrapApiSuccess(response, "Unable to load your inventory", {
+    parse: parseInventory,
+    serverError: true,
+  });
 }
 
 export async function purchaseItem(
@@ -106,5 +83,8 @@ export async function purchaseItem(
     headers: jsonHeaders(accessToken),
     body: JSON.stringify(body),
   });
-  return readResponse(response, "Unable to purchase this item", parsePurchaseResult);
+  return unwrapApiSuccess(response, "Unable to purchase this item", {
+    parse: parsePurchaseResult,
+    serverError: true,
+  });
 }

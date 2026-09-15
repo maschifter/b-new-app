@@ -1,10 +1,10 @@
-import { getStudioRoom, saveStudioRoom } from "@/lib/api/client";
 import { useAuthSession } from "@/lib/auth/session-provider";
 import type { DecorationSnapshot } from "@bnewapp/studio-core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useFocusEffect } from "expo-router";
 import { useAtom } from "jotai";
 import { useCallback, useEffect, useRef } from "react";
+import { getStudioRoom, saveStudioRoom } from "../api";
 import { hasStoredRoom, persistedDecorationAtom, syncedSnapshotAtom } from "./atoms";
 
 // Cloud sync for a user's studio room. Runs entirely as a side effect: it never
