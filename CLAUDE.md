@@ -29,10 +29,11 @@ Key technologies:
 apps/
   mobile/    @bnewapp/mobile   Expo app (all UI, local state, sync)
   server/    @bnewapp/server   Fastify API (auth, persistence)
+  admin/     @bnewapp/admin    react-admin back office over the server API
 packages/
   studio-core/ @bnewapp/studio-core  Pure domain: snapshot/template/catalog + coerce→migrate→reconcile
+  dance-core/  @bnewapp/dance-core   Pure domain: dance post/scan status coercion + scoring shapes
   types/       @bnewapp/types         Shared DTOs (ApiSuccess, StudioRoom, …) + database.generated.ts
-  utils/       @bnewapp/utils         Genuinely cross-package helpers only
 ```
 
 Dependencies flow **inward** — enforce these boundaries:

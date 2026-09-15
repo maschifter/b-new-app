@@ -6,9 +6,10 @@ BNewApp is a pnpm/Turborepo monorepo for a dance product:
 
 - `apps/mobile`: Expo Router, React Native, Jotai, TanStack Query, Supabase Auth
 - `apps/server`: Fastify API, Supabase service client, Zod, Vitest
+- `apps/admin`: react-admin back office over the server API
 - `packages/studio-core`: pure studio domain rules shared by mobile and server
+- `packages/dance-core`: pure dance domain rules shared by mobile and server
 - `packages/types`: shared API and generated database types
-- `packages/utils`: genuinely cross-package utilities
 - `supabase`: schema configuration and forward-only SQL migrations
 
 Read the nearest scoped `AGENTS.md` before changing files in a subdirectory.
@@ -28,17 +29,16 @@ Dependencies flow inward:
 
 ```text
 apps/mobile ─┐
-             ├──> packages/types, packages/studio-core, packages/utils
-apps/server ─┘
+apps/server  ├──> packages/types, packages/studio-core, packages/dance-core
+apps/admin  ─┘
 
 supabase migrations ──> generated database types ──> apps/packages
 ```
 
 - Apps may depend on packages. Packages must never import from apps.
 - Mobile must not import server implementation files; communicate through HTTP and shared types.
-- Server route modules must not contain reusable domain algorithms. Put environment-neutral rules in a focused package such as `@bnewapp/studio-core`.
+- Server route modules must not contain reusable domain algorithms. Put environment-neutral rules in a focused package such as `@bnewapp/studio-core`. Create a new shared package only after a concept is truly shared; prefer feature-local code over premature abstraction.
 - Keep shared packages platform-neutral unless their package purpose explicitly says otherwise.
-- Add to `@bnewapp/utils` only after a concept is truly shared. Prefer feature-local code over premature abstraction.
 - Avoid package cycles and deep imports into another package's private files; consume its public entry point.
 
 ## Coding Standards

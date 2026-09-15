@@ -7,7 +7,7 @@ import {
   uploadDanceVideo,
 } from "../api";
 
-export interface SubmitDanceRecordingInput {
+interface SubmitDanceRecordingInput {
   danceMoveId: string;
   /** Local `file://` path of the captured clip. */
   path: string;

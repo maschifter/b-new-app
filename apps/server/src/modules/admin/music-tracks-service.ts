@@ -18,7 +18,7 @@ const FOREIGN_KEY_VIOLATION = "23503";
 
 type HttpErrors = FastifyInstance["httpErrors"];
 
-export interface ListMusicTracksOptions {
+interface ListMusicTracksOptions {
   start: number;
   end: number;
   sort: string;

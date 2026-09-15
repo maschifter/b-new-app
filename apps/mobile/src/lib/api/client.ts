@@ -1,10 +1,8 @@
 import type {
   ApiSuccess,
-  HealthStatus,
   SaveStudioRoomBody,
   StudioRoom,
   StudioRoomWithVisitorCount,
-  UserProfile,
 } from "@bnewapp/types";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
@@ -51,21 +49,6 @@ export async function unwrapApiSuccess<T>(response: Response, errorMessage: stri
   if (!response.ok) throw new Error(errorMessage);
   const body = (await response.json()) as ApiSuccess<T>;
   return body.data;
-}
-
-export async function getHealth(): Promise<HealthStatus> {
-  const response = await fetch(`${apiUrl}/health`);
-  if (!response.ok) {
-    throw new Error("Unable to reach the server");
-  }
-  return (await response.json()) as HealthStatus;
-}
-
-export async function getCurrentUser(accessToken: string): Promise<UserProfile> {
-  const response = await fetch(`${apiUrl}/api/user/me`, {
-    headers: authHeaders(accessToken),
-  });
-  return unwrapApiSuccess<UserProfile>(response, "Unable to load your profile");
 }
 
 export async function getStudioRoom(

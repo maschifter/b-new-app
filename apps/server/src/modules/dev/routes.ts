@@ -14,7 +14,7 @@ const GrantAdminRequest = z.object({
   role: z.enum(["admin", "user"]).default("admin"),
 });
 
-export interface DevRoutesOptions {
+interface DevRoutesOptions {
   adminSecret: string;
 }
 

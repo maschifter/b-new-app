@@ -24,7 +24,7 @@ export interface ClaimedJob {
   attempts: number;
 }
 
-export interface JobQueueOptions {
+interface JobQueueOptions {
   /** Rows allowed in `processing` at once — per replica, not per cluster. */
   concurrency: number;
   logger: FastifyBaseLogger;

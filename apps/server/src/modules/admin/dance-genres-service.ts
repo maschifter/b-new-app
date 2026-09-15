@@ -15,7 +15,7 @@ const SORTABLE_COLUMNS = new Set([
 
 type HttpErrors = FastifyInstance["httpErrors"];
 
-export interface ListDanceGenresOptions {
+interface ListDanceGenresOptions {
   start: number;
   end: number;
   sort: string;

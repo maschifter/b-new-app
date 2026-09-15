@@ -3,7 +3,7 @@ import type { PressableProps, StyleProp, ViewStyle } from "react-native";
 import { Pressable } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 
-export interface BouncablePressProps extends Omit<PressableProps, "style"> {
+interface BouncablePressProps extends Omit<PressableProps, "style"> {
   className?: string;
   bounce?: boolean;
   scaleIn?: number;

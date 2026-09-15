@@ -30,7 +30,7 @@ const SWEEP_EVERY_TICKS = 30;
 const SWEEP_LIMIT = 20;
 const SWEEP_WINDOW_MS = 24 * 60 * 60 * 1000;
 
-export interface MediaWorkerOptions {
+interface MediaWorkerOptions {
   concurrency: number;
   danceVideoBucket: string;
   downloadTimeoutMs: number;

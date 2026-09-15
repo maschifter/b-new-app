@@ -24,7 +24,7 @@ const ACCESS_PRICE_ERROR =
 type HttpErrors = FastifyInstance["httpErrors"];
 type CatalogAdminRow = Database["public"]["Tables"]["catalog_items"]["Row"];
 
-export interface ListCatalogOptions {
+interface ListCatalogOptions {
   start: number;
   end: number;
   sort: string;

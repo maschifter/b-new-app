@@ -3,7 +3,7 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { FastifyInstance } from "fastify";
 import type { UpdateUserBody } from "./schemas.js";
 
-export interface ListUsersOptions {
+interface ListUsersOptions {
   start: number;
   end: number;
   sort: string;

@@ -1,4 +1,4 @@
-export interface ResolveApiUrlOptions {
+interface ResolveApiUrlOptions {
   configuredUrl: string | undefined;
   isDevelopment: boolean;
   metroHost: string | undefined;

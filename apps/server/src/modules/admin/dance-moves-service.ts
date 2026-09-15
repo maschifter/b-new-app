@@ -33,7 +33,7 @@ type DanceMoveWithGenres = DanceMoveRow & {
   filter?: Array<{ genre_id: string }>;
 };
 
-export interface ListDanceMovesOptions {
+interface ListDanceMovesOptions {
   start: number;
   end: number;
   sort: string;

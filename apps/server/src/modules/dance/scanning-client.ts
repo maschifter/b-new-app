@@ -13,13 +13,13 @@ export class ScanRequestError extends Error {
   }
 }
 
-export interface ScanRequest {
+interface ScanRequest {
   amateurUrl: string;
   expertUrl: string;
   jobId: string;
 }
 
-export interface ScanningClientOptions {
+interface ScanningClientOptions {
   fetchImpl?: typeof fetch;
   serverUrls: string;
   sleep?: (milliseconds: number) => Promise<void>;

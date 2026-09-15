@@ -50,7 +50,7 @@ export interface SyncedVideoClock {
   addListener(event: "playToEnd", listener: () => void): ClockSubscription;
 }
 
-export interface SyncedMusicTrackOptions {
+interface SyncedMusicTrackOptions {
   /** Null while the track is still unknown, and for a move that has no music. */
   audioUrl: string | null;
   /** Music playhead at the video's first frame, in milliseconds. */
