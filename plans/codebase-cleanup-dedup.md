@@ -414,13 +414,13 @@ Schedule last so it lands on an otherwise-stable tree.
 `DancePostStatus` list and a `toDancePostStatus` coercer that
 `packages/dance-core/src/status.ts:3-18` already has — it just is not exported.
 
-- [ ] Export `isDancePostStatus` (and/or `coerceDancePostStatus`) from
-      `packages/dance-core`.
-- [ ] Delete `POST_STATUSES` and `toDancePostStatus` from the server service.
-- [ ] Keep the server's "invalid status → 500" behavior: dance-core's internal
-      coercer defaults to `"uploading"`, which is **not** what the service wants.
-      Export a predicate and let the service keep its own throw, or export both.
-      Add a dance-core test pinning whichever contract is chosen.
+- [x] Export `isDancePostStatus` from `packages/dance-core`. The predicate, not a
+      coercer: `coercePostStatus` stays internal and keeps its `"uploading"` default,
+      now implemented on top of the predicate so the list exists once.
+- [x] Delete `POST_STATUSES` and `toDancePostStatus` from the server service.
+- [x] Keep the server's "invalid status → 500" behavior. The throw stays at the
+      call site in `toDancePost`. Pinned by a dance-core test covering every stored
+      status plus an unknown one, an empty string and `null`.
 
 ### 10b — shared fallback catalog
 

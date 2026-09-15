@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { coerceScanStatus } from "@bnewapp/dance-core";
+import { coerceScanStatus, isDancePostStatus } from "@bnewapp/dance-core";
 import type {
   CreateDancePostResult,
   DanceGenre,
@@ -95,14 +95,9 @@ function cursorFilter(cursor: DanceMovesCursor): string {
   ].join(",");
 }
 
-const POST_STATUSES = ["uploading", "uploaded", "scoring", "scored", "failed"] as const;
 const DANCE_POST_SELECT =
   "id, owner_id, dance_move_id, music_id, video_path, merged_video_path, thumbnail_path, blurhash, audio_offset_ms, status, score, video_length_s, created_at, updated_at";
 const PROFILE_VIDEO_URL_TTL_SECONDS = 60 * 60;
-
-function toDancePostStatus(value: string): DancePost["status"] | null {
-  return POST_STATUSES.find((status) => status === value) ?? null;
-}
 
 function toDancePost(
   row: Pick<
@@ -118,8 +113,10 @@ function toDancePost(
   >,
   httpErrors: HttpErrors,
 ): DancePost {
-  const status = toDancePostStatus(row.status);
-  if (status === null) throw httpErrors.internalServerError("Invalid dance post status");
+  const { status } = row;
+  if (!isDancePostStatus(status)) {
+    throw httpErrors.internalServerError("Invalid dance post status");
+  }
   return {
     id: row.id,
     danceMoveId: row.dance_move_id,

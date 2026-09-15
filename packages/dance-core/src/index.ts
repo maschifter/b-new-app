@@ -23,7 +23,7 @@ export {
   delayBeforeTimerMs,
   mergeAudioOffsetMs,
 } from "./timing.ts";
-export { coerceScanStatus, shouldFinishScorePolling } from "./status.ts";
+export { coerceScanStatus, isDancePostStatus, shouldFinishScorePolling } from "./status.ts";
 export type { CountdownPhase } from "./record-flow.ts";
 export {
   FilmStep,

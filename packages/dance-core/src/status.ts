@@ -10,10 +10,16 @@ const POST_STATUSES: readonly DancePostStatus[] = [
 
 const JOB_STATES: readonly ScanJobState[] = ["pending", "processing", "completed", "failed"];
 
+/**
+ * Narrows a raw `dance_posts.status`. Separate from `coercePostStatus` on purpose:
+ * a reader that must reject an unknown status needs the predicate, not the default.
+ */
+export function isDancePostStatus(value: string | null): value is DancePostStatus {
+  return POST_STATUSES.includes(value as DancePostStatus);
+}
+
 function coercePostStatus(value: string | null): DancePostStatus {
-  return POST_STATUSES.includes(value as DancePostStatus)
-    ? (value as DancePostStatus)
-    : "uploading";
+  return isDancePostStatus(value) ? value : "uploading";
 }
 
 function coerceJobState(value: string | null): ScanJobState {

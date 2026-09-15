@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { coerceScanStatus, shouldFinishScorePolling } from "../status.ts";
+import { coerceScanStatus, isDancePostStatus, shouldFinishScorePolling } from "../status.ts";
 import type { ScanStatus } from "../types.ts";
 
 function status(overrides: Partial<ScanStatus> = {}): ScanStatus {
@@ -78,5 +78,19 @@ describe("shouldFinishScorePolling", () => {
     expect(shouldFinishScorePolling(status({ status: "scored" }))).toBe(true);
     expect(shouldFinishScorePolling(status({ jobState: "failed" }))).toBe(true);
     expect(shouldFinishScorePolling(status({ jobState: "completed" }))).toBe(true);
+  });
+});
+
+describe("isDancePostStatus", () => {
+  it("accepts every stored post status", () => {
+    for (const status of ["uploading", "uploaded", "scoring", "scored", "failed"]) {
+      expect(isDancePostStatus(status)).toBe(true);
+    }
+  });
+
+  it("rejects an unknown or missing status instead of defaulting it", () => {
+    expect(isDancePostStatus("archived")).toBe(false);
+    expect(isDancePostStatus("")).toBe(false);
+    expect(isDancePostStatus(null)).toBe(false);
   });
 });
