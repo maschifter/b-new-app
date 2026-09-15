@@ -54,6 +54,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // Playback only: the dance recorder captures video with audio disabled, so the
     // plugin's default microphone permission and background services are opted out.
     ["expo-audio", { recordAudioAndroid: false, enableBackgroundPlayback: false }],
+    "./plugins/with-ios-min-deployment-target",
   ],
   experiments: { typedRoutes: true },
 });
