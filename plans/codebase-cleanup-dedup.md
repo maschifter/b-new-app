@@ -35,7 +35,7 @@ Zero-risk deletions. Nothing here has a consumer.
 
 **Risk:** none. **Depends on:** nothing.
 
-- [ ] Delete `packages/utils` entirely (package, `tsconfig*.json`, its
+- [x] Delete `packages/utils` entirely (package, `tsconfig*.json`, its
       `pnpm-workspace.yaml` coverage is a glob so no edit needed). Its only
       export `isNonEmptyString` has zero consumers and the package is not
       declared as a dependency anywhere in the workspace. Follow the deletion
@@ -447,7 +447,7 @@ the Studio/Explore/Shop screens render a real room end to end on device.
 
 | Phase | Area | Risk | Status |
 |---|---|---|---|
-| 0 | Dead code removal | none | in progress — all items done except the `packages/utils` deletion |
+| 0 | Dead code removal | none | [x] |
 | 1 | Server test helpers | low | [ ] |
 | 2 | `pickDefined` | low | [ ] |
 | 3 | Shared admin resource service | medium | [ ] |

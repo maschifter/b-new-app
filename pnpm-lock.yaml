@@ -310,8 +310,6 @@ importers:
         specifier: workspace:*
         version: link:../studio-core
 
-  packages/utils: {}
-
 packages:
 
   '@alloc/quick-lru@5.2.0':
