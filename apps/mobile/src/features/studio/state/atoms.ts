@@ -2,12 +2,11 @@ import { catalogAtom } from "@/features/catalog";
 import { createAtomWithMMKV } from "@/lib/jotai/atom-with-mmkv";
 import {
   type DecorationSnapshot,
-  ROOM_TEMPLATE,
   coerceSnapshot,
   emptyDecoration,
   migrate,
   reconcile,
-  templateById,
+  templateOrDefault,
 } from "@bnewapp/studio-core";
 import { atom } from "jotai";
 import { atomFamily } from "jotai-family";
@@ -78,7 +77,9 @@ export const decorationAtom = atomFamily((ownerId: string) => {
   return atom(
     (get) => {
       const migrated = get(persisted);
-      const template = templateById(migrated.templateId) ?? ROOM_TEMPLATE;
+      // Not `hydrateSnapshot`: `persisted` is already coerced and migrated, and it
+      // must stay the un-reconciled value the sync layer diffs against.
+      const template = templateOrDefault(migrated.templateId);
       return reconcile(migrated, template, get(catalogAtom).data.items);
     },
     (_get, set, next: DecorationSnapshot) => {

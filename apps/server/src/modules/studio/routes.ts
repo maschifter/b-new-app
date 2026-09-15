@@ -1,8 +1,7 @@
 import {
   CURRENT_VERSION,
   type CatalogItem,
-  ROOM_TEMPLATE,
-  coerceSnapshot,
+  hydrateSnapshot,
   migrate,
   reconcile,
   templateById,
@@ -70,11 +69,10 @@ function embeddedUsername(profiles: ProfileEmbed): string | null {
 function buildExploreRoom(row: RawExploreRow, catalog: CatalogItem[]): ExploreRoom | null {
   const username = embeddedUsername(row.profiles);
   if (!username) return null;
-  const migrated = migrate(
-    coerceSnapshot({ version: row.version, templateId: row.template_id, map: row.map }),
+  const snapshot = hydrateSnapshot(
+    { version: row.version, templateId: row.template_id, map: row.map },
+    catalog,
   );
-  const template = templateById(migrated.templateId) ?? ROOM_TEMPLATE;
-  const snapshot = reconcile(migrated, template, catalog);
   return { ownerId: row.owner_id, snapshot, updatedAt: row.updated_at, username };
 }
 
@@ -102,10 +100,6 @@ export async function studioRoutes(app: FastifyInstance) {
       if (error) throw app.httpErrors.internalServerError("Could not load the studio room");
       if (!row) return { data: null };
 
-      const migrated = migrate(
-        coerceSnapshot({ version: row.version, templateId: row.template_id, map: row.map }),
-      );
-      const template = templateById(migrated.templateId) ?? ROOM_TEMPLATE;
       let catalog: CatalogItem[];
       try {
         catalog = (await app.catalogService.getAuthoritative()).items;
@@ -115,7 +109,10 @@ export async function studioRoutes(app: FastifyInstance) {
         }
         throw error;
       }
-      const snapshot = reconcile(migrated, template, catalog);
+      const snapshot = hydrateSnapshot(
+        { version: row.version, templateId: row.template_id, map: row.map },
+        catalog,
+      );
       const visitorCount = await countRoomVisitors(app, row.id);
 
       return {
@@ -140,6 +137,8 @@ export async function studioRoutes(app: FastifyInstance) {
       const body = saveRoomBodySchema.safeParse(request.body);
       if (!body.success) throw app.httpErrors.badRequest("Invalid studio room snapshot");
 
+      // Not `hydrateSnapshot`: a write must reject an unknown template rather than
+      // silently retarget the room to the default the read path falls back to.
       const migrated = migrate(body.data);
       const template = templateById(migrated.templateId);
       if (!template) throw app.httpErrors.badRequest("Unknown studio template");

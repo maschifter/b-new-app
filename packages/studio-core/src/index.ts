@@ -15,4 +15,5 @@ export {
   emptyDecoration,
 } from "./template.ts";
 export { coerceSnapshot } from "./coerce.ts";
+export { hydrateSnapshot, templateOrDefault } from "./hydrate.ts";
 export { canAfford, resolvePrice } from "./shop.ts";

@@ -1,6 +1,6 @@
 import { MobileQueryErrorBoundary } from "@/components/error-boundary";
 import { StudioStage } from "@/features/studio";
-import { ROOM_TEMPLATE, templateById } from "@bnewapp/studio-core";
+import { templateOrDefault } from "@bnewapp/studio-core";
 import { useAtomValue } from "jotai";
 import { Suspense } from "react";
 import { View } from "react-native";
@@ -35,7 +35,7 @@ function ExploreRoomContent({ ownerId }: { ownerId: string }) {
     );
   }
 
-  const template = templateById(room.snapshot.templateId) ?? ROOM_TEMPLATE;
+  const template = templateOrDefault(room.snapshot.templateId);
 
   return (
     <View className="flex-1 bg-panel">

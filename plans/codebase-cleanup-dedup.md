@@ -459,17 +459,21 @@ The `migrate(coerceSnapshot(...))` → `templateById(id) ?? ROOM_TEMPLATE` →
 - `apps/mobile/src/features/studio/state/atoms.ts:52`, `:81`
 - `apps/mobile/src/features/explore/ui/explore-room-screen.tsx:38`
 
-- [ ] Add `hydrateSnapshot(raw, catalog)` to `studio-core` for the **read** path
-      only, returning the reconciled snapshot.
-- [ ] Leave the write path at `studio/routes.ts:144` explicit. Its missing
-      fallback is a deliberate invariant, not an oversight — folding it into the
-      shared helper would turn "unknown template → 400" into a silent rewrite.
-      Add a comment at the call site saying so.
-- [ ] Replace the four read-path call sites.
-- [ ] Keep `apps/mobile/.../atoms.ts`'s split between `persistedDecorationAtom`
-      (migrated, **not** reconciled) and `decorationAtom` (reconciled). The
-      comment there explains why: reconciling the persisted value against a
-      temporarily-stale catalog would turn a read into a destructive sync write.
+- [x] Add `hydrateSnapshot(raw, catalog)` to `studio-core` for the **read** path
+      only (`src/hydrate.ts`), plus `templateOrDefault(templateId)` — the
+      `templateById(id) ?? ROOM_TEMPLATE` fallback, which is the piece actually
+      repeated 4/4. Unit-tested: kept/dropped placements, unusable input, and a
+      retired template rendering against the default.
+- [x] Leave the write path explicit, with a comment saying why.
+- [x] Replace the read-path call sites. **Fewer than the plan assumed:** only the
+      two in `studio/routes.ts` (`buildExploreRoom` and `GET /room`) run the full
+      pipeline. `explore-room-screen.tsx` renders a snapshot the server already
+      reconciled, so it needed only `templateOrDefault`; `atoms.ts:52` is the
+      deliberately un-reconciled half of the split below and `atoms.ts:81` starts
+      from an already-migrated value, so it too takes only `templateOrDefault`.
+- [x] Keep `apps/mobile/.../atoms.ts`'s split between `persistedDecorationAtom`
+      (migrated, **not** reconciled) and `decorationAtom` (reconciled). Kept, with
+      a comment at `decorationAtom` saying why `hydrateSnapshot` is wrong there.
 
 ### 10d — shop service stops re-parsing the decoration map
 
