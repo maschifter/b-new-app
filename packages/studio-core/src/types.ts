@@ -28,6 +28,23 @@ export interface CatalogItem {
   art?: { url: string; hitbox?: ArtHitBox };
 }
 
+export type CatalogItemStatus = "draft" | "published";
+export type CatalogItemAccess = "free" | "premium";
+
+/** A catalog item as published to clients: a `CatalogItem` plus its shop facts. */
+export interface CatalogItemDTO extends CatalogItem {
+  name: string;
+  status: CatalogItemStatus;
+  access: CatalogItemAccess;
+  price?: number;
+}
+
+/** The published catalog a client decorates from, versioned for cache busting. */
+export interface StudioCatalog {
+  version: number;
+  items: CatalogItemDTO[];
+}
+
 /** A fixed placement position in a room, defined by designers. */
 export interface Spot {
   id: string;

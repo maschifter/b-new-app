@@ -436,15 +436,17 @@ CATALOG.map((item) => ({ ...item, name: defaultItemLabel(item.id), status: "publ
 The blocker: `CatalogItemDTO` lives in `packages/types`, and `types` depends on
 `studio-core` — so `studio-core` cannot currently return that type.
 
-- [ ] Move `CatalogItemDTO`, `StudioCatalog`, `CatalogItemStatus` and
-      `CatalogItemAccess` into `packages/studio-core`. They are studio-domain
-      shapes, not transport-only DTOs, so this is the right home rather than a
-      workaround.
-- [ ] Re-export them from `packages/types` so no consumer import path changes.
-- [ ] Add `fallbackCatalog(): StudioCatalog` to `studio-core` with a unit test.
-- [ ] Replace both copies.
-- [ ] Verify the mobile Metro resolver still picks `studio-core`'s
-      `react-native` export condition (`src/index.ts`) after the type move.
+- [x] Move `CatalogItemDTO`, `StudioCatalog`, `CatalogItemStatus` and
+      `CatalogItemAccess` into `packages/studio-core` (`src/types.ts`).
+- [x] Re-export them from `packages/types`. No consumer import path changed.
+- [x] Add `fallbackCatalog(): StudioCatalog` to `studio-core` with a unit test
+      (published/free/slug-named, version 0, tags preserved, fresh object per call).
+- [x] Replace both copies — `catalog/service.ts`'s `FALLBACK_ITEMS` and
+      `catalog/_atoms/queries.ts`'s `FALLBACK_CATALOG`.
+- [x] Verify the Metro resolver still picks the `react-native` export condition.
+      `package.json#exports` is untouched (`react-native` → `src/index.ts`); the
+      mobile suite resolves through the same entry via its jest `moduleNameMapper`
+      and is green, and the built `dist/index.js` exports `fallbackCatalog` too.
 
 ### 10c — `hydrateSnapshot`
 

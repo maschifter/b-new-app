@@ -1,4 +1,4 @@
-import type { CatalogItem } from "./types.ts";
+import type { CatalogItem, StudioCatalog } from "./types.ts";
 
 // Seed catalog for the Foundation stage. Items have no art until an admin upload
 // supplies a remote URL, so clients keep them visually hidden until then.
@@ -86,4 +86,21 @@ export function catalogItemById(id: string): CatalogItem | undefined {
 /** Convert a catalog slug such as "big-screen" into its default display name. */
 export function defaultItemLabel(id: string): string {
   return id.replace(/-/g, " ").replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+/**
+ * The bundled seed as a publishable catalog: every item free and published, named
+ * from its slug. Version 0 so any server catalog outranks it. Used wherever the real
+ * catalog is unavailable — a cold start, or a failed read — so the room still renders.
+ */
+export function fallbackCatalog(): StudioCatalog {
+  return {
+    version: 0,
+    items: CATALOG.map((item) => ({
+      ...item,
+      name: defaultItemLabel(item.id),
+      status: "published",
+      access: "free",
+    })),
+  };
 }

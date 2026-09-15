@@ -1,4 +1,4 @@
-import { CATALOG, defaultItemLabel } from "@bnewapp/studio-core";
+import { fallbackCatalog } from "@bnewapp/studio-core";
 import type { CatalogItemDTO, Database, StudioCatalog } from "@bnewapp/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
@@ -17,13 +17,6 @@ const hitBoxSchema = z.object({
 });
 const statusSchema = z.enum(["draft", "published"]);
 const accessSchema = z.enum(["free", "premium"]);
-
-const FALLBACK_ITEMS: CatalogItemDTO[] = CATALOG.map((item) => ({
-  ...item,
-  name: defaultItemLabel(item.id),
-  status: "published",
-  access: "free",
-}));
 
 type CatalogRow = Pick<
   Database["public"]["Tables"]["catalog_items"]["Row"],
@@ -132,7 +125,7 @@ export function createCatalogService(supabase: SupabaseClient<Database>, logger?
         return await refresh();
       } catch (error) {
         logger?.warn({ error }, "Using fallback studio catalog after a database read failure");
-        return cache?.data ?? { version: 0, items: FALLBACK_ITEMS };
+        return cache?.data ?? fallbackCatalog();
       }
     },
 

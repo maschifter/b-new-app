@@ -1,5 +1,5 @@
 import { readQueryAuth } from "@/lib/jotai/authed-query";
-import { CATALOG, defaultItemLabel } from "@bnewapp/studio-core";
+import { fallbackCatalog } from "@bnewapp/studio-core";
 import type { CatalogItemDTO, StudioCatalog } from "@bnewapp/types";
 import { Image } from "expo-image";
 import { atom } from "jotai";
@@ -10,15 +10,7 @@ import { getCatalog } from "../api";
 const CACHE_PREFIX = "catalog:v1:";
 const catalogStorage = new MMKV({ id: "catalog" });
 
-const FALLBACK_CATALOG: StudioCatalog = {
-  version: 0,
-  items: CATALOG.map((item) => ({
-    ...item,
-    name: defaultItemLabel(item.id),
-    status: "published",
-    access: "free",
-  })),
-};
+const FALLBACK_CATALOG: StudioCatalog = fallbackCatalog();
 
 function isStringTags(value: unknown): value is Record<string, string | string[]> {
   return (
