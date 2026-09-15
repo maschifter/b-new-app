@@ -1,43 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { createDanceService } from "../src/modules/dance/service.js";
+import { httpErrors } from "./helpers/http-errors.js";
+import { queryBuilder } from "./helpers/supabase.js";
 
 const OWNER_ID = "11111111-1111-4111-8111-111111111111";
 const MOVE_ID = "22222222-2222-4222-8222-222222222222";
 const POST_ID = "33333333-3333-4333-8333-333333333333";
 const MUSIC_ID = "44444444-4444-4444-8444-444444444444";
 const CREATED_AT = "2026-09-11T00:00:00.000Z";
-
-const httpErrors = {
-  conflict: (message: string) => Object.assign(new Error(message), { statusCode: 409 }),
-  internalServerError: (message: string) => Object.assign(new Error(message), { statusCode: 500 }),
-  notFound: (message: string) => Object.assign(new Error(message), { statusCode: 404 }),
-};
-
-function queryBuilder(result: { count?: number; data?: unknown; error: unknown }) {
-  const query: Record<string, ReturnType<typeof vi.fn>> = {};
-  const chain = () => query;
-  for (const method of [
-    "delete",
-    "eq",
-    "insert",
-    "limit",
-    "neq",
-    "not",
-    "or",
-    "order",
-    "select",
-    "update",
-    "upsert",
-  ]) {
-    query[method] = vi.fn(chain);
-  }
-  query.maybeSingle = vi.fn(() => Promise.resolve(result));
-  // biome-ignore lint/suspicious/noThenProperty: mirrors Supabase's awaitable query builder
-  query.then = vi.fn((onfulfilled: (value: unknown) => unknown) =>
-    Promise.resolve(result).then(onfulfilled),
-  );
-  return query;
-}
 
 function postRow(status = "uploading") {
   return {

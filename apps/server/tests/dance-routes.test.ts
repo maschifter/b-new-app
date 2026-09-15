@@ -3,21 +3,14 @@ import { buildApp } from "../src/app.js";
 import { danceRoutes } from "../src/modules/dance/routes.js";
 import { CreateDancePostRequest, encodeDanceMovesCursor } from "../src/modules/dance/schemas.js";
 import { createDanceService } from "../src/modules/dance/service.js";
+import { testConfig } from "./helpers/config.js";
+import { httpErrors } from "./helpers/http-errors.js";
+import { queryBuilder } from "./helpers/supabase.js";
 
 const GENRE_ID = "11111111-1111-4111-8111-111111111111";
 const MOVE_ID = "22222222-2222-4222-8222-222222222222";
 const MUSIC_ID = "33333333-3333-4333-8333-333333333333";
 const CREATED_AT = "2026-09-11T00:00:00.000Z";
-
-const testConfig = {
-  NODE_ENV: "test",
-  PORT: 3000,
-  HOST: "127.0.0.1",
-  LOG_LEVEL: "fatal",
-  RATE_LIMIT_MAX: 120,
-  SUPABASE_URL: "https://example.supabase.co",
-  SUPABASE_SECRET_KEY: "test-secret-key",
-} as const;
 
 type Handler = (request: {
   body?: unknown;
@@ -25,10 +18,6 @@ type Handler = (request: {
   params?: unknown;
   user?: { sub: string };
 }) => Promise<unknown>;
-
-function httpError(statusCode: number, message: string) {
-  return Object.assign(new Error(message), { statusCode });
-}
 
 function registerDance(supabase: Record<string, unknown>) {
   const handlers: Record<string, Handler> = {};
@@ -43,30 +32,10 @@ function registerDance(supabase: Record<string, unknown>) {
     delete: vi.fn((path: string, _options: unknown, handler: Handler) => {
       handlers[`DELETE ${path}`] = handler;
     }),
-    httpErrors: {
-      badRequest: (message: string) => httpError(400, message),
-      notFound: (message: string) => httpError(404, message),
-      internalServerError: (message: string) => httpError(500, message),
-    },
+    httpErrors,
     supabase,
   };
   return { app, handlers };
-}
-
-type QueryResult = { data: unknown; error: unknown };
-
-function queryBuilder(result: QueryResult) {
-  const query: Record<string, ReturnType<typeof vi.fn>> = {};
-  const chain = () => query;
-  for (const method of ["select", "eq", "neq", "not", "order", "limit", "or"]) {
-    query[method] = vi.fn(chain);
-  }
-  query.maybeSingle = vi.fn(() => Promise.resolve(result));
-  // biome-ignore lint/suspicious/noThenProperty: mirrors Supabase's awaitable query builder
-  query.then = vi.fn((onfulfilled: (value: unknown) => unknown) =>
-    Promise.resolve(result).then(onfulfilled),
-  );
-  return query;
 }
 
 const moveRow = {

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createJobQueue, errorMessage, retryAt } from "../src/modules/dance/job-queue.js";
+import { queryBuilder } from "./helpers/supabase.js";
 
 const job = {
   attempts: 0,
@@ -7,25 +8,6 @@ const job = {
   owner_id: "22222222-2222-4222-8222-222222222222",
   post_id: "33333333-3333-4333-8333-333333333333",
 };
-
-function queryBuilder(
-  result: { count?: number; data?: unknown; error: unknown },
-  gate?: Promise<void>,
-) {
-  const query: Record<string, ReturnType<typeof vi.fn>> = {};
-  const chain = () => query;
-  for (const method of ["eq", "limit", "lt", "lte", "order", "select", "update"]) {
-    query[method] = vi.fn(chain);
-  }
-  const settle = async () => {
-    await gate;
-    return result;
-  };
-  query.maybeSingle = vi.fn(settle);
-  // biome-ignore lint/suspicious/noThenProperty: mirrors Supabase's awaitable query builder
-  query.then = vi.fn((onfulfilled: (value: unknown) => unknown) => settle().then(onfulfilled));
-  return query;
-}
 
 function harness(
   queries: ReturnType<typeof queryBuilder>[],

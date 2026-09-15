@@ -9,48 +9,9 @@ import { UpdateUserRequest } from "../src/modules/admin/schemas.js";
 import { createAdminService } from "../src/modules/admin/service.js";
 import { devRoutes } from "../src/modules/dev/routes.js";
 import { authPlugin, isAdmin } from "../src/plugins/auth.js";
-
-const testConfig = {
-  NODE_ENV: "test",
-  PORT: 3000,
-  HOST: "127.0.0.1",
-  LOG_LEVEL: "fatal",
-  RATE_LIMIT_MAX: 120,
-  SUPABASE_URL: "https://example.supabase.co",
-  SUPABASE_SECRET_KEY: "test-secret-key",
-} as const;
-
-function httpError(statusCode: number, message: string) {
-  return Object.assign(new Error(message), { statusCode });
-}
-
-const httpErrors = {
-  badRequest: (message: string) => httpError(400, message),
-  forbidden: (message: string) => httpError(403, message),
-  conflict: (message: string) => httpError(409, message),
-  notFound: (message: string) => httpError(404, message),
-  internalServerError: (message: string) => httpError(500, message),
-} as const;
-
-type QueryResult = {
-  data: unknown;
-  error: { code?: string; message: string } | null;
-  count?: number;
-};
-
-function queryBuilder(result: QueryResult) {
-  const builder: Record<string, ReturnType<typeof vi.fn>> = {};
-  const chain = () => builder;
-  for (const method of ["select", "order", "range", "or", "eq", "gte", "update"]) {
-    builder[method] = vi.fn(chain);
-  }
-  builder.maybeSingle = vi.fn(() => Promise.resolve(result));
-  // biome-ignore lint/suspicious/noThenProperty: mirrors Supabase's awaitable query builder
-  builder.then = vi.fn((onfulfilled: (value: unknown) => unknown) =>
-    Promise.resolve(result).then(onfulfilled),
-  );
-  return builder;
-}
+import { testConfig } from "./helpers/config.js";
+import { httpErrors } from "./helpers/http-errors.js";
+import { queryBuilder } from "./helpers/supabase.js";
 
 function makeService(supabase: unknown) {
   return createAdminService(supabase as never, httpErrors as never);

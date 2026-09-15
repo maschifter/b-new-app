@@ -2,6 +2,7 @@ import { CATALOG } from "@bnewapp/studio-core";
 import { describe, expect, it, vi } from "vitest";
 import { catalogRoutes } from "../src/modules/catalog/routes.js";
 import { CatalogUnavailableError, createCatalogService } from "../src/modules/catalog/service.js";
+import { queryBuilder as itemsBuilder } from "./helpers/supabase.js";
 
 const CATALOG_ROW = {
   id: "remote-plant",
@@ -18,6 +19,9 @@ const CATALOG_ROW = {
   sort_order: 10,
 };
 
+// Local rather than the shared queryBuilder: the catalog service reads the meta
+// version twice per refresh, so `single()` has to hand back a different result on
+// each call instead of resolving one fixed result.
 function versionBuilder(results: Array<{ data: unknown; error: unknown }>) {
   const builder = {
     select: vi.fn(),
@@ -30,26 +34,12 @@ function versionBuilder(results: Array<{ data: unknown; error: unknown }>) {
   return builder;
 }
 
-function itemsBuilder(result: { data: unknown; error: unknown }) {
-  const builder: Record<string, ReturnType<typeof vi.fn>> = {};
-  const chain = () => builder;
-  builder.select = vi.fn(chain);
-  builder.eq = vi.fn(chain);
-  builder.not = vi.fn(chain);
-  builder.order = vi.fn(chain);
-  // biome-ignore lint/suspicious/noThenProperty: mirrors Supabase's awaitable query builder
-  builder.then = vi.fn((onfulfilled: (value: unknown) => unknown) =>
-    Promise.resolve(result).then(onfulfilled),
-  );
-  return builder;
-}
-
 function catalogSupabase(
   versions: Array<{ data: unknown; error: unknown }>,
   itemResults: Array<{ data: unknown; error: unknown }>,
 ) {
   const meta = versionBuilder(versions);
-  const items = itemResults.map(itemsBuilder);
+  const items = itemResults.map((result) => itemsBuilder(result));
   let itemIndex = 0;
   const from = vi.fn((table: string) => {
     if (table === "catalog_meta") return meta;

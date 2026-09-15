@@ -1,19 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createScanWorker } from "../src/modules/dance/scan-worker.js";
-
-function queryBuilder(result: { count?: number; data?: unknown; error: unknown }) {
-  const query: Record<string, ReturnType<typeof vi.fn>> = {};
-  const chain = () => query;
-  for (const method of ["eq", "lt", "lte", "order", "limit", "update", "select"]) {
-    query[method] = vi.fn(chain);
-  }
-  query.maybeSingle = vi.fn(() => Promise.resolve(result));
-  // biome-ignore lint/suspicious/noThenProperty: mirrors Supabase's awaitable query builder
-  query.then = vi.fn((onfulfilled: (value: unknown) => unknown) =>
-    Promise.resolve(result).then(onfulfilled),
-  );
-  return query;
-}
+import { queryBuilder } from "./helpers/supabase.js";
 
 describe("dance scan worker", () => {
   const scan = {

@@ -1,19 +1,10 @@
 import { CATALOG, CURRENT_VERSION, DEFAULT_TEMPLATE_ID } from "@bnewapp/studio-core";
 import { describe, expect, it, vi } from "vitest";
-
 import { buildApp } from "../src/app.js";
 import { CatalogUnavailableError } from "../src/modules/catalog/service.js";
 import { studioRoutes } from "../src/modules/studio/routes.js";
-
-const testConfig = {
-  NODE_ENV: "test",
-  PORT: 3000,
-  HOST: "127.0.0.1",
-  LOG_LEVEL: "fatal",
-  RATE_LIMIT_MAX: 120,
-  SUPABASE_URL: "https://example.supabase.co",
-  SUPABASE_SECRET_KEY: "test-secret-key",
-} as const;
+import { testConfig } from "./helpers/config.js";
+import { queryBuilder as queryableRooms } from "./helpers/supabase.js";
 
 type Handler = (request: {
   user: { sub: string };
@@ -26,25 +17,6 @@ function getHandler(handlers: Record<string, Handler>, route: string): Handler {
   const handler = handlers[route];
   if (!handler) throw new Error(`Route handler was not registered: ${route}`);
   return handler;
-}
-
-// A chainable Supabase query builder mock. Every filter/order method returns the
-// builder, `maybeSingle()` resolves the result, and the builder is itself a
-// thenable so an awaited terminal chain (the Explore list) resolves the result too.
-type QueryBuilder = Record<string, ReturnType<typeof vi.fn>>;
-
-function queryableRooms(result: { data: unknown; error: unknown }): QueryBuilder {
-  const builder: QueryBuilder = {};
-  const chain = () => builder;
-  for (const method of ["select", "insert", "eq", "neq", "order", "limit", "or"]) {
-    builder[method] = vi.fn(chain);
-  }
-  builder.maybeSingle = vi.fn(() => Promise.resolve(result));
-  // biome-ignore lint/suspicious/noThenProperty: mirrors Supabase's awaitable PostgrestFilterBuilder
-  builder.then = vi.fn((onfulfilled: (value: unknown) => unknown) =>
-    Promise.resolve(result).then(onfulfilled),
-  );
-  return builder;
 }
 
 const OTHER_ROOM = {

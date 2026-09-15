@@ -7,37 +7,9 @@ import {
   ShopUnavailableError,
   createShopService,
 } from "../src/modules/shop/shop-service.js";
-
-const testConfig = {
-  NODE_ENV: "test",
-  PORT: 3000,
-  HOST: "127.0.0.1",
-  LOG_LEVEL: "fatal",
-  RATE_LIMIT_MAX: 120,
-  SUPABASE_URL: "https://example.supabase.co",
-  SUPABASE_SECRET_KEY: "test-secret-key",
-} as const;
-
-interface QueryResult {
-  data: unknown;
-  error: unknown;
-}
-
-function queryBuilder(result: QueryResult) {
-  const builder: Record<string, ReturnType<typeof vi.fn>> = {};
-  const chain = () => builder;
-  for (const method of ["select", "eq", "in", "order", "update"]) {
-    builder[method] = vi.fn(chain);
-  }
-  builder.upsert = vi.fn(() => Promise.resolve(result));
-  builder.single = vi.fn(() => Promise.resolve(result));
-  builder.maybeSingle = vi.fn(() => Promise.resolve(result));
-  // biome-ignore lint/suspicious/noThenProperty: mirrors Supabase's awaitable query builder
-  builder.then = vi.fn((onfulfilled: (value: unknown) => unknown) =>
-    Promise.resolve(result).then(onfulfilled),
-  );
-  return builder;
-}
+import { testConfig } from "./helpers/config.js";
+import { httpErrors } from "./helpers/http-errors.js";
+import { queryBuilder } from "./helpers/supabase.js";
 
 describe("shop routes", () => {
   it("requires authentication for every economy endpoint", async () => {
@@ -84,18 +56,12 @@ describe("shop routes", () => {
       vi.fn((path: string, _options: unknown, handler: Handler) => {
         handlers[`${method} ${path}`] = handler;
       });
-    const httpError = (statusCode: number, message: string) =>
-      Object.assign(new Error(message), { statusCode });
     const app = {
       authenticate: vi.fn(),
       get: capture("GET"),
       post: capture("POST"),
       supabase: { rpc },
-      httpErrors: {
-        badRequest: (message: string) => httpError(400, message),
-        notFound: (message: string) => httpError(404, message),
-        internalServerError: (message: string) => httpError(500, message),
-      },
+      httpErrors,
     };
     await shopRoutes(app as never);
     const purchase = handlers["POST /purchase"];

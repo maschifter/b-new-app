@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DanceMediaProcessor } from "../src/modules/dance/media-processor.js";
 import { createMediaWorker } from "../src/modules/dance/media-worker.js";
+import { queryBuilder } from "./helpers/supabase.js";
 
 const OWNER_ID = "11111111-1111-4111-8111-111111111111";
 const POST_ID = "33333333-3333-4333-8333-333333333333";
@@ -10,33 +11,6 @@ const JOB_ID = "44444444-4444-4444-8444-444444444444";
 const BLURHASH = "LEHV6nWB2yk8pyo0adR*.7kCMdnj";
 
 const job = { attempts: 0, id: JOB_ID, owner_id: OWNER_ID, post_id: POST_ID };
-
-function queryBuilder(result: { count?: number; data?: unknown; error: unknown }) {
-  const query: Record<string, ReturnType<typeof vi.fn>> = {};
-  const chain = () => query;
-  for (const method of [
-    "eq",
-    "gte",
-    "is",
-    "limit",
-    "lt",
-    "lte",
-    "neq",
-    "not",
-    "order",
-    "select",
-    "update",
-    "upsert",
-  ]) {
-    query[method] = vi.fn(chain);
-  }
-  query.maybeSingle = vi.fn(() => Promise.resolve(result));
-  // biome-ignore lint/suspicious/noThenProperty: mirrors Supabase's awaitable query builder
-  query.then = vi.fn((onfulfilled: (value: unknown) => unknown) =>
-    Promise.resolve(result).then(onfulfilled),
-  );
-  return query;
-}
 
 function postRow(overrides: Record<string, unknown> = {}) {
   return {

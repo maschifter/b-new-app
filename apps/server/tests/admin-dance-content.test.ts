@@ -11,6 +11,8 @@ import {
 } from "../src/modules/admin/dance-content-schemas.js";
 import { createAdminDanceMovesService } from "../src/modules/admin/dance-moves-service.js";
 import { createAdminMusicTracksService } from "../src/modules/admin/music-tracks-service.js";
+import { httpErrors } from "./helpers/http-errors.js";
+import { queryBuilder } from "./helpers/supabase.js";
 
 const GENRE_ID = "11111111-1111-4111-8111-111111111111";
 const SECOND_GENRE_ID = "22222222-2222-4222-8222-222222222222";
@@ -37,49 +39,6 @@ const moveRow = {
   sort_order: 1,
   created_at: "2026-08-26T00:00:00.000Z",
   updated_at: "2026-08-26T00:00:00.000Z",
-};
-
-type QueryResult = {
-  data: unknown;
-  error: { code?: string; message?: string } | null;
-  count?: number;
-};
-
-function queryBuilder(result: QueryResult) {
-  const query: Record<string, ReturnType<typeof vi.fn>> = {};
-  const chain = () => query;
-  for (const method of [
-    "select",
-    "order",
-    "range",
-    "or",
-    "ilike",
-    "eq",
-    "in",
-    "insert",
-    "update",
-    "delete",
-  ]) {
-    query[method] = vi.fn(chain);
-  }
-  query.single = vi.fn(() => Promise.resolve(result));
-  query.maybeSingle = vi.fn(() => Promise.resolve(result));
-  // biome-ignore lint/suspicious/noThenProperty: mirrors Supabase's awaitable query builder
-  query.then = vi.fn((onfulfilled: (value: unknown) => unknown) =>
-    Promise.resolve(result).then(onfulfilled),
-  );
-  return query;
-}
-
-function httpError(statusCode: number, message: string) {
-  return Object.assign(new Error(message), { statusCode });
-}
-
-const httpErrors = {
-  badRequest: (message: string) => httpError(400, message),
-  conflict: (message: string) => httpError(409, message),
-  notFound: (message: string) => httpError(404, message),
-  internalServerError: (message: string) => httpError(500, message),
 };
 
 describe("admin dance content validation", () => {

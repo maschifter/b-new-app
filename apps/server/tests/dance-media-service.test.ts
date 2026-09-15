@@ -5,12 +5,7 @@ import {
   createDanceMediaService,
   processDanceMediaImage,
 } from "../src/modules/admin/dance-media-service.js";
-
-const httpErrors = {
-  badRequest: (message: string) => Object.assign(new Error(message), { statusCode: 400 }),
-  notFound: (message: string) => Object.assign(new Error(message), { statusCode: 404 }),
-  internalServerError: (message: string) => Object.assign(new Error(message), { statusCode: 500 }),
-};
+import { httpErrors } from "./helpers/http-errors.js";
 
 function mediaSupabase() {
   const createSignedUploadUrl = vi
