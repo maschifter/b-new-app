@@ -9,17 +9,24 @@ const request = {
 
 describe("scanning client", () => {
   it("posts the documented form body and returns a valid primary score", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue(new Response(JSON.stringify({ score: 72 }), { status: 200 }));
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify({ score: 72 }), { status: 200 }));
     const client = createScanningClient({ fetchImpl, serverUrls: "https://scan-one.example" });
 
     await expect(client.scan(request)).resolves.toBe(72);
     expect(fetchImpl).toHaveBeenCalledWith(
       "https://scan-one.example",
-      expect.objectContaining({ method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" } }),
+      expect.objectContaining({
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+      }),
     );
     const init = fetchImpl.mock.calls[0]?.[1] as RequestInit;
     expect(init.body?.toString()).toContain("expert_url=https%3A%2F%2Fmedia.example%2Fexpert.mp4");
-    expect(init.body?.toString()).toContain("amateur_url=https%3A%2F%2Fstorage.example%2Famateur.mp4");
+    expect(init.body?.toString()).toContain(
+      "amateur_url=https%3A%2F%2Fstorage.example%2Famateur.mp4",
+    );
   });
 
   it("fails over after an invalid primary response", async () => {

@@ -1,10 +1,10 @@
 import { BouncablePress } from "@/components/bouncable-press";
 import { useFocusedPlayback } from "@/lib/media/use-focused-playback";
+import { VideoView, useVideoPlayer } from "expo-video";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { VideoView, useVideoPlayer } from "expo-video";
 import { startDanceScorePollingAtom } from "../_atoms/effects";
 import { submitDanceRecordingMutationAtom } from "../_atoms/mutations";
 import { danceScoreAtom } from "../_atoms/queries";
@@ -57,7 +57,8 @@ export function DanceResultScreen({
     if (submit.isSuccess && submit.data !== undefined) startScorePolling(submit.data);
   }, [startScorePolling, submit.data, submit.isSuccess]);
 
-  const retrySubmission = () => submit.mutate({ danceMoveId: moveId, path: clipPath, videoLength: clipDuration });
+  const retrySubmission = () =>
+    submit.mutate({ danceMoveId: moveId, path: clipPath, videoLength: clipDuration });
   const canFinish = submission.kind === "scored" || submission.kind === "failed";
 
   return (

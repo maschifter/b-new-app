@@ -60,10 +60,7 @@ export async function getDancePosts(
   return unwrapApiSuccess<DancePostsPage>(response, "Unable to load your dances");
 }
 
-export async function getDancePost(
-  accessToken: string,
-  postId: string,
-): Promise<DancePostDetail> {
+export async function getDancePost(accessToken: string, postId: string): Promise<DancePostDetail> {
   const response = await fetch(`${apiUrl}/api/dance/posts/${postId}`, {
     headers: authHeaders(accessToken),
   });

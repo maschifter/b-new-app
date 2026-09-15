@@ -28,6 +28,10 @@ function post(): DancePostDetail {
     videoLengthS: 72,
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
+    mergedVideoUrl: null,
+    thumbnailUrl: null,
+    thumbnailPath: null,
+    blurhash: null,
     videoUrl: "https://storage.example.test/attempt.mp4",
     danceMove: {
       title: "Electric Slide",

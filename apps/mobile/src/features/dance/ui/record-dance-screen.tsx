@@ -23,9 +23,9 @@ import {
   useCameraPermission,
   useVideoOutput,
 } from "react-native-vision-camera";
-import { getDanceMoves } from "../api";
 import { danceMoveDetailAtomFamily } from "../_atoms/queries";
 import { simulatedDanceRecordingEnabledAtom, useBackDanceCameraAtom } from "../_atoms/ui";
+import { getDanceMoves } from "../api";
 import {
   type DanceRecorder,
   chooseSimulatedDanceVideo,
@@ -54,7 +54,11 @@ export function RecordDanceScreen({ moveId, onBack, onRecordingComplete }: Recor
     <SafeAreaView className="flex-1 bg-black" edges={["top", "left", "right", "bottom"]}>
       <MobileQueryErrorBoundary title="Couldn't load this dance" retryLabel="Retry loading dance">
         <Suspense fallback={<DanceSkeleton />}>
-          <RecordDanceContent moveId={moveId} onBack={onBack} onRecordingComplete={onRecordingComplete} />
+          <RecordDanceContent
+            moveId={moveId}
+            onBack={onBack}
+            onRecordingComplete={onRecordingComplete}
+          />
         </Suspense>
       </MobileQueryErrorBoundary>
     </SafeAreaView>
@@ -93,7 +97,10 @@ function RecordDanceContent({ moveId, onBack, onRecordingComplete }: RecordDance
   );
   const musicPlayer = useAudioPlayer(move.music?.audioUrl);
   useFocusedPlayback(referencePlayer, step === FilmStep.RECORDING);
-  useFocusedPlayback(simulatedCameraPlayer, simulatedRecordingEnabled && step === FilmStep.RECORDING);
+  useFocusedPlayback(
+    simulatedCameraPlayer,
+    simulatedRecordingEnabled && step === FilmStep.RECORDING,
+  );
   const videoOutput = useVideoOutput({
     enableAudio: false,
     fileType: "mp4",
@@ -379,7 +386,8 @@ function RecordDanceContent({ moveId, onBack, onRecordingComplete }: RecordDance
         </Text>
         {simulatedRecordingEnabled ? (
           <Text className="text-xs text-violet-300">
-            DEV · Simulated {simulatedVideoUrl === move.filmYourselfVideoUrl ? "reference" : "catalog"} recording
+            DEV · Simulated{" "}
+            {simulatedVideoUrl === move.filmYourselfVideoUrl ? "reference" : "catalog"} recording
           </Text>
         ) : null}
         {recordingError ? (

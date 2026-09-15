@@ -46,12 +46,24 @@ function postRow(status = "uploading") {
     dance_move_id: MOVE_ID,
     music_id: null,
     video_path: `${OWNER_ID}/${POST_ID}.mp4`,
+    merged_video_path: null,
+    thumbnail_path: null,
+    blurhash: null,
+    audio_offset_ms: null,
     status,
     score: null,
     video_length_s: 12,
     created_at: CREATED_AT,
     updated_at: CREATED_AT,
   };
+}
+
+/** Mirrors Supabase's per-path signing response: one entry per requested path. */
+function signedUrlsFor(...paths: string[]) {
+  return vi.fn().mockResolvedValue({
+    data: paths.map((path) => ({ error: null, path, signedUrl: `https://signed.example/${path}` })),
+    error: null,
+  });
 }
 
 const postMove = {
@@ -65,21 +77,26 @@ describe("dance post service", () => {
     const post = queryBuilder({ data: { ...postRow("scored"), music_id: MUSIC_ID }, error: null });
     const move = queryBuilder({ data: postMove, error: null });
     const music = queryBuilder({ data: postMusic, error: null });
-    const createSignedUrl = vi.fn().mockResolvedValue({
-      data: { signedUrl: "https://storage.example/read" },
-      error: null,
-    });
+    const createSignedUrls = signedUrlsFor(`${OWNER_ID}/${POST_ID}.mp4`);
     const service = createDanceService(
       {
-        from: vi.fn().mockReturnValueOnce(post).mockReturnValueOnce(move).mockReturnValueOnce(music),
-        storage: { from: vi.fn(() => ({ createSignedUrl })) },
+        from: vi
+          .fn()
+          .mockReturnValueOnce(post)
+          .mockReturnValueOnce(move)
+          .mockReturnValueOnce(music),
+        storage: { from: vi.fn(() => ({ createSignedUrls })) },
       } as never,
       httpErrors as never,
     );
 
     await expect(service.getPost(OWNER_ID, POST_ID)).resolves.toMatchObject({
       id: POST_ID,
-      videoUrl: "https://storage.example/read",
+      videoUrl: `https://signed.example/${OWNER_ID}/${POST_ID}.mp4`,
+      mergedVideoUrl: null,
+      thumbnailUrl: null,
+      thumbnailPath: null,
+      blurhash: null,
       danceMove: { title: "Electric Slide", music: { title: "The Track" } },
     });
     expect(post.eq).toHaveBeenCalledWith("id", POST_ID);
@@ -103,23 +120,25 @@ describe("dance post service", () => {
 
   it("returns only the owner's posts with short-lived signed video URLs", async () => {
     const posts = queryBuilder({ data: [postRow("scored")], error: null });
-    const createSignedUrl = vi.fn().mockResolvedValue({
-      data: { signedUrl: "https://storage.example/read" },
-      error: null,
-    });
+    const createSignedUrls = signedUrlsFor(`${OWNER_ID}/${POST_ID}.mp4`);
     const service = createDanceService(
-      { from: vi.fn(() => posts), storage: { from: vi.fn(() => ({ createSignedUrl })) } } as never,
+      { from: vi.fn(() => posts), storage: { from: vi.fn(() => ({ createSignedUrls })) } } as never,
       httpErrors as never,
     );
 
     await expect(service.listPosts(OWNER_ID, { limit: 18 })).resolves.toMatchObject({
-      items: [expect.objectContaining({ id: POST_ID, videoUrl: "https://storage.example/read" })],
+      items: [
+        expect.objectContaining({
+          id: POST_ID,
+          videoUrl: `https://signed.example/${OWNER_ID}/${POST_ID}.mp4`,
+        }),
+      ],
       nextCursor: null,
     });
     expect(posts.eq).toHaveBeenCalledWith("owner_id", OWNER_ID);
     expect(posts.neq).toHaveBeenCalledWith("status", "uploading");
     expect(posts.order).toHaveBeenNthCalledWith(1, "created_at", { ascending: false });
-    expect(createSignedUrl).toHaveBeenCalledWith(`${OWNER_ID}/${POST_ID}.mp4`, 3600);
+    expect(createSignedUrls).toHaveBeenCalledWith([`${OWNER_ID}/${POST_ID}.mp4`], 3600);
   });
 
   it("uses the final returned post as the descending keyset cursor", async () => {
@@ -128,12 +147,9 @@ describe("dance post service", () => {
       data: [postRow("scored"), { ...postRow("scored"), id: nextPostId }],
       error: null,
     });
-    const createSignedUrl = vi.fn().mockResolvedValue({
-      data: { signedUrl: "https://storage.example/read" },
-      error: null,
-    });
+    const createSignedUrls = signedUrlsFor(`${OWNER_ID}/${POST_ID}.mp4`);
     const service = createDanceService(
-      { from: vi.fn(() => posts), storage: { from: vi.fn(() => ({ createSignedUrl })) } } as never,
+      { from: vi.fn(() => posts), storage: { from: vi.fn(() => ({ createSignedUrls })) } } as never,
       httpErrors as never,
     );
 
@@ -152,7 +168,7 @@ describe("dance post service", () => {
     expect(posts.or).toHaveBeenCalledWith(
       `created_at.lt.${CREATED_AT},and(created_at.eq.${CREATED_AT},id.lt.${POST_ID})`,
     );
-    expect(createSignedUrl).toHaveBeenCalledOnce();
+    expect(createSignedUrls).toHaveBeenCalledOnce();
   });
 
   it("creates an owned post and signed upload target for an eligible move", async () => {
@@ -175,6 +191,142 @@ describe("dance post service", () => {
     expect(insert.insert).toHaveBeenCalledWith(
       expect.objectContaining({ owner_id: OWNER_ID, dance_move_id: MOVE_ID, video_length_s: 12 }),
     );
+  });
+
+  it("persists the device-measured audio offset, including a literal zero", async () => {
+    for (const [audioOffsetMs, expected] of [
+      [undefined, null],
+      [0, 0],
+      [4200, 4200],
+    ] as const) {
+      const move = queryBuilder({ data: { id: MOVE_ID, music_id: null }, error: null });
+      const insert = queryBuilder({ error: null });
+      const service = createDanceService(
+        {
+          from: vi.fn().mockReturnValueOnce(move).mockReturnValueOnce(insert),
+          storage: {
+            from: vi.fn(() => ({
+              createSignedUploadUrl: vi
+                .fn()
+                .mockResolvedValue({ data: { signedUrl: "https://up" }, error: null }),
+            })),
+          },
+        } as never,
+        httpErrors as never,
+      );
+
+      await service.createPost(OWNER_ID, {
+        danceMoveId: MOVE_ID,
+        videoLength: 12,
+        ...(audioOffsetMs === undefined ? {} : { audioOffsetMs }),
+      });
+
+      expect(insert.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ audio_offset_ms: expected }),
+      );
+    }
+  });
+
+  it("signs a page in one call and zips the URLs back by path, not by index", async () => {
+    const secondPostId = "55555555-5555-4555-8555-555555555555";
+    const first = {
+      ...postRow("scored"),
+      merged_video_path: `${OWNER_ID}/${POST_ID}-merged.mp4`,
+      thumbnail_path: `${OWNER_ID}/${POST_ID}.jpg`,
+      blurhash: "LEHV6nWB2yk8",
+    };
+    const second = {
+      ...postRow("scored"),
+      id: secondPostId,
+      video_path: `${OWNER_ID}/${secondPostId}.mp4`,
+    };
+    const posts = queryBuilder({ data: [first, second], error: null });
+    // Deliberately out of input order: index-based zipping would mis-attribute these.
+    const createSignedUrls = vi.fn().mockResolvedValue({
+      data: [
+        { error: null, path: second.video_path, signedUrl: "https://signed.example/second" },
+        { error: null, path: first.thumbnail_path, signedUrl: "https://signed.example/thumb" },
+        { error: null, path: first.video_path, signedUrl: "https://signed.example/first" },
+        { error: null, path: first.merged_video_path, signedUrl: "https://signed.example/merged" },
+      ],
+      error: null,
+    });
+    const service = createDanceService(
+      { from: vi.fn(() => posts), storage: { from: vi.fn(() => ({ createSignedUrls })) } } as never,
+      httpErrors as never,
+    );
+
+    const page = await service.listPosts(OWNER_ID, { limit: 18 });
+
+    expect(createSignedUrls).toHaveBeenCalledOnce();
+    expect(createSignedUrls).toHaveBeenCalledWith(
+      [first.video_path, first.merged_video_path, first.thumbnail_path, second.video_path],
+      3600,
+    );
+    expect(page.items).toMatchObject([
+      {
+        id: POST_ID,
+        videoUrl: "https://signed.example/first",
+        mergedVideoUrl: "https://signed.example/merged",
+        thumbnailUrl: "https://signed.example/thumb",
+        thumbnailPath: first.thumbnail_path,
+        blurhash: "LEHV6nWB2yk8",
+      },
+      {
+        id: secondPostId,
+        videoUrl: "https://signed.example/second",
+        mergedVideoUrl: null,
+        thumbnailUrl: null,
+      },
+    ]);
+  });
+
+  it("degrades a derived object to null when its own signing entry fails", async () => {
+    const row = {
+      ...postRow("scored"),
+      merged_video_path: `${OWNER_ID}/${POST_ID}-merged.mp4`,
+      thumbnail_path: `${OWNER_ID}/${POST_ID}.jpg`,
+    };
+    const posts = queryBuilder({ data: [row], error: null });
+    const createSignedUrls = vi.fn().mockResolvedValue({
+      data: [
+        { error: null, path: row.video_path, signedUrl: "https://signed.example/video" },
+        // A failed entry comes back without a path, so it cannot be attributed to a row.
+        { error: "Object not found", path: null, signedUrl: "" },
+        { error: null, path: row.thumbnail_path, signedUrl: "https://signed.example/thumb" },
+      ],
+      error: null,
+    });
+    const service = createDanceService(
+      { from: vi.fn(() => posts), storage: { from: vi.fn(() => ({ createSignedUrls })) } } as never,
+      httpErrors as never,
+    );
+
+    await expect(service.listPosts(OWNER_ID, { limit: 18 })).resolves.toMatchObject({
+      items: [
+        {
+          videoUrl: "https://signed.example/video",
+          mergedVideoUrl: null,
+          thumbnailUrl: "https://signed.example/thumb",
+        },
+      ],
+    });
+  });
+
+  it("fails the page when the original recording cannot be signed", async () => {
+    const posts = queryBuilder({ data: [postRow("scored")], error: null });
+    const createSignedUrls = vi.fn().mockResolvedValue({
+      data: [{ error: "Object not found", path: null, signedUrl: "" }],
+      error: null,
+    });
+    const service = createDanceService(
+      { from: vi.fn(() => posts), storage: { from: vi.fn(() => ({ createSignedUrls })) } } as never,
+      httpErrors as never,
+    );
+
+    await expect(service.listPosts(OWNER_ID, { limit: 18 })).rejects.toMatchObject({
+      statusCode: 500,
+    });
   });
 
   it("removes a newly-created post when minting its upload URL fails", async () => {

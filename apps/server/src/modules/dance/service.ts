@@ -97,7 +97,7 @@ function cursorFilter(cursor: DanceMovesCursor): string {
 
 const POST_STATUSES = ["uploading", "uploaded", "scoring", "scored", "failed"] as const;
 const DANCE_POST_SELECT =
-  "id, owner_id, dance_move_id, music_id, video_path, status, score, video_length_s, created_at, updated_at";
+  "id, owner_id, dance_move_id, music_id, video_path, merged_video_path, thumbnail_path, blurhash, audio_offset_ms, status, score, video_length_s, created_at, updated_at";
 const PROFILE_VIDEO_URL_TTL_SECONDS = 60 * 60;
 
 function toDancePostStatus(value: string): DancePost["status"] | null {
@@ -132,6 +132,10 @@ function toDancePost(
   };
 }
 
+function signedUrlFor(signedByPath: Map<string, string>, path: string | null): string | null {
+  return path === null ? null : (signedByPath.get(path) ?? null);
+}
+
 function postsCursorFilter(cursor: DancePostsCursor): string {
   return [
     `created_at.lt.${cursor.createdAt}`,
@@ -144,17 +148,51 @@ export function createDanceService(
   httpErrors: HttpErrors,
   danceVideoBucket = "dance-videos",
 ) {
-  async function withSignedVideoUrl(
-    row: Database["public"]["Tables"]["dance_posts"]["Row"],
-  ): Promise<DancePostHistoryItem> {
-    if (!row.video_path) throw httpErrors.internalServerError("Dance post video is missing");
-    const { data: signedVideo, error: signedVideoError } = await supabase.storage
-      .from(danceVideoBucket)
-      .createSignedUrl(row.video_path, PROFILE_VIDEO_URL_TTL_SECONDS);
-    if (signedVideoError || !signedVideo) {
-      throw httpErrors.internalServerError("Could not load dance post video");
+  // Signs a whole page in one Storage call: three paths per row would otherwise turn a
+  // page of 18 into 54 round trips.
+  async function signPostRows(
+    rows: Database["public"]["Tables"]["dance_posts"]["Row"][],
+  ): Promise<DancePostHistoryItem[]> {
+    const paths = new Set<string>();
+    for (const row of rows) {
+      if (row.video_path) paths.add(row.video_path);
+      if (row.merged_video_path) paths.add(row.merged_video_path);
+      if (row.thumbnail_path) paths.add(row.thumbnail_path);
     }
-    return { ...toDancePost(row, httpErrors), videoUrl: signedVideo.signedUrl };
+
+    const signedByPath = new Map<string, string>();
+    if (paths.size > 0) {
+      const { data: signed, error: signedError } = await supabase.storage
+        .from(danceVideoBucket)
+        .createSignedUrls([...paths], PROFILE_VIDEO_URL_TTL_SECONDS);
+      if (signedError || !signed) {
+        throw httpErrors.internalServerError("Could not load dance post video");
+      }
+      // Zip by the returned path, never by array index: a reordered response would hand
+      // one row another row's signed URL. An entry that failed comes back with a null
+      // path and cannot be attributed to any row, so it is dropped rather than bucketed.
+      for (const entry of signed) {
+        if (entry.error !== null || entry.path === null || !entry.signedUrl) continue;
+        signedByPath.set(entry.path, entry.signedUrl);
+      }
+    }
+
+    return rows.map((row) => {
+      if (!row.video_path) throw httpErrors.internalServerError("Dance post video is missing");
+      // Only the derived objects may degrade to null; videoUrl is non-nullable in the DTO.
+      const videoUrl = signedByPath.get(row.video_path);
+      if (videoUrl === undefined) {
+        throw httpErrors.internalServerError("Could not load dance post video");
+      }
+      return {
+        ...toDancePost(row, httpErrors),
+        videoUrl,
+        mergedVideoUrl: signedUrlFor(signedByPath, row.merged_video_path),
+        thumbnailUrl: signedUrlFor(signedByPath, row.thumbnail_path),
+        thumbnailPath: row.thumbnail_path,
+        blurhash: row.blurhash,
+      };
+    });
   }
 
   async function loadPostMoveDetail(
@@ -270,7 +308,7 @@ export function createDanceService(
       if (error) throw httpErrors.internalServerError("Could not load dance posts");
       const rows = data ?? [];
       const pageRows = rows.slice(0, options.limit);
-      const items = await Promise.all(pageRows.map(withSignedVideoUrl));
+      const items = await signPostRows(pageRows);
       const last = items.at(-1);
       return {
         items,
@@ -290,10 +328,12 @@ export function createDanceService(
         .maybeSingle();
       if (error) throw httpErrors.internalServerError("Could not load dance post");
       if (!data) throw httpErrors.notFound("Dance post not found");
-      const [postWithVideoUrl, danceMove] = await Promise.all([
-        withSignedVideoUrl(data),
+      const [signedPosts, danceMove] = await Promise.all([
+        signPostRows([data]),
         loadPostMoveDetail(data),
       ]);
+      const postWithVideoUrl = signedPosts[0];
+      if (!postWithVideoUrl) throw httpErrors.internalServerError("Could not load dance post");
       return {
         ...postWithVideoUrl,
         danceMove,
@@ -302,7 +342,7 @@ export function createDanceService(
 
     async createPost(
       ownerId: string,
-      input: { danceMoveId: string; videoLength: number },
+      input: { danceMoveId: string; videoLength: number; audioOffsetMs?: number | undefined },
     ): Promise<CreateDancePostResult> {
       const { data: move, error: moveError } = await supabase
         .from("dance_moves")
@@ -323,6 +363,7 @@ export function createDanceService(
         music_id: move.music_id,
         video_path: path,
         video_length_s: input.videoLength,
+        audio_offset_ms: input.audioOffsetMs ?? null,
         status: "uploading",
       });
       if (insertError) throw httpErrors.internalServerError("Could not create dance post");

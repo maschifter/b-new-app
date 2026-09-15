@@ -10,10 +10,10 @@ import type { Env } from "./config.js";
 import { errorHandlerPlugin } from "./lib/errors.js";
 import { adminRoutes } from "./modules/admin/routes.js";
 import { catalogRoutes } from "./modules/catalog/routes.js";
-import { devRoutes } from "./modules/dev/routes.js";
 import { DANCE_SCAN_CONFIG } from "./modules/dance/config.js";
 import { danceRoutes } from "./modules/dance/routes.js";
 import { startScanWorker } from "./modules/dance/scan-worker.js";
+import { devRoutes } from "./modules/dev/routes.js";
 import { healthRoutes } from "./modules/health/routes.js";
 import { shopRoutes } from "./modules/shop/routes.js";
 import { studioRoutes } from "./modules/studio/routes.js";
@@ -78,7 +78,10 @@ export async function buildApp(config: Env) {
       scanServerUrls: DANCE_SCAN_CONFIG.scanServerUrls,
     });
   }
-  await app.register(danceRoutes, { prefix: "/api/dance", danceVideoBucket: DANCE_SCAN_CONFIG.danceVideoBucket });
+  await app.register(danceRoutes, {
+    prefix: "/api/dance",
+    danceVideoBucket: DANCE_SCAN_CONFIG.danceVideoBucket,
+  });
   await app.register(adminRoutes, { prefix: "/api/admin" });
   if (config.NODE_ENV === "development" && config.DEV_ADMIN_SECRET) {
     await app.register(devRoutes, {

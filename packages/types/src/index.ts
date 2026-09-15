@@ -265,6 +265,12 @@ export interface DancePostsCursor {
 
 export interface DancePostHistoryItem extends DancePost {
   videoUrl: string;
+  /** The recording remuxed with the move's music; null until the media job completes. */
+  mergedVideoUrl: string | null;
+  thumbnailUrl: string | null;
+  /** Stable storage path behind `thumbnailUrl`; the signed URL rotates, this does not. */
+  thumbnailPath: string | null;
+  blurhash: string | null;
 }
 
 /** Move metadata available with an owned recording, even when the move is no longer published. */
@@ -290,6 +296,12 @@ export interface DancePostsPage {
 export interface CreateDancePostBody {
   danceMoveId: string;
   videoLength: number;
+  /**
+   * Music playhead at the first recorded frame, measured on device. Omitted when the
+   * player never started; the merge then falls back to the computed timeline offset.
+   * The explicit `| undefined` is load-bearing under `exactOptionalPropertyTypes`.
+   */
+  audioOffsetMs?: number | undefined;
 }
 
 /** Supabase Storage signed upload target for the amateur recording. */

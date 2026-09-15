@@ -69,15 +69,11 @@ function LearnDanceContent({ moveId, onBack, onStartRecording }: LearnDanceScree
           </BouncablePress>
         ) : null}
         <View className="flex-1 gap-1">
-          <Text className="text-xs font-extrabold tracking-[2px] text-neon">
-            LEARN THE ROUTINE
-          </Text>
+          <Text className="text-xs font-extrabold tracking-[2px] text-neon">LEARN THE ROUTINE</Text>
           <Text accessibilityRole="header" className="text-2xl font-extrabold text-foreground">
             {move.title}
           </Text>
-          {move.description ? (
-            <Text className="text-sm text-muted">{move.description}</Text>
-          ) : null}
+          {move.description ? <Text className="text-sm text-muted">{move.description}</Text> : null}
         </View>
       </View>
       {videos.length > 0 ? (

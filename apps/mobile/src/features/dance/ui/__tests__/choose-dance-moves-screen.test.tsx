@@ -18,7 +18,10 @@ jest.mock("@react-navigation/native", () => ({ useIsFocused: () => mockUseIsFocu
 
 jest.mock("expo-video", () => ({
   VideoView: "VideoView",
-  useVideoPlayer: (_url: string, setup: (player: { loop: boolean; muted: boolean; play: () => void; pause: () => void }) => void) => {
+  useVideoPlayer: (
+    _url: string,
+    setup: (player: { loop: boolean; muted: boolean; play: () => void; pause: () => void }) => void,
+  ) => {
     const player = { loop: false, muted: false, play: jest.fn(), pause: jest.fn() };
     setup(player);
     return player;
@@ -53,9 +56,7 @@ function move(id: string): DanceMove {
 function page(items: DanceMove[], nextId: string | null): DanceMovesPage {
   return {
     items,
-    nextCursor: nextId
-      ? { id: nextId, sortOrder: 1, createdAt: "2026-01-01T00:00:00.000Z" }
-      : null,
+    nextCursor: nextId ? { id: nextId, sortOrder: 1, createdAt: "2026-01-01T00:00:00.000Z" } : null,
   };
 }
 
@@ -192,7 +193,9 @@ it("refreshes from the explicit control on the horizontal carousel", async () =>
 it("recovers from an initial loading error", async () => {
   const consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
   try {
-    mockedGetMoves.mockRejectedValueOnce(new Error("offline")).mockResolvedValueOnce(page([move("recovered")], null));
+    mockedGetMoves
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce(page([move("recovered")], null));
     await mount();
     await screen.findByText("Couldn't load dances");
     await fireEventAsync.press(screen.getByLabelText("Retry loading dances"));

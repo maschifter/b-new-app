@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { buildApp } from "../src/app.js";
 import { danceRoutes } from "../src/modules/dance/routes.js";
-import { encodeDanceMovesCursor } from "../src/modules/dance/schemas.js";
+import { CreateDancePostRequest, encodeDanceMovesCursor } from "../src/modules/dance/schemas.js";
 import { createDanceService } from "../src/modules/dance/service.js";
 
 const GENRE_ID = "11111111-1111-4111-8111-111111111111";
@@ -101,6 +101,10 @@ const postRow = {
   dance_move_id: MOVE_ID,
   music_id: MUSIC_ID,
   video_path: `${GENRE_ID}/${MOVE_ID}.mp4`,
+  merged_video_path: null,
+  thumbnail_path: null,
+  blurhash: null,
+  audio_offset_ms: null,
   status: "scored",
   score: 92,
   video_length_s: 12,
@@ -190,13 +194,19 @@ describe("dance consumer routes", () => {
     const query = queryBuilder({ data: postRow, error: null });
     const move = queryBuilder({ data: postMove, error: null });
     const music = queryBuilder({ data: postMusic, error: null });
-    const createSignedUrl = vi.fn().mockResolvedValue({
-      data: { signedUrl: "https://storage.example/read" },
+    const createSignedUrls = vi.fn().mockResolvedValue({
+      data: [
+        {
+          error: null,
+          path: `${GENRE_ID}/${MOVE_ID}.mp4`,
+          signedUrl: "https://storage.example/read",
+        },
+      ],
       error: null,
     });
     const { app, handlers } = registerDance({
       from: vi.fn().mockReturnValueOnce(query).mockReturnValueOnce(move).mockReturnValueOnce(music),
-      storage: { from: vi.fn(() => ({ createSignedUrl })) },
+      storage: { from: vi.fn(() => ({ createSignedUrls })) },
     });
     await danceRoutes(app as never);
 
@@ -210,7 +220,7 @@ describe("dance consumer routes", () => {
       },
     });
     expect(query.eq).toHaveBeenCalledWith("owner_id", GENRE_ID);
-    expect(createSignedUrl).toHaveBeenCalledWith(`${GENRE_ID}/${MOVE_ID}.mp4`, 3600);
+    expect(createSignedUrls).toHaveBeenCalledWith([`${GENRE_ID}/${MOVE_ID}.mp4`], 3600);
   });
 
   it("returns only eligible published moves and maps joined music", async () => {
@@ -314,5 +324,21 @@ describe("dance consumer routes", () => {
       handlers["DELETE /posts/:id"]?.({ params: { id: "not-a-uuid" }, user: { sub: GENRE_ID } }),
     ).rejects.toMatchObject({ statusCode: 400, message: "Invalid dance post id" });
     expect(from).not.toHaveBeenCalled();
+  });
+
+  it("keeps a null audio offset absent instead of coercing it to a measured zero", () => {
+    const base = { danceMoveId: MOVE_ID, videoLength: 12 };
+
+    expect(CreateDancePostRequest.parse(base)).not.toHaveProperty("audioOffsetMs");
+    // Without the null guard z.coerce reads this as 0, which the merge would trust as a
+    // real measurement instead of falling back to the computed timeline offset.
+    expect(CreateDancePostRequest.parse({ ...base, audioOffsetMs: null }).audioOffsetMs).toBe(
+      undefined,
+    );
+    expect(CreateDancePostRequest.parse({ ...base, audioOffsetMs: 0 }).audioOffsetMs).toBe(0);
+    expect(CreateDancePostRequest.parse({ ...base, audioOffsetMs: "4200" }).audioOffsetMs).toBe(
+      4200,
+    );
+    expect(CreateDancePostRequest.safeParse({ ...base, audioOffsetMs: -1 }).success).toBe(false);
   });
 });

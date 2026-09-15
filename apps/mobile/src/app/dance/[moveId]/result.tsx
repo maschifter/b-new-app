@@ -13,7 +13,12 @@ export default function DanceResultRoute() {
     clipDuration: string;
   }>();
   const duration = Number(clipDuration);
-  if (!isUuidParam(moveId) || !isLocalVideoPath(clipPath) || !Number.isFinite(duration) || duration <= 0) {
+  if (
+    !isUuidParam(moveId) ||
+    !isLocalVideoPath(clipPath) ||
+    !Number.isFinite(duration) ||
+    duration <= 0
+  ) {
     return <Redirect href="/dance" />;
   }
   return (

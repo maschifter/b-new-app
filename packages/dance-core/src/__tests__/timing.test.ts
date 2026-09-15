@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_BPM, countdownSeconds, delayBeforeTimerMs, musicSeekSeconds } from "../timing.ts";
+import {
+  DEFAULT_BPM,
+  countdownSeconds,
+  delayBeforeTimerMs,
+  mergeAudioOffsetMs,
+  musicSeekSeconds,
+} from "../timing.ts";
 
 describe("countdownSeconds", () => {
   it("is 4 beats at the move's tempo", () => {
@@ -38,5 +44,32 @@ describe("delayBeforeTimerMs", () => {
 
   it("returns 0 for a null delay", () => {
     expect(delayBeforeTimerMs(null, 120)).toBe(0);
+  });
+});
+
+describe("mergeAudioOffsetMs", () => {
+  it("reconstructs the record timeline: seek + pre-countdown delay + half the countdown", () => {
+    // 5 s seek, countdown of 2 s leaves 3 s of delay, then half the countdown.
+    expect(mergeAudioOffsetMs(120, 5000)).toBe(5000 + 3000 + 1000);
+  });
+
+  it("uses DEFAULT_BPM for a null bpm", () => {
+    const countdownMs = countdownSeconds(null) * 1000;
+    expect(mergeAudioOffsetMs(null, 5000)).toBe(
+      Math.round(5000 + (5000 - countdownMs) + countdownMs / 2),
+    );
+  });
+
+  it("is half the countdown when the track has no beat-drop delay", () => {
+    expect(mergeAudioOffsetMs(120, null)).toBe(1000);
+  });
+
+  it("clamps the pre-countdown wait to zero when the delay is shorter than the countdown", () => {
+    // countdownSeconds(60) is 4 s, so the 1 s delay only contributes its whole-second seek.
+    expect(mergeAudioOffsetMs(60, 1000)).toBe(1000 + 0 + 2000);
+  });
+
+  it("returns a whole number of milliseconds", () => {
+    expect(Number.isInteger(mergeAudioOffsetMs(null, 3500))).toBe(true);
   });
 });

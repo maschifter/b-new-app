@@ -129,6 +129,53 @@ export type Database = {
         }
         Relationships: []
       }
+      dance_media_jobs: {
+        Row: {
+          attempts: number
+          created_at: string
+          error: string | null
+          id: string
+          locked_at: string | null
+          next_run_at: string
+          owner_id: string
+          post_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          locked_at?: string | null
+          next_run_at?: string
+          owner_id: string
+          post_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          locked_at?: string | null
+          next_run_at?: string
+          owner_id?: string
+          post_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dance_media_jobs_post_owner_fk"
+            columns: ["post_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "dance_posts"
+            referencedColumns: ["id", "owner_id"]
+          },
+        ]
+      }
       dance_move_genres: {
         Row: {
           dance_move_id: string
@@ -235,37 +282,49 @@ export type Database = {
       }
       dance_posts: {
         Row: {
+          audio_offset_ms: number | null
+          blurhash: string | null
           created_at: string
           dance_move_id: string
           id: string
+          merged_video_path: string | null
           music_id: string | null
           owner_id: string
           score: number | null
           status: string
+          thumbnail_path: string | null
           updated_at: string
           video_length_s: number | null
           video_path: string | null
         }
         Insert: {
+          audio_offset_ms?: number | null
+          blurhash?: string | null
           created_at?: string
           dance_move_id: string
           id?: string
+          merged_video_path?: string | null
           music_id?: string | null
           owner_id: string
           score?: number | null
           status?: string
+          thumbnail_path?: string | null
           updated_at?: string
           video_length_s?: number | null
           video_path?: string | null
         }
         Update: {
+          audio_offset_ms?: number | null
+          blurhash?: string | null
           created_at?: string
           dance_move_id?: string
           id?: string
+          merged_video_path?: string | null
           music_id?: string | null
           owner_id?: string
           score?: number | null
           status?: string
+          thumbnail_path?: string | null
           updated_at?: string
           video_length_s?: number | null
           video_path?: string | null

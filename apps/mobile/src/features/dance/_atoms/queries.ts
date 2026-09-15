@@ -24,8 +24,8 @@ import {
 import {
   getDanceGenres,
   getDanceMove,
-  getDancePost,
   getDanceMoves,
+  getDancePost,
   getDancePosts,
   getDanceScoreStatus,
 } from "../api";

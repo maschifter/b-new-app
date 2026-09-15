@@ -29,3 +29,20 @@ export function musicSeekSeconds(delayMs: number | null): number {
 export function delayBeforeTimerMs(delayMs: number | null, bpm: number | null): number {
   return Math.max((delayMs ?? 0) - countdownSeconds(bpm) * 1000, 0);
 }
+
+/**
+ * Music playhead position, in milliseconds, at the first recorded frame — the
+ * fallback used to seek the track when merging a post whose device-measured
+ * offset is missing. Reconstructs the Record-screen timeline: seek to the
+ * beat-drop, wait out the pre-countdown delay, then half the countdown.
+ *
+ * `countdownSeconds(bpm) * 500` is the timeline's `countdownCompletionMs(countDown) / 2`
+ * reduced, so this stays a leaf and does not import from record-flow.ts.
+ */
+export function mergeAudioOffsetMs(bpm: number | null, delayMs: number | null): number {
+  return Math.round(
+    musicSeekSeconds(delayMs) * 1000 +
+      delayBeforeTimerMs(delayMs, bpm) +
+      countdownSeconds(bpm) * 500,
+  );
+}

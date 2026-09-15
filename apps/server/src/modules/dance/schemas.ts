@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AUDIO_OFFSET_CEILING_MS } from "./config.js";
 
 const cursorSchema = z.object({
   sortOrder: z.number().int(),
@@ -19,6 +20,13 @@ export const DancePostIdParams = z.object({
 export const CreateDancePostRequest = z.object({
   danceMoveId: z.string().uuid(),
   videoLength: z.coerce.number().finite().positive().max(600),
+  // `z.coerce` would turn an explicit null into 0, collapsing "not measured" into the
+  // valid measurement "the track was at its very start". Map null to undefined first so
+  // only an omitted field reaches the fallback path.
+  audioOffsetMs: z.preprocess(
+    (value) => value ?? undefined,
+    z.coerce.number().int().min(0).max(AUDIO_OFFSET_CEILING_MS).optional(),
+  ),
 });
 
 export const DanceMovesQuery = z.object({

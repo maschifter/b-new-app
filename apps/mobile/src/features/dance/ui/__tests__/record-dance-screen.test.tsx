@@ -7,7 +7,7 @@ import { Camera, useVideoOutput } from "react-native-vision-camera";
 
 import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
 import { simulatedDanceRecordingEnabledAtom, useBackDanceCameraAtom } from "../../_atoms/ui";
-import { getDanceMoves, getDanceMove } from "../../api";
+import { getDanceMove, getDanceMoves } from "../../api";
 import { createSimulatedDanceRecorder } from "../../recording-adapter";
 import { RecordDanceScreen } from "../record-dance-screen";
 
@@ -240,7 +240,9 @@ it("shows a recoverable message when the recorder cannot start", async () => {
   await mount(move({ bpm: FAST_BPM }));
   await fireEventAsync.press(screen.getByLabelText("Start recording"));
 
-  expect(await screen.findByText("Couldn't record your dance. Please try again.")).toBeOnTheScreen();
+  expect(
+    await screen.findByText("Couldn't record your dance. Please try again."),
+  ).toBeOnTheScreen();
   expect(screen.getByLabelText("Start recording")).toBeOnTheScreen();
 });
 

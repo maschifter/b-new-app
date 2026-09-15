@@ -21,6 +21,7 @@ export {
   countdownSeconds,
   musicSeekSeconds,
   delayBeforeTimerMs,
+  mergeAudioOffsetMs,
 } from "./timing.ts";
 export { coerceScanStatus, shouldFinishScorePolling } from "./status.ts";
 export type { CountdownPhase } from "./record-flow.ts";

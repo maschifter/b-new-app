@@ -50,9 +50,7 @@ it("offers a retry only for a failed upload", () => {
 });
 
 it("keeps scanning with a non-blocking hint after the soft threshold", () => {
-  expect(
-    deriveSubmissionState(input({ isScanning: true, isScorePollingSlow: true })),
-  ).toEqual({
+  expect(deriveSubmissionState(input({ isScanning: true, isScorePollingSlow: true }))).toEqual({
     kind: "scanning",
     isSlow: true,
   });

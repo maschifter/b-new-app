@@ -7,5 +7,7 @@
     "enabled": true,
     "rules": { "recommended": true, "suspicious": { "noExplicitAny": "error" } }
   },
-  "files": { "ignore": ["node_modules", "dist", ".expo", ".turbo"] }
+  "files": {
+    "ignore": ["node_modules", "dist", ".expo", ".turbo", "**/database.generated.ts"]
+  }
 }

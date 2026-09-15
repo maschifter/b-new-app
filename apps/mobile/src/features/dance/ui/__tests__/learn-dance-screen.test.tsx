@@ -16,8 +16,23 @@ const videoPlayers: Array<{ url: string; play: jest.Mock; pause: jest.Mock }> = 
 
 jest.mock("expo-video", () => ({
   VideoView: "VideoView",
-  useVideoPlayer: (url: string, setup: (player: { loop: boolean; muted: boolean; playbackRate: number; play: () => void; pause: () => void }) => void) => {
-    const player = { loop: false, muted: false, playbackRate: 1, play: jest.fn(), pause: jest.fn() };
+  useVideoPlayer: (
+    url: string,
+    setup: (player: {
+      loop: boolean;
+      muted: boolean;
+      playbackRate: number;
+      play: () => void;
+      pause: () => void;
+    }) => void,
+  ) => {
+    const player = {
+      loop: false,
+      muted: false,
+      playbackRate: 1,
+      play: jest.fn(),
+      pause: jest.fn(),
+    };
     videoPlayers.push({ url, ...player });
     setup(player);
     return player;
@@ -51,7 +66,9 @@ function move(overrides: Partial<DanceMove> = {}): DanceMove {
 
 async function mount() {
   const store = createStore();
-  const queryClient = new QueryClient({ defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY, retry: false } } });
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY, retry: false } },
+  });
   store.set(queryClientAtom, queryClient);
   store.set(queryAuthAtom, { userId: "dancer", accessToken: "token" });
   return renderAsync(

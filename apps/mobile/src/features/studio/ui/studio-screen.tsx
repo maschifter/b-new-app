@@ -103,7 +103,9 @@ function StudioContent({
               accessibilityLabel={`${visitorCount} room visitors`}
               className="rounded-[18px] bg-panel/70 px-[14px] py-2"
             >
-              <Text className="text-[15px] font-bold text-foreground">Visitors: {visitorCount}</Text>
+              <Text className="text-[15px] font-bold text-foreground">
+                Visitors: {visitorCount}
+              </Text>
             </View>
           ) : null}
         </View>

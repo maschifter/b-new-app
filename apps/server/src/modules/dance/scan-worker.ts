@@ -87,7 +87,8 @@ export function createScanWorker(options: ScanWorkerOptions) {
       .eq("status", "scored")
       .select("id")
       .maybeSingle();
-    if (restoreError || !restoredPost) throw new Error("Could not restore dance post after scan completion failed");
+    if (restoreError || !restoredPost)
+      throw new Error("Could not restore dance post after scan completion failed");
     throw new Error("Could not complete dance scan");
   }
 
@@ -126,7 +127,10 @@ export function createScanWorker(options: ScanWorkerOptions) {
           if (postError || !post) throw new Error("Could not load dance post for fallback score");
           await completeScan(scan, post.dance_move_id, generateFallbackScore(), false);
         } catch (fallbackError) {
-          options.logger.error({ err: fallbackError, scanId: scan.id }, "Could not write fallback dance score");
+          options.logger.error(
+            { err: fallbackError, scanId: scan.id },
+            "Could not write fallback dance score",
+          );
         }
         return;
       }
@@ -151,7 +155,8 @@ export function createScanWorker(options: ScanWorkerOptions) {
         .eq("id", scan.post_id)
         .eq("owner_id", scan.owner_id)
         .eq("status", "scoring");
-      if (postError) options.logger.error({ err: postError, scanId: scan.id }, "Could not reset dance post");
+      if (postError)
+        options.logger.error({ err: postError, scanId: scan.id }, "Could not reset dance post");
     }
   }
 
@@ -204,7 +209,9 @@ export function createScanWorker(options: ScanWorkerOptions) {
           return data;
         }),
       );
-      await Promise.all(claims.filter((claim): claim is ClaimedScan => claim !== null).map(processClaim));
+      await Promise.all(
+        claims.filter((claim): claim is ClaimedScan => claim !== null).map(processClaim),
+      );
     } catch (error) {
       options.logger.error({ err: error }, "Dance scan worker tick failed");
     } finally {
@@ -227,7 +234,10 @@ export function createScanWorker(options: ScanWorkerOptions) {
   };
 }
 
-export function startScanWorker(app: FastifyInstance, options: Omit<ScanWorkerOptions, "logger" | "supabase">) {
+export function startScanWorker(
+  app: FastifyInstance,
+  options: Omit<ScanWorkerOptions, "logger" | "supabase">,
+) {
   const worker = createScanWorker({ ...options, logger: app.log, supabase: app.supabase });
   worker.start();
   app.addHook("onClose", () => worker.stop());

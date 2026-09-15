@@ -1,8 +1,4 @@
-import {
-  requirePublishedApiUrl,
-  resolveApiUrl,
-  validatePublishedBuildApiUrl,
-} from "../api-url";
+import { requirePublishedApiUrl, resolveApiUrl, validatePublishedBuildApiUrl } from "../api-url";
 
 describe("resolveApiUrl", () => {
   const baseOptions = {

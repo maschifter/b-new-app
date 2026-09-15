@@ -28,7 +28,15 @@ jest.mock("../../api", () => ({
 jest.mock("@react-navigation/native", () => ({ useIsFocused: () => mockUseIsFocused() }));
 jest.mock("expo-video", () => ({
   VideoView: "VideoView",
-  useVideoPlayer: (_source: string, configure: (player: { loop: boolean; muted: boolean; play: () => void; pause: () => void }) => void) => {
+  useVideoPlayer: (
+    _source: string,
+    configure: (player: {
+      loop: boolean;
+      muted: boolean;
+      play: () => void;
+      pause: () => void;
+    }) => void,
+  ) => {
     const player = { loop: false, muted: false, play: jest.fn(), pause: jest.fn() };
     configure(player);
     return player;
@@ -124,7 +132,9 @@ it("keeps the clip on the result screen and retries a failed upload", async () =
   });
 
   await mount();
-  expect(await screen.findByText("Couldn't submit your dance. Please try again.")).toBeOnTheScreen();
+  expect(
+    await screen.findByText("Couldn't submit your dance. Please try again."),
+  ).toBeOnTheScreen();
 
   await fireEventAsync.press(screen.getByRole("button", { name: "Retry submitting your dance" }));
   expect(await screen.findByText("You scored 88 points!")).toBeOnTheScreen();

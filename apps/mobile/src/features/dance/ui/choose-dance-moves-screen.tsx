@@ -7,9 +7,9 @@ import { Suspense, useCallback, useEffect, useRef } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  RefreshControl,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  RefreshControl,
   Text,
   View,
   useWindowDimensions,

@@ -46,11 +46,7 @@ export function TrackFormFields() {
         requirement="required"
         validate={required()}
       />
-      <NumberInput
-        source="delay_before_avatar_dance"
-        label="Choreography offset (ms)"
-        min={0}
-      />
+      <NumberInput source="delay_before_avatar_dance" label="Choreography offset (ms)" min={0} />
       <SelectInput
         source="status"
         choices={[

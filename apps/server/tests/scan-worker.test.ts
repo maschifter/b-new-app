@@ -9,7 +9,9 @@ function queryBuilder(result: { count?: number; data?: unknown; error: unknown }
   }
   query.maybeSingle = vi.fn(() => Promise.resolve(result));
   // biome-ignore lint/suspicious/noThenProperty: mirrors Supabase's awaitable query builder
-  query.then = vi.fn((onfulfilled: (value: unknown) => unknown) => Promise.resolve(result).then(onfulfilled));
+  query.then = vi.fn((onfulfilled: (value: unknown) => unknown) =>
+    Promise.resolve(result).then(onfulfilled),
+  );
   return query;
 }
 
@@ -71,7 +73,16 @@ describe("dance scan worker", () => {
     const missingPost = queryBuilder({ data: null, error: { message: "missing" } });
     const retry = queryBuilder({ error: null });
     const resetPost = queryBuilder({ error: null });
-    const queries = [reaper, activeCount, candidates, claim, markScoring, missingPost, retry, resetPost];
+    const queries = [
+      reaper,
+      activeCount,
+      candidates,
+      claim,
+      markScoring,
+      missingPost,
+      retry,
+      resetPost,
+    ];
     const from = vi.fn(() => {
       const query = queries.shift();
       if (!query) throw new Error("Unexpected Supabase query");
@@ -110,13 +121,25 @@ describe("dance scan worker", () => {
     const firstTime = queryBuilder({ count: 0, error: null });
     const scorePost = queryBuilder({ data: { id: scan.post_id }, error: null });
     const complete = queryBuilder({ data: { id: scan.id }, error: null });
-    const queries = [reaper, activeCount, candidates, claim, markScoring, post, firstTime, scorePost, complete];
+    const queries = [
+      reaper,
+      activeCount,
+      candidates,
+      claim,
+      markScoring,
+      post,
+      firstTime,
+      scorePost,
+      complete,
+    ];
     const from = vi.fn(() => {
       const query = queries.shift();
       if (!query) throw new Error("Unexpected Supabase query");
       return query;
     });
-    const createSignedUrl = vi.fn().mockResolvedValue({ data: { signedUrl: "https://signed.example/video" }, error: null });
+    const createSignedUrl = vi
+      .fn()
+      .mockResolvedValue({ data: { signedUrl: "https://signed.example/video" }, error: null });
     const scanRequest = vi.fn().mockResolvedValue(72);
     const worker = createScanWorker({
       concurrency: 3,
@@ -209,7 +232,18 @@ describe("dance scan worker", () => {
     const scorePost = queryBuilder({ data: null, error: { message: "offline" } });
     const retry = queryBuilder({ error: null });
     const resetPost = queryBuilder({ error: null });
-    const queries = [reaper, activeCount, candidates, claim, markScoring, post, firstTime, scorePost, retry, resetPost];
+    const queries = [
+      reaper,
+      activeCount,
+      candidates,
+      claim,
+      markScoring,
+      post,
+      firstTime,
+      scorePost,
+      retry,
+      resetPost,
+    ];
     const from = vi.fn(() => {
       const query = queries.shift();
       if (!query) throw new Error("Unexpected Supabase query");
@@ -223,13 +257,22 @@ describe("dance scan worker", () => {
       scanServerUrls: "https://scan.example",
       supabase: {
         from,
-        storage: { from: vi.fn(() => ({ createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: "https://signed.example/video" }, error: null }) })) },
+        storage: {
+          from: vi.fn(() => ({
+            createSignedUrl: vi.fn().mockResolvedValue({
+              data: { signedUrl: "https://signed.example/video" },
+              error: null,
+            }),
+          })),
+        },
       } as never,
     });
 
     await worker.tick();
 
-    expect(retry.update).toHaveBeenCalledWith(expect.objectContaining({ attempts: 1, status: "pending" }));
+    expect(retry.update).toHaveBeenCalledWith(
+      expect.objectContaining({ attempts: 1, status: "pending" }),
+    );
     expect(resetPost.update).toHaveBeenCalledWith({ status: "uploaded" });
   });
 
@@ -280,7 +323,14 @@ describe("dance scan worker", () => {
       scanServerUrls: "https://scan.example",
       supabase: {
         from,
-        storage: { from: vi.fn(() => ({ createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: "https://signed.example/video" }, error: null }) })) },
+        storage: {
+          from: vi.fn(() => ({
+            createSignedUrl: vi.fn().mockResolvedValue({
+              data: { signedUrl: "https://signed.example/video" },
+              error: null,
+            }),
+          })),
+        },
       } as never,
     });
 
@@ -288,7 +338,9 @@ describe("dance scan worker", () => {
 
     expect(restorePost.update).toHaveBeenCalledWith({ status: "uploaded", score: null });
     expect(restorePost.eq).toHaveBeenCalledWith("status", "scored");
-    expect(retry.update).toHaveBeenCalledWith(expect.objectContaining({ attempts: 1, status: "pending" }));
+    expect(retry.update).toHaveBeenCalledWith(
+      expect.objectContaining({ attempts: 1, status: "pending" }),
+    );
     expect(resetPost.update).toHaveBeenCalledWith({ status: "uploaded" });
   });
 });

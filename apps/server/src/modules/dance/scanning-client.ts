@@ -4,7 +4,10 @@ export const SCAN_TIMEOUT_MS = 90_000;
 export const SCAN_FAILOVER_DELAY_MS = 1_000;
 
 export class ScanRequestError extends Error {
-  constructor(message: string, readonly causes: readonly string[]) {
+  constructor(
+    message: string,
+    readonly causes: readonly string[],
+  ) {
     super(message);
     this.name = "ScanRequestError";
   }
@@ -38,7 +41,9 @@ export function createScanningClient(options: ScanningClientOptions) {
   const fetchImpl = options.fetchImpl ?? fetch;
   const sleep = options.sleep ?? defaultSleep;
   const maxDurationMs =
-    urls.length === 0 ? 0 : urls.length * SCAN_TIMEOUT_MS + (urls.length - 1) * SCAN_FAILOVER_DELAY_MS;
+    urls.length === 0
+      ? 0
+      : urls.length * SCAN_TIMEOUT_MS + (urls.length - 1) * SCAN_FAILOVER_DELAY_MS;
 
   return {
     maxDurationMs,
