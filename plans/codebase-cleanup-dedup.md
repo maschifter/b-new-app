@@ -201,7 +201,7 @@ change, the refactor changed behavior — investigate before proceeding.
 
 **Risk:** low. **Depends on:** Phase 3 (avoid conflicting edits in the same files).
 
-- [ ] Create `apps/server/src/lib/pg-error-codes.ts` with
+- [x] Create `apps/server/src/lib/pg-error-codes.ts` with
       `UNIQUE_VIOLATION = "23505"`, `FOREIGN_KEY_VIOLATION = "23503"`,
       `CHECK_CONSTRAINT_VIOLATION = "23514"`. Replace the local consts
       (`FOREIGN_KEY_VIOLATION` in `dance-moves-service.ts:26` and
@@ -209,12 +209,14 @@ change, the refactor changed behavior — investigate before proceeding.
       `catalog-service.ts:20`) and the bare `"23505"` literals at
       `catalog-service.ts:116` and `admin/service.ts:129`. No `UNIQUE_VIOLATION`
       const exists today — it is introduced by this phase, which is the point.
-- [ ] Compose the dance-move select strings instead of retyping the column list:
+- [x] Compose the dance-move select strings instead of retyping the column list:
+      Each base literal is `as const` and the derived ones are `as const` template
+      literals, so Supabase still infers the Result type from the select string.
       `MOVE_COLUMNS` → `MOVE_WITH_GENRES` → `MOVE_WITH_GENRES_AND_FILTER` in
       `admin/dance-moves-service.ts:19-24` (20 columns typed out three times),
       and `MOVE_SELECT` → `MOVE_SELECT_WITH_GENRE` in `dance/service.ts:17-19`
       (twice more).
-- [ ] Do **not** try to share one column list between the admin and consumer
+- [x] Do **not** try to share one column list between the admin and consumer
       services — they select deliberately different column sets. Compose within
       each file only.
 
@@ -460,7 +462,7 @@ the Studio/Explore/Shop screens render a real room end to end on device.
 | 1 | Server test helpers | low | [x] |
 | 2 | `pickDefined` | low | [x] |
 | 3 | Shared admin resource service | medium | [x] 3a + reduced 3b; 3c dropped |
-| 4 | Server constants & select strings | low | [ ] |
+| 4 | Server constants & select strings | low | [x] |
 | 5 | Admin app constants | very low | [ ] |
 | 6 | Mobile query-atom helper | medium | [ ] |
 | 7 | Mobile test render helper | low | [ ] |

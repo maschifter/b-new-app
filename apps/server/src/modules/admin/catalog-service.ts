@@ -3,6 +3,7 @@ import type { Database } from "@bnewapp/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyInstance } from "fastify";
 import { rangeEnd, searchTerm, sortColumn } from "../../lib/admin-list.js";
+import { CHECK_CONSTRAINT_VIOLATION, UNIQUE_VIOLATION } from "../../lib/pg-error-codes.js";
 import { pickDefined } from "../../lib/pick-defined.js";
 import { processCatalogArt } from "../catalog/art.js";
 import {
@@ -23,7 +24,6 @@ const SORTABLE_COLUMNS = new Set([
   "created_at",
   "updated_at",
 ]);
-const CHECK_CONSTRAINT_VIOLATION = "23514";
 const ACCESS_PRICE_ERROR =
   "Free items must have no price; premium items require a positive Glow price";
 
@@ -112,7 +112,8 @@ export function createAdminCatalogService(
         .insert(payload)
         .select(CATALOG_COLUMNS)
         .single();
-      if (error?.code === "23505") throw httpErrors.conflict("Catalog item id already exists");
+      if (error?.code === UNIQUE_VIOLATION)
+        throw httpErrors.conflict("Catalog item id already exists");
       if (error?.code === CHECK_CONSTRAINT_VIOLATION) {
         throw httpErrors.badRequest(ACCESS_PRICE_ERROR);
       }

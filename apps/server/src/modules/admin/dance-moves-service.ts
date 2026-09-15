@@ -2,6 +2,7 @@ import type { AdminDanceMove, DanceContentStatus, Database } from "@bnewapp/type
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyInstance } from "fastify";
 import { rangeEnd, searchTerm, sortColumn } from "../../lib/admin-list.js";
+import { FOREIGN_KEY_VIOLATION } from "../../lib/pg-error-codes.js";
 import { pickDefined } from "../../lib/pick-defined.js";
 import {
   type CreateDanceMoveBody,
@@ -13,11 +14,10 @@ import {
 } from "./dance-content-schemas.js";
 
 const MOVE_COLUMNS =
-  "id, legacy_id, title, description, level, bpm, thumbnail_url, main_video_url, pro_dancer_video_url, pro_dancer_image_url, dancer_tip_video_url, dancer_tip_image_url, presentation_video_url, film_yourself_video_url, music_id, status, sort_order, created_at, updated_at";
-const MOVE_WITH_GENRES =
-  "id, legacy_id, title, description, level, bpm, thumbnail_url, main_video_url, pro_dancer_video_url, pro_dancer_image_url, dancer_tip_video_url, dancer_tip_image_url, presentation_video_url, film_yourself_video_url, music_id, status, sort_order, created_at, updated_at, dance_move_genres(genre_id)";
+  "id, legacy_id, title, description, level, bpm, thumbnail_url, main_video_url, pro_dancer_video_url, pro_dancer_image_url, dancer_tip_video_url, dancer_tip_image_url, presentation_video_url, film_yourself_video_url, music_id, status, sort_order, created_at, updated_at" as const;
+const MOVE_WITH_GENRES = `${MOVE_COLUMNS}, dance_move_genres(genre_id)` as const;
 const MOVE_WITH_GENRES_AND_FILTER =
-  "id, legacy_id, title, description, level, bpm, thumbnail_url, main_video_url, pro_dancer_video_url, pro_dancer_image_url, dancer_tip_video_url, dancer_tip_image_url, presentation_video_url, film_yourself_video_url, music_id, status, sort_order, created_at, updated_at, dance_move_genres(genre_id), filter:dance_move_genres!inner(genre_id)";
+  `${MOVE_WITH_GENRES}, filter:dance_move_genres!inner(genre_id)` as const;
 const SORTABLE_COLUMNS = new Set([
   "id",
   "title",
@@ -27,7 +27,6 @@ const SORTABLE_COLUMNS = new Set([
   "created_at",
   "updated_at",
 ]);
-const FOREIGN_KEY_VIOLATION = "23503";
 const UNKNOWN_REFERENCE_ERROR = "Unknown music track or genre";
 
 type HttpErrors = FastifyInstance["httpErrors"];

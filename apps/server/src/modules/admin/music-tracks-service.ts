@@ -2,6 +2,7 @@ import type { AdminMusicTrack, DanceContentStatus, Database } from "@bnewapp/typ
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyInstance } from "fastify";
 import { rangeEnd, searchTerm, sortColumn } from "../../lib/admin-list.js";
+import { FOREIGN_KEY_VIOLATION } from "../../lib/pg-error-codes.js";
 import { pickDefined } from "../../lib/pick-defined.js";
 import {
   type CreateMusicTrackBody,
@@ -21,7 +22,6 @@ const SORTABLE_COLUMNS = new Set([
   "created_at",
   "updated_at",
 ]);
-const FOREIGN_KEY_VIOLATION = "23503";
 
 type HttpErrors = FastifyInstance["httpErrors"];
 

@@ -18,9 +18,9 @@ import type { FastifyBaseLogger, FastifyInstance } from "fastify";
 import type { DanceMovesCursor, DancePostsCursor } from "./schemas.js";
 
 const MOVE_SELECT =
-  "id, title, description, level, bpm, thumbnail_url, main_video_url, pro_dancer_video_url, pro_dancer_image_url, dancer_tip_video_url, dancer_tip_image_url, presentation_video_url, film_yourself_video_url, sort_order, created_at, music_tracks(id, title, artist, audio_url, delay_before_avatar_dance), dance_move_genres(genre_id)";
+  "id, title, description, level, bpm, thumbnail_url, main_video_url, pro_dancer_video_url, pro_dancer_image_url, dancer_tip_video_url, dancer_tip_image_url, presentation_video_url, film_yourself_video_url, sort_order, created_at, music_tracks(id, title, artist, audio_url, delay_before_avatar_dance), dance_move_genres(genre_id)" as const;
 const MOVE_SELECT_WITH_GENRE =
-  "id, title, description, level, bpm, thumbnail_url, main_video_url, pro_dancer_video_url, pro_dancer_image_url, dancer_tip_video_url, dancer_tip_image_url, presentation_video_url, film_yourself_video_url, sort_order, created_at, music_tracks(id, title, artist, audio_url, delay_before_avatar_dance), dance_move_genres(genre_id), matching_genres:dance_move_genres!inner(genre_id)";
+  `${MOVE_SELECT}, matching_genres:dance_move_genres!inner(genre_id)` as const;
 
 type HttpErrors = FastifyInstance["httpErrors"];
 type DanceMoveRow = Database["public"]["Tables"]["dance_moves"]["Row"];

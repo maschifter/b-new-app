@@ -1,6 +1,7 @@
 import type { AdminUserDetail, AdminUserRow, DashboardSummary, Database } from "@bnewapp/types";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { FastifyInstance } from "fastify";
+import { UNIQUE_VIOLATION } from "../../lib/pg-error-codes.js";
 import type { UpdateUserBody } from "./schemas.js";
 
 interface ListUsersOptions {
@@ -126,7 +127,7 @@ export function createAdminService(supabase: SupabaseClient<Database>, httpError
         .select("id, email, username, created_at")
         .maybeSingle();
 
-      if (error?.code === "23505") throw httpErrors.conflict("Username is already taken");
+      if (error?.code === UNIQUE_VIOLATION) throw httpErrors.conflict("Username is already taken");
       if (error) throw httpErrors.internalServerError("Could not update user");
       if (!data) throw httpErrors.notFound("User not found");
       return data;
