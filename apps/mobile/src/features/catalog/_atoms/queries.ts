@@ -1,5 +1,4 @@
-import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
-import { queryErrorResetVersionAtom } from "@/lib/react-query/query-error-reset";
+import { readQueryAuth } from "@/lib/jotai/authed-query";
 import { CATALOG, defaultItemLabel } from "@bnewapp/studio-core";
 import type { CatalogItemDTO, StudioCatalog } from "@bnewapp/types";
 import { Image } from "expo-image";
@@ -108,8 +107,7 @@ function persistCatalog(userId: string, catalog: StudioCatalog): void {
 }
 
 export const catalogAtom = atomWithQuery<StudioCatalog>((get) => {
-  const auth = get(queryAuthAtom);
-  get(queryErrorResetVersionAtom);
+  const auth = readQueryAuth(get);
   return {
     queryKey: ["studio-catalog", auth?.userId ?? null],
     enabled: auth !== null,

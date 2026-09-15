@@ -1,4 +1,5 @@
 import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
+import { requireAuth } from "@/lib/jotai/authed-query";
 import type { PurchaseItemResult } from "@bnewapp/types";
 import { atomWithMutation, queryClientAtom } from "jotai-tanstack-query";
 import { purchaseItem } from "../api";
@@ -9,10 +10,7 @@ export const purchaseMutationAtom = atomWithMutation<PurchaseItemResult, string,
   const queryClient = get(queryClientAtom);
   return {
     mutationKey: ["shop-purchase", auth?.userId ?? null],
-    mutationFn: async (itemId) => {
-      if (!auth) throw new Error("Not authenticated");
-      return purchaseItem(auth.accessToken, { itemId });
-    },
+    mutationFn: async (itemId) => purchaseItem(requireAuth(auth).accessToken, { itemId }),
     onSuccess: async () => {
       if (!auth) return;
       await Promise.all([

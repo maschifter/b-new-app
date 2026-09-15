@@ -267,24 +267,38 @@ return {
 
 `"Not authenticated"` appears 14 times across `apps/mobile/src`.
 
-- [ ] Add `apps/mobile/src/lib/jotai/authed-query.ts` exporting a helper that
+- [x] Add `apps/mobile/src/lib/jotai/authed-query.ts` exporting a helper that
       takes the getter, a key suffix, and `(auth) => Promise<T>`, and returns the
       options object with `queryKey` (userId-scoped), the reset-version
       subscription, the `enabled` guard, and the unauthenticated throw.
-- [ ] It must support all four atom flavors in use: `atomWithQuery`,
-      `atomWithSuspenseQuery`, `atomWithInfiniteQuery`,
-      `atomWithSuspenseInfiniteQuery`. If one helper cannot serve all four
-      cleanly under the generics, ship two (`authedQuery` / `authedInfiniteQuery`)
-      rather than a single `any`-shaped one — `noExplicitAny` is an error here.
-- [ ] Migrate one feature at a time, running that feature's tests after each:
-      `catalog` → `shop` → `explore` → `dance`.
-- [ ] Preserve every per-atom deviation exactly: `explore-room`'s `retry: false`,
-      `catalog`'s `initialData` / `initialDataUpdatedAt` / `staleTime`,
-      `danceScore`'s `gcTime: 0` / `refetchInterval` / `retryDelay`,
-      `optionalDanceMoveAtomFamily` deliberately **not** subscribing to
-      `queryErrorResetVersionAtom` (it shares a key with the suspense twin).
-- [ ] Do not change any `queryKey`. A changed key silently invalidates cache
-      identity and the auth-switch cleanup contract in CLAUDE.md §6.
+      **Reduced in scope.** A full options-object helper does not survive the four
+      atom flavors: `queryKey` is typed per atom (`(string | null)[]` on the infinite
+      atoms, a `readonly` tuple in shop), the infinite `queryFn` takes `{ pageParam }`
+      while the plain one takes nothing, `catalogAtom` deliberately returns the
+      fallback instead of throwing, and `danceScoreAtom`'s `enabled` also depends on
+      `activeDanceScanAtom`. Threading all of that through one generic either widens
+      the option types or hands each caller more boilerplate than it removes.
+      Shipped instead: two plain functions —
+      `readQueryAuth(get, { errorBoundaryReset })` (reads the auth projection and
+      subscribes to the reset signal) and `requireAuth(auth)` (the single
+      `"Not authenticated"` throw). Every option literal stays at its call site, so
+      no generics are involved and no deviation had to be encoded.
+- [x] It must support all four atom flavors in use. All four adopted
+      `readQueryAuth`; being option-free, it is flavor-agnostic.
+- [x] Migrate one feature at a time: `catalog` → `shop` → `explore` → `dance`.
+      `requireAuth` also replaced the same throw in `shop` and `dance` mutation
+      atoms, so one `"Not authenticated"` string is left in the whole app — in
+      legacy `studio-sync.tsx`, which holds a raw token rather than a `QueryAuth`.
+- [x] Preserve every per-atom deviation exactly. `explore-room`'s `retry: false`,
+      `catalog`'s `initialData`/`initialDataUpdatedAt`/`staleTime`, `danceScore`'s
+      `gcTime: 0`/`refetchInterval`/`retryDelay` and shop's `throwOnError` are all
+      untouched. The three atoms that do not subscribe to `queryErrorResetVersionAtom`
+      (`optionalDanceMoveAtomFamily`, `dancePostsInfiniteAtom`, `danceScoreAtom`) now
+      say so with `{ errorBoundaryReset: false }`. `danceScoreAtom`'s combined
+      `if (!auth || !scan)` guard split: `requireAuth` covers auth, and the `!scan`
+      branch now throws `"No active dance scan"` — unreachable either way, since
+      `enabled` already requires both.
+- [x] Do not change any `queryKey`. No key was touched.
 
 **Acceptance:** all mobile feature tests green with no test edits; manual check
 that sign-out → sign-in as another user still clears the previous user's data.
@@ -470,7 +484,7 @@ the Studio/Explore/Shop screens render a real room end to end on device.
 | 3 | Shared admin resource service | medium | [x] 3a + reduced 3b; 3c dropped |
 | 4 | Server constants & select strings | low | [x] |
 | 5 | Admin app constants | very low | [x] STATUS_CHOICES only |
-| 6 | Mobile query-atom helper | medium | [ ] |
+| 6 | Mobile query-atom helper | medium | [x] reduced |
 | 7 | Mobile test render helper | low | [ ] |
 | 8 | Mobile color tokens | low | [ ] |
 | 9 | Mobile API layer consistency | low | [ ] |

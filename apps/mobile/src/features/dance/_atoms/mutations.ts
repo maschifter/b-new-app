@@ -1,4 +1,5 @@
 import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
+import { requireAuth } from "@/lib/jotai/authed-query";
 import { atomWithMutation } from "jotai-tanstack-query";
 import {
   createDancePost,
@@ -33,22 +34,22 @@ export const submitDanceRecordingMutationAtom = atomWithMutation<
   return {
     mutationKey: ["dance-submit-recording", auth?.userId ?? null],
     mutationFn: async ({ danceMoveId, path, videoLength, audioOffsetMs }) => {
-      if (!auth) throw new Error("Not authenticated");
+      const { accessToken } = requireAuth(auth);
       let postId: string | null = null;
       try {
-        const created = await createDancePost(auth.accessToken, {
+        const created = await createDancePost(accessToken, {
           danceMoveId,
           videoLength,
           ...(audioOffsetMs === undefined ? {} : { audioOffsetMs }),
         });
         postId = created.postId;
         await uploadDanceVideo(created.upload.signedUrl, path);
-        await markDancePostUploaded(auth.accessToken, postId);
+        await markDancePostUploaded(accessToken, postId);
         return postId;
       } catch (error) {
         if (postId !== null) {
           try {
-            await discardUploadingDancePost(auth.accessToken, postId);
+            await discardUploadingDancePost(accessToken, postId);
           } catch {
             // A post already queued by a response lost in transit is retained by the server.
           }

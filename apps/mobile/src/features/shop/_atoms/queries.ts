@@ -1,5 +1,4 @@
-import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
-import { queryErrorResetVersionAtom } from "@/lib/react-query/query-error-reset";
+import { readQueryAuth, requireAuth } from "@/lib/jotai/authed-query";
 import type { Inventory, Wallet } from "@bnewapp/types";
 import { atomWithQuery } from "jotai-tanstack-query";
 import { getInventory, getWallet } from "../api";
@@ -13,29 +12,21 @@ export function inventoryQueryKey(userId: string | null) {
 }
 
 export const walletAtom = atomWithQuery<Wallet>((get) => {
-  const auth = get(queryAuthAtom);
-  get(queryErrorResetVersionAtom);
+  const auth = readQueryAuth(get);
   return {
     queryKey: walletQueryKey(auth?.userId ?? null),
     enabled: auth !== null,
     throwOnError: true,
-    queryFn: async () => {
-      if (!auth) throw new Error("Not authenticated");
-      return getWallet(auth.accessToken);
-    },
+    queryFn: async () => getWallet(requireAuth(auth).accessToken),
   };
 });
 
 export const inventoryAtom = atomWithQuery<Inventory>((get) => {
-  const auth = get(queryAuthAtom);
-  get(queryErrorResetVersionAtom);
+  const auth = readQueryAuth(get);
   return {
     queryKey: inventoryQueryKey(auth?.userId ?? null),
     enabled: auth !== null,
     throwOnError: true,
-    queryFn: async () => {
-      if (!auth) throw new Error("Not authenticated");
-      return getInventory(auth.accessToken);
-    },
+    queryFn: async () => getInventory(requireAuth(auth).accessToken),
   };
 });

@@ -1,5 +1,4 @@
-import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
-import { queryErrorResetVersionAtom } from "@/lib/react-query/query-error-reset";
+import { readQueryAuth, requireAuth } from "@/lib/jotai/authed-query";
 import { shouldFinishScorePolling } from "@bnewapp/dance-core";
 import type {
   DanceGenre,
@@ -36,14 +35,10 @@ const DANCE_MOVES_PAGE_LIMIT = 20;
 const DANCE_POSTS_PAGE_LIMIT = 18;
 
 export const danceGenresAtom = atomWithSuspenseQuery<DanceGenre[]>((get) => {
-  const auth = get(queryAuthAtom);
-  get(queryErrorResetVersionAtom);
+  const auth = readQueryAuth(get);
   return {
     queryKey: ["dance-genres", auth?.userId ?? null],
-    queryFn: async () => {
-      if (!auth) throw new Error("Not authenticated");
-      return getDanceGenres(auth.accessToken);
-    },
+    queryFn: async () => getDanceGenres(requireAuth(auth).accessToken),
   };
 });
 
@@ -54,20 +49,17 @@ export const danceMovesInfiniteAtom = atomWithSuspenseInfiniteQuery<
   (string | null)[],
   DanceMovesCursor | null
 >((get) => {
-  const auth = get(queryAuthAtom);
+  const auth = readQueryAuth(get);
   const genreId = get(selectedDanceGenreIdAtom);
-  get(queryErrorResetVersionAtom);
   return {
     queryKey: ["dance-moves", auth?.userId ?? null, genreId],
     initialPageParam: null,
-    queryFn: async ({ pageParam }) => {
-      if (!auth) throw new Error("Not authenticated");
-      return getDanceMoves(auth.accessToken, {
+    queryFn: async ({ pageParam }) =>
+      getDanceMoves(requireAuth(auth).accessToken, {
         genreId,
         cursor: pageParam,
         limit: DANCE_MOVES_PAGE_LIMIT,
-      });
-    },
+      }),
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   };
 });
@@ -80,14 +72,10 @@ export const danceMovesAtom = atom(async (get): Promise<DanceMove[]> => {
 
 export const danceMoveDetailAtomFamily = atomFamily((moveId: string) =>
   atomWithSuspenseQuery<DanceMove>((get) => {
-    const auth = get(queryAuthAtom);
-    get(queryErrorResetVersionAtom);
+    const auth = readQueryAuth(get);
     return {
       queryKey: ["dance-move", auth?.userId ?? null, moveId],
-      queryFn: async () => {
-        if (!auth) throw new Error("Not authenticated");
-        return getDanceMove(auth.accessToken, moveId);
-      },
+      queryFn: async () => getDanceMove(requireAuth(auth).accessToken, moveId),
     };
   }),
 );
@@ -100,14 +88,11 @@ export const danceMoveDetailAtomFamily = atomFamily((moveId: string) =>
  */
 export const optionalDanceMoveAtomFamily = atomFamily((moveId: string) =>
   atomWithQuery<DanceMove>((get) => {
-    const auth = get(queryAuthAtom);
+    const auth = readQueryAuth(get, { errorBoundaryReset: false });
     return {
       queryKey: ["dance-move", auth?.userId ?? null, moveId],
       enabled: auth !== null,
-      queryFn: async () => {
-        if (!auth) throw new Error("Not authenticated");
-        return getDanceMove(auth.accessToken, moveId);
-      },
+      queryFn: async () => getDanceMove(requireAuth(auth).accessToken, moveId),
     };
   }),
 );
@@ -119,15 +104,16 @@ export const dancePostsInfiniteAtom = atomWithInfiniteQuery<
   (string | null)[],
   DancePostsCursor | null
 >((get) => {
-  const auth = get(queryAuthAtom);
+  const auth = readQueryAuth(get, { errorBoundaryReset: false });
   return {
     queryKey: ["dance-posts", auth?.userId ?? null],
     enabled: auth !== null,
     initialPageParam: null,
-    queryFn: async ({ pageParam }) => {
-      if (!auth) throw new Error("Not authenticated");
-      return getDancePosts(auth.accessToken, { cursor: pageParam, limit: DANCE_POSTS_PAGE_LIMIT });
-    },
+    queryFn: async ({ pageParam }) =>
+      getDancePosts(requireAuth(auth).accessToken, {
+        cursor: pageParam,
+        limit: DANCE_POSTS_PAGE_LIMIT,
+      }),
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   };
 });
@@ -139,14 +125,10 @@ export const dancePostsAtom = atom((get): DancePostHistoryItem[] => {
 
 export const dancePostDetailAtomFamily = atomFamily((postId: string) =>
   atomWithSuspenseQuery<DancePostDetail>((get) => {
-    const auth = get(queryAuthAtom);
-    get(queryErrorResetVersionAtom);
+    const auth = readQueryAuth(get);
     return {
       queryKey: ["dance-post", auth?.userId ?? null, postId],
-      queryFn: async () => {
-        if (!auth) throw new Error("Not authenticated");
-        return getDancePost(auth.accessToken, postId);
-      },
+      queryFn: async () => getDancePost(requireAuth(auth).accessToken, postId),
     };
   }),
 );
@@ -160,15 +142,15 @@ export function danceScoreQueryKey(userId: string | null, postId: string | null)
  * a fallback result, so this intentionally has no client-side deadline.
  */
 export const danceScoreAtom = atomWithQuery<ScanStatus, Error>((get) => {
-  const auth = get(queryAuthAtom);
+  const auth = readQueryAuth(get, { errorBoundaryReset: false });
   const scan = get(activeDanceScanAtom);
   return {
     queryKey: danceScoreQueryKey(auth?.userId ?? null, scan?.postId ?? null),
     enabled: auth !== null && scan !== null,
     gcTime: 0,
     queryFn: async () => {
-      if (!auth || !scan) throw new Error("Not authenticated");
-      return getDanceScoreStatus(auth.accessToken, scan.postId);
+      if (!scan) throw new Error("No active dance scan");
+      return getDanceScoreStatus(requireAuth(auth).accessToken, scan.postId);
     },
     retry: true,
     retryDelay: (failureCount) => scorePollIntervalMs(failureCount + 1),

@@ -1,5 +1,4 @@
-import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
-import { queryErrorResetVersionAtom } from "@/lib/react-query/query-error-reset";
+import { readQueryAuth, requireAuth } from "@/lib/jotai/authed-query";
 import type { ExploreRoomsCursor, ExploreRoomsPage } from "@bnewapp/types";
 import type { InfiniteData } from "@tanstack/react-query";
 import { atomFamily } from "jotai-family";
@@ -21,15 +20,15 @@ export const exploreRoomsInfiniteAtom = atomWithSuspenseInfiniteQuery<
   (string | null)[],
   ExploreCursor
 >((get) => {
-  const auth = get(queryAuthAtom);
-  get(queryErrorResetVersionAtom);
+  const auth = readQueryAuth(get);
   return {
     queryKey: ["explore-rooms", auth?.userId ?? null],
     initialPageParam: null,
-    queryFn: async ({ pageParam }) => {
-      if (!auth) throw new Error("Not authenticated");
-      return getExploreRooms(auth.accessToken, { limit: EXPLORE_PAGE_LIMIT, cursor: pageParam });
-    },
+    queryFn: async ({ pageParam }) =>
+      getExploreRooms(requireAuth(auth).accessToken, {
+        limit: EXPLORE_PAGE_LIMIT,
+        cursor: pageParam,
+      }),
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   };
 });
@@ -38,14 +37,10 @@ export const exploreRoomsInfiniteAtom = atomWithSuspenseInfiniteQuery<
 // standard, one atom per owner. Detail data is cached per authenticated viewer.
 export const exploreRoomQueryAtomFamily = atomFamily((ownerId: string) =>
   atomWithSuspenseQuery((get) => {
-    const auth = get(queryAuthAtom);
-    get(queryErrorResetVersionAtom);
+    const auth = readQueryAuth(get);
     return {
       queryKey: ["explore-room", auth?.userId ?? null, ownerId],
-      queryFn: async () => {
-        if (!auth) throw new Error("Not authenticated");
-        return visitExploreRoom(auth.accessToken, ownerId);
-      },
+      queryFn: async () => visitExploreRoom(requireAuth(auth).accessToken, ownerId),
       // This request appends a visit. Retrying after an ambiguous network error
       // could store the same screen opening more than once.
       retry: false,
