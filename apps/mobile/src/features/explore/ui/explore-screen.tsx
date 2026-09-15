@@ -1,4 +1,5 @@
 import { MobileQueryErrorBoundary } from "@/components/error-boundary";
+import { COLORS } from "@/lib/theme/colors";
 import type { ExploreRoom } from "@bnewapp/types";
 import { useAtomValue } from "jotai";
 import { Suspense, useEffect } from "react";
@@ -82,7 +83,7 @@ function ExploreContent() {
         <RefreshControl
           refreshing={isRefetching && !isFetchingNextPage}
           onRefresh={() => refetch()}
-          tintColor="#8B5CF6"
+          tintColor={COLORS.primary}
         />
       }
     />

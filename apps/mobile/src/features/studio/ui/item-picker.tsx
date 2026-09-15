@@ -2,6 +2,7 @@ import { BouncablePress } from "@/components/bouncable-press";
 import { MobileQueryErrorBoundary } from "@/components/error-boundary";
 import { artSource, catalogAtom } from "@/features/catalog";
 import { ownedItemIdsAtom } from "@/features/shop";
+import { COLORS } from "@/lib/theme/colors";
 import { type ContentRef, type Spot, fits } from "@bnewapp/studio-core";
 import { Image } from "expo-image";
 import { useAtomValue } from "jotai";
@@ -57,7 +58,7 @@ export function ItemPicker({ onOpenShop }: { onOpenShop?: () => void }) {
       <View
         className="max-h-[72%] rounded-t-3xl border border-neon/35 bg-[#160E29] px-5 pb-8 pt-[10px]"
         style={{
-          shadowColor: NEON,
+          shadowColor: COLORS.neon,
           shadowOffset: { width: 0, height: -6 },
           shadowOpacity: 0.6,
           shadowRadius: 20,
@@ -67,7 +68,7 @@ export function ItemPicker({ onOpenShop }: { onOpenShop?: () => void }) {
         {/* Neon accent line + grabber echo the room's glowing light strips. */}
         <View
           className="mb-[6px] h-[3px] w-[120px] self-center rounded-sm bg-neon opacity-90"
-          style={{ shadowColor: NEON, shadowOpacity: 1, shadowRadius: 8 }}
+          style={{ shadowColor: COLORS.neon, shadowOpacity: 1, shadowRadius: 8 }}
         />
         <View className="mb-3 h-[5px] w-11 self-center rounded-[3px] bg-white/20" />
 
@@ -147,7 +148,7 @@ function CatalogGrid({ spot, current, cardWidth, onAssign, onOpenShop }: Catalog
         accessibilityRole="progressbar"
         accessibilityLabel="Loading owned items"
       >
-        <ActivityIndicator color={NEON} />
+        <ActivityIndicator color={COLORS.neon} />
         <Text className="text-sm text-muted">Loading your inventory…</Text>
       </View>
     );
@@ -171,7 +172,11 @@ function CatalogGrid({ spot, current, cardWidth, onAssign, onOpenShop }: Catalog
         </View>
       ) : query.isFetching ? (
         <View className="mb-3 flex-row items-center justify-center gap-2">
-          <ActivityIndicator accessibilityLabel="Refreshing catalog" color={NEON} size="small" />
+          <ActivityIndicator
+            accessibilityLabel="Refreshing catalog"
+            color={COLORS.neon}
+            size="small"
+          />
           <Text className="text-xs text-muted">Checking for new items…</Text>
         </View>
       ) : null}
@@ -195,7 +200,7 @@ function CatalogGrid({ spot, current, cardWidth, onAssign, onOpenShop }: Catalog
                 style={{
                   ...(isCurrent
                     ? {
-                        shadowColor: NEON,
+                        shadowColor: COLORS.neon,
                         shadowOpacity: 0.95,
                         shadowRadius: 12,
                         elevation: 12,
@@ -248,5 +253,3 @@ function CatalogGrid({ spot, current, cardWidth, onAssign, onOpenShop }: Catalog
     </ScrollView>
   );
 }
-
-const NEON = "#A78BFA";

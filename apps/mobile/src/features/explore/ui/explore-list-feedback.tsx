@@ -1,10 +1,11 @@
 import { BouncablePress } from "@/components/bouncable-press";
+import { COLORS } from "@/lib/theme/colors";
 import { ActivityIndicator, Text, View } from "react-native";
 
 export function ExploreListFooter() {
   return (
     <View testID="explore-footer" className="py-5">
-      <ActivityIndicator color="#8B5CF6" />
+      <ActivityIndicator color={COLORS.primary} />
     </View>
   );
 }

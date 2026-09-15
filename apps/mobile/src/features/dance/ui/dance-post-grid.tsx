@@ -1,4 +1,5 @@
 import { BouncablePress } from "@/components/bouncable-press";
+import { COLORS } from "@/lib/theme/colors";
 import type { DancePostHistoryItem } from "@bnewapp/types";
 import { Image } from "expo-image";
 import { VideoView, useVideoPlayer } from "expo-video";
@@ -60,12 +61,16 @@ export function DancePostGrid({ header, onOpenPost }: DancePostGridProps) {
         <RefreshControl
           refreshing={query.isRefetching}
           onRefresh={() => void query.refetch()}
-          tintColor="#A78BFA"
+          tintColor={COLORS.neon}
         />
       }
       ListEmptyComponent={
         query.isPending ? (
-          <ActivityIndicator testID="profile-dances-loading" className="my-12" color="#A78BFA" />
+          <ActivityIndicator
+            testID="profile-dances-loading"
+            className="my-12"
+            color={COLORS.neon}
+          />
         ) : query.isError ? (
           <View className="items-center gap-3 px-8 py-12">
             <Text accessibilityRole="alert" className="text-center text-sm text-muted">
@@ -90,7 +95,7 @@ export function DancePostGrid({ header, onOpenPost }: DancePostGridProps) {
         )
       }
       ListFooterComponent={
-        query.isFetchingNextPage ? <ActivityIndicator className="py-4" color="#A78BFA" /> : null
+        query.isFetchingNextPage ? <ActivityIndicator className="py-4" color={COLORS.neon} /> : null
       }
     />
   );

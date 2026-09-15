@@ -3,6 +3,7 @@ import { BouncablePress } from "@/components/bouncable-press";
 import { Screen } from "@/components/screen";
 import { DancePostGrid } from "@/features/dance";
 import { useAuthSession } from "@/lib/auth/session-provider";
+import { COLORS } from "@/lib/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Text, View } from "react-native";
@@ -29,7 +30,7 @@ export function ProfileScreen({ onOpenSettings }: ProfileScreenProps) {
             onPress={onOpenSettings}
             className="size-11 items-center justify-center rounded-full border border-border bg-panel"
           >
-            <Ionicons name="settings-outline" size={20} color="#F8F7FC" />
+            <Ionicons name="settings-outline" size={20} color={COLORS.foreground} />
           </BouncablePress>
         }
       />

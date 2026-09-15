@@ -1,3 +1,4 @@
+import { COLORS } from "@/lib/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import type { ReactNode } from "react";
 import { Text, View } from "react-native";
@@ -18,7 +19,7 @@ export function AppHeader({ title, onBack, trailing }: AppHeaderProps) {
         onPress={onBack}
         className="size-11 items-center justify-center rounded-full border border-border bg-panel"
       >
-        <Ionicons name="chevron-back" size={22} color="#F8F7FC" />
+        <Ionicons name="chevron-back" size={22} color={COLORS.foreground} />
       </BouncablePress>
       <Text
         accessibilityRole="header"

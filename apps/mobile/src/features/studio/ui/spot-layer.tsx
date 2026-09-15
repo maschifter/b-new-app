@@ -66,7 +66,7 @@ export function SpotLayer({
   ) : (
     <View
       testID={`spot-empty-${spot.id}`}
-      className={`flex-1 items-center justify-center rounded-[10px] border-[1.5px] border-dashed p-1 ${selected ? "border-2 border-solid border-neon" : "border-[#4A4856]"}`}
+      className={`flex-1 items-center justify-center rounded-[10px] border-[1.5px] border-dashed p-1 ${selected ? "border-2 border-solid border-neon" : "border-border"}`}
     >
       <Text className="text-xl font-bold text-[#6C6C7A]">+</Text>
       <Text numberOfLines={1} className="text-center text-[10px] text-[#6C6C7A]">

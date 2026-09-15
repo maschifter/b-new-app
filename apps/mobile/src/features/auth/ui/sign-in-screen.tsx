@@ -2,6 +2,7 @@ import { BouncablePress } from "@/components/bouncable-press";
 import { Screen } from "@/components/screen";
 import { TextField } from "@/components/text-field";
 import { supabase } from "@/lib/auth/supabase";
+import { COLORS } from "@/lib/theme/colors";
 import { router } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Text, View } from "react-native";
@@ -137,7 +138,7 @@ export function SignInScreen() {
               onPress={submit}
               className={`min-h-[52px] flex-row items-center justify-center gap-2 rounded-xl bg-primary px-5 ${isSubmitting ? "opacity-[0.55]" : ""}`}
             >
-              {isSubmitting ? <ActivityIndicator color="#F8F7FC" /> : null}
+              {isSubmitting ? <ActivityIndicator color={COLORS.foreground} /> : null}
               <Text className="text-base font-bold text-foreground">
                 {isSignUp ? "Create account" : "Sign in"}
               </Text>

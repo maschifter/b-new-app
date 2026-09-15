@@ -1,5 +1,6 @@
 import { BouncablePress } from "@/components/bouncable-press";
 import { MobileQueryErrorBoundary } from "@/components/error-boundary";
+import { COLORS } from "@/lib/theme/colors";
 import type { DanceGenre, DanceMove } from "@bnewapp/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useAtom, useAtomValue } from "jotai";
@@ -131,7 +132,7 @@ function ChooseDanceMovesContent({ onOpenMove, onBack }: ChooseDanceMovesScreenP
                 onPress={onBack}
                 className="size-11 items-center justify-center rounded-full border border-border bg-panel"
               >
-                <Ionicons name="chevron-back" size={22} color="#F8F7FC" />
+                <Ionicons name="chevron-back" size={22} color={COLORS.foreground} />
               </BouncablePress>
             ) : null}
             <View className="flex-1">
@@ -190,7 +191,7 @@ function ChooseDanceMovesContent({ onOpenMove, onBack }: ChooseDanceMovesScreenP
               testID="dance-moves-refresh-control"
               refreshing={query.isRefetching && !query.isFetchingNextPage}
               onRefresh={() => void query.refetch()}
-              tintColor="#A78BFA"
+              tintColor={COLORS.neon}
             />
           }
           ListEmptyComponent={
@@ -205,7 +206,7 @@ function ChooseDanceMovesContent({ onOpenMove, onBack }: ChooseDanceMovesScreenP
           ListFooterComponent={
             query.isFetchingNextPage ? (
               <View testID="dance-list-footer" className="w-16 items-center justify-center">
-                <ActivityIndicator color="#A78BFA" />
+                <ActivityIndicator color={COLORS.neon} />
               </View>
             ) : query.isFetchNextPageError ? (
               <BouncablePress

@@ -1,5 +1,6 @@
 import { MobileQueryErrorBoundary } from "@/components/error-boundary";
 import { catalogAtom } from "@/features/catalog";
+import { COLORS } from "@/lib/theme/colors";
 import type { CatalogItemDTO } from "@bnewapp/types";
 import { useAtomValue } from "jotai";
 import { useCallback } from "react";
@@ -73,7 +74,7 @@ function InventoryContent({ onOpenShop }: InventoryScreenProps) {
           <RefreshControl
             refreshing={wallet.isRefetching || inventory.isRefetching || catalog.isRefetching}
             onRefresh={() => void refresh()}
-            tintColor="#8B5CF6"
+            tintColor={COLORS.primary}
           />
         }
       />

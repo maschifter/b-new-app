@@ -1,4 +1,5 @@
 import { BouncablePress } from "@/components/bouncable-press";
+import { COLORS } from "@/lib/theme/colors";
 import type { ExploreRoom } from "@bnewapp/types";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -31,7 +32,7 @@ export function RoomRow({ room }: { room: ExploreRoom }) {
           {itemCount} {itemCount === 1 ? "item" : "items"} · {formatRelativeTime(room.updatedAt)}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={20} color="#4A4856" />
+      <Ionicons name="chevron-forward" size={20} color={COLORS.border} />
     </BouncablePress>
   );
 }

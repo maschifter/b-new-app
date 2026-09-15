@@ -1,5 +1,6 @@
 import { MobileQueryErrorBoundary } from "@/components/error-boundary";
 import { catalogAtom } from "@/features/catalog";
+import { COLORS } from "@/lib/theme/colors";
 import { canAfford } from "@bnewapp/studio-core";
 import type { CatalogItemDTO } from "@bnewapp/types";
 import { useAtom, useAtomValue } from "jotai";
@@ -106,7 +107,7 @@ function ShopContent({ onBack }: ShopScreenProps) {
           <RefreshControl
             refreshing={wallet.isRefetching || inventory.isRefetching || catalog.isRefetching}
             onRefresh={() => void refresh()}
-            tintColor="#8B5CF6"
+            tintColor={COLORS.primary}
           />
         }
       />

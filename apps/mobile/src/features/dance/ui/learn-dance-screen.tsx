@@ -1,6 +1,7 @@
 import { BouncablePress } from "@/components/bouncable-press";
 import { MobileQueryErrorBoundary } from "@/components/error-boundary";
 import { useFocusedPlayback } from "@/lib/media/use-focused-playback";
+import { COLORS } from "@/lib/theme/colors";
 import type { DanceMove } from "@bnewapp/types";
 import { Ionicons } from "@expo/vector-icons";
 import { VideoView, useVideoPlayer } from "expo-video";
@@ -65,7 +66,7 @@ function LearnDanceContent({ moveId, onBack, onStartRecording }: LearnDanceScree
             onPress={onBack}
             className="size-11 items-center justify-center rounded-full border border-border bg-panel"
           >
-            <Ionicons name="chevron-back" size={22} color="#F8F7FC" />
+            <Ionicons name="chevron-back" size={22} color={COLORS.foreground} />
           </BouncablePress>
         ) : null}
         <View className="flex-1 gap-1">

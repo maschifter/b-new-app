@@ -356,13 +356,20 @@ hex in TS, at places where NativeWind `className` does not reach (`tintColor`,
 | `#F8F7FC` | `foreground` | 6 |
 | `#4A4856` | `border` | 2 |
 
-- [ ] Create `apps/mobile/src/lib/theme/colors.ts` as the single source of truth.
-- [ ] Make `tailwind.config.js` `require` it, so the Tailwind theme and the TS
-      constants cannot drift.
-- [ ] Replace the hardcoded hexes above with token references.
-- [ ] Leave the one-off hexes that are **not** theme tokens (`#160E29`,
-      `#241436`, `#140A20`, `#060410`, `#F6F1E6`, …) alone unless a token
-      obviously covers them — inventing tokens for gradient stops is scope creep.
+- [x] Create the single source of truth. Landed as
+      `apps/mobile/src/lib/theme/colors.js` (CommonJS) plus a sibling `colors.d.ts`,
+      not a `.ts` file: `tailwind.config.js` is loaded by Node at Metro start, which
+      cannot `require` TypeScript. The `.d.ts` is inside the tsconfig `include` glob,
+      so `@/lib/theme/colors` is fully typed for app code while Metro bundles the
+      `.js`. It carries the whole palette, not just the four duplicated tokens.
+- [x] Make `tailwind.config.js` `require` it. It now holds no hex at all; the
+      resolved `theme.extend.colors` is byte-identical to the previous literal.
+- [x] Replace the hardcoded hexes above with token references. 19 sites:
+      `COLORS.primary` ×5, `COLORS.neon` ×6 (including `item-picker`'s local `NEON`
+      const, now deleted), `COLORS.foreground` ×6, `COLORS.border` ×2 —
+      `room-row`'s icon color, and `spot-layer`'s `border-[#4A4856]` className, which
+      became the `border-border` utility rather than a TS constant.
+- [x] Leave the one-off hexes that are **not** theme tokens alone. Untouched.
 - [ ] Device-verify: Studio, Shop, Explore, Dance record + result screens.
 
 **Acceptance:** screenshots unchanged; `tailwind.config.js` holds no literal hex.
@@ -494,7 +501,7 @@ the Studio/Explore/Shop screens render a real room end to end on device.
 | 5 | Admin app constants | very low | [x] STATUS_CHOICES only |
 | 6 | Mobile query-atom helper | medium | [x] reduced |
 | 7 | Mobile test render helper | low | [x] |
-| 8 | Mobile color tokens | low | [ ] |
+| 8 | Mobile color tokens | low | [x] code; device check pending |
 | 9 | Mobile API layer consistency | low | [ ] |
 | 10 | Shared package boundaries | medium-high | [ ] |
 
