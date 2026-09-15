@@ -1,9 +1,6 @@
-import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
+import { renderWithProviders } from "@/test-utils/render-with-providers";
 import type { DancePostDetail } from "@bnewapp/types";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEventAsync, renderAsync, screen } from "@testing-library/react-native";
-import { Provider, createStore } from "jotai";
-import { queryClientAtom } from "jotai-tanstack-query";
+import { fireEventAsync, screen } from "@testing-library/react-native";
 import { getDancePost } from "../../api";
 import { DancePostDetailScreen } from "../dance-post-detail-screen";
 
@@ -48,19 +45,9 @@ function post(overrides: Partial<DancePostDetail> = {}): DancePostDetail {
 }
 
 async function mount(onBack = jest.fn()) {
-  const store = createStore();
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY, retry: false } },
+  await renderWithProviders(<DancePostDetailScreen postId={POST_ID} onBack={onBack} />, {
+    auth: { userId: "dancer", accessToken: "token" },
   });
-  store.set(queryClientAtom, queryClient);
-  store.set(queryAuthAtom, { userId: "dancer", accessToken: "token" });
-  await renderAsync(
-    <QueryClientProvider client={queryClient}>
-      <Provider store={store}>
-        <DancePostDetailScreen postId={POST_ID} onBack={onBack} />
-      </Provider>
-    </QueryClientProvider>,
-  );
   return onBack;
 }
 

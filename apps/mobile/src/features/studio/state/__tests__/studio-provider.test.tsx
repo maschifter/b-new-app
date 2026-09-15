@@ -1,15 +1,14 @@
 import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
+import { type TestStore, createTestStore } from "@/test-utils/render-with-providers";
 import type { StudioCatalog } from "@bnewapp/types";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
-import { Provider, createStore } from "jotai";
+import { Provider } from "jotai";
 import { queryClientAtom } from "jotai-tanstack-query";
 import { ItemPicker } from "../../ui/item-picker";
 import { StudioStage } from "../../ui/studio-stage";
 import { decorationAtom } from "../atoms";
 import { type StudioApi, StudioProvider, useStudio } from "../studio-provider";
-
-type Store = ReturnType<typeof createStore>;
 
 const UPLOADED_CATALOG: StudioCatalog = {
   version: 1,
@@ -25,20 +24,13 @@ const UPLOADED_CATALOG: StudioCatalog = {
   ],
 };
 
-function testStore(): Store {
-  const store = createStore();
-  store.set(
-    queryClientAtom,
-    new QueryClient({
-      defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY, retry: false } },
-    }),
-  );
-  return store;
+function testStore(): TestStore {
+  return createTestStore().store;
 }
 
 // atomWithStorage only syncs with MMKV while mounted, so seed/read the raw room
 // through a subscription — the same way components mount the atom in the app.
-function withRoom<T>(store: Store, ownerId: string, run: () => T): T {
+function withRoom<T>(store: TestStore, ownerId: string, run: () => T): T {
   const unsub = store.sub(decorationAtom(ownerId), () => {});
   try {
     return run();
@@ -63,7 +55,7 @@ function Harness() {
   );
 }
 
-function mountStudio(store: ReturnType<typeof createStore>, ownerId: string) {
+function mountStudio(store: TestStore, ownerId: string) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {

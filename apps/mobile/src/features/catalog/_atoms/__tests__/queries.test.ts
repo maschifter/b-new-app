@@ -1,10 +1,7 @@
-import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
+import { createTestStore } from "@/test-utils/render-with-providers";
 import type { StudioCatalog } from "@bnewapp/types";
-import { QueryClient } from "@tanstack/react-query";
 import { waitFor } from "@testing-library/react-native";
 import { Image } from "expo-image";
-import { createStore } from "jotai";
-import { queryClientAtom } from "jotai-tanstack-query";
 import { MMKV } from "react-native-mmkv";
 import { getCatalog } from "../../api";
 import { catalogAtom, catalogItemByIdAtom } from "../queries";
@@ -28,13 +25,7 @@ const REMOTE_CATALOG: StudioCatalog = {
 };
 
 function catalogStore(userId: string | null) {
-  const store = createStore();
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY, retry: false } },
-  });
-  store.set(queryClientAtom, queryClient);
-  if (userId) store.set(queryAuthAtom, { userId, accessToken: "token" });
-  return store;
+  return createTestStore(userId ? { auth: { userId, accessToken: "token" } } : {}).store;
 }
 
 beforeEach(() => {

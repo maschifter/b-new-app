@@ -1,9 +1,6 @@
-import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
+import { createTestQueryClient, renderWithProviders } from "@/test-utils/render-with-providers";
 import type { StudioCatalog } from "@bnewapp/types";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEventAsync, renderAsync, screen } from "@testing-library/react-native";
-import { Provider, createStore } from "jotai";
-import { queryClientAtom } from "jotai-tanstack-query";
+import { fireEventAsync, screen } from "@testing-library/react-native";
 import { getCatalog } from "../../../catalog/api";
 import { getInventory, getWallet, purchaseItem } from "../../api";
 import { InventoryScreen } from "../inventory-screen";
@@ -72,20 +69,10 @@ let userSequence = 0;
 
 async function mount(screenElement: React.ReactElement) {
   userSequence += 1;
-  const store = createStore();
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      mutations: { gcTime: Number.POSITIVE_INFINITY },
-      queries: { gcTime: Number.POSITIVE_INFINITY, retry: false },
-    },
+  await renderWithProviders(screenElement, {
+    queryClient: createTestQueryClient({ mutations: { gcTime: Number.POSITIVE_INFINITY } }),
+    auth: { userId: `shop-user-${userSequence}`, accessToken: "token" },
   });
-  store.set(queryClientAtom, queryClient);
-  store.set(queryAuthAtom, { userId: `shop-user-${userSequence}`, accessToken: "token" });
-  await renderAsync(
-    <QueryClientProvider client={queryClient}>
-      <Provider store={store}>{screenElement}</Provider>
-    </QueryClientProvider>,
-  );
 }
 
 beforeEach(() => {

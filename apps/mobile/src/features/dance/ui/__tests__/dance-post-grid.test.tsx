@@ -1,9 +1,6 @@
-import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
+import { renderWithProviders } from "@/test-utils/render-with-providers";
 import type { DancePostsPage } from "@bnewapp/types";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, renderAsync, screen } from "@testing-library/react-native";
-import { Provider, createStore } from "jotai";
-import { queryClientAtom } from "jotai-tanstack-query";
+import { act, fireEvent, screen } from "@testing-library/react-native";
 import type { ReactElement } from "react";
 import { Text } from "react-native";
 import { getDancePosts } from "../../api";
@@ -47,19 +44,9 @@ function post(
 }
 
 async function mount(header?: ReactElement, onOpenPost?: (postId: string) => void) {
-  const store = createStore();
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY, retry: false } },
+  await renderWithProviders(<DancePostGrid header={header} onOpenPost={onOpenPost} />, {
+    auth: { userId: "dancer", accessToken: "token" },
   });
-  store.set(queryClientAtom, queryClient);
-  store.set(queryAuthAtom, { userId: "dancer", accessToken: "token" });
-  await renderAsync(
-    <QueryClientProvider client={queryClient}>
-      <Provider store={store}>
-        <DancePostGrid header={header} onOpenPost={onOpenPost} />
-      </Provider>
-    </QueryClientProvider>,
-  );
 }
 
 beforeEach(() => {

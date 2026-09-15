@@ -1,12 +1,9 @@
+import { renderWithProviders } from "@/test-utils/render-with-providers";
 import { CURRENT_VERSION, DEFAULT_TEMPLATE_ID } from "@bnewapp/studio-core";
 import type { VisitedStudioRoom } from "@bnewapp/types";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, renderAsync, screen } from "@testing-library/react-native";
+import { fireEvent, screen } from "@testing-library/react-native";
 import { router } from "expo-router";
-import { Provider, createStore } from "jotai";
-import { queryClientAtom } from "jotai-tanstack-query";
 
-import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
 import { visitExploreRoom } from "../../api";
 import { ExploreRoomScreen } from "../explore-room-screen";
 
@@ -27,19 +24,9 @@ function room(): VisitedStudioRoom {
 }
 
 async function mountRoom(ownerId = "owner-1") {
-  const store = createStore();
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY, retry: false } },
+  await renderWithProviders(<ExploreRoomScreen ownerId={ownerId} />, {
+    auth: { userId: "viewer", accessToken: "token" },
   });
-  store.set(queryClientAtom, queryClient);
-  store.set(queryAuthAtom, { userId: "viewer", accessToken: "token" });
-  await renderAsync(
-    <QueryClientProvider client={queryClient}>
-      <Provider store={store}>
-        <ExploreRoomScreen ownerId={ownerId} />
-      </Provider>
-    </QueryClientProvider>,
-  );
 }
 
 beforeEach(() => {

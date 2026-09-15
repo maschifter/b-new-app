@@ -1,11 +1,16 @@
 import {
+  type TestStore,
+  createTestQueryClient,
+  createTestStore,
+} from "@/test-utils/render-with-providers";
+import {
   CURRENT_VERSION,
   DEFAULT_TEMPLATE_ID,
   type DecorationSnapshot,
 } from "@bnewapp/studio-core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, renderHook, waitFor } from "@testing-library/react-native";
-import { Provider, createStore } from "jotai";
+import { Provider } from "jotai";
 import { queryClientAtom } from "jotai-tanstack-query";
 import type { ReactNode } from "react";
 
@@ -25,8 +30,6 @@ const mockedSession = useAuthSession as jest.Mock;
 const mockedGetRoom = getStudioRoom as jest.Mock;
 const mockedSaveRoom = saveStudioRoom as jest.Mock;
 
-type Store = ReturnType<typeof createStore>;
-
 function snapshot(map: DecorationSnapshot["map"]): DecorationSnapshot {
   return { version: CURRENT_VERSION, templateId: DEFAULT_TEMPLATE_ID, map };
 }
@@ -43,7 +46,7 @@ function room(map: DecorationSnapshot["map"]) {
 // atomWithStorage only syncs with MMKV while mounted, so seed the raw room the
 // same way a component does — through a live subscription (mirrors the provider
 // test's helper).
-function seedRoom(store: Store, ownerId: string, map: DecorationSnapshot["map"]) {
+function seedRoom(store: TestStore, ownerId: string, map: DecorationSnapshot["map"]) {
   const unsub = store.sub(decorationAtom(ownerId), () => {});
   store.set(decorationAtom(ownerId), snapshot(map));
   unsub();
@@ -57,21 +60,16 @@ function signedInAs(userId: string) {
 }
 
 function createQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { gcTime: Number.POSITIVE_INFINITY, retry: false },
-      mutations: { gcTime: Number.POSITIVE_INFINITY, retry: false },
-    },
+  return createTestQueryClient({
+    mutations: { gcTime: Number.POSITIVE_INFINITY, retry: false },
   });
 }
 
-function testStore(client = createQueryClient()): Store {
-  const store = createStore();
-  store.set(queryClientAtom, client);
-  return store;
+function testStore(client = createQueryClient()): TestStore {
+  return createTestStore({ queryClient: client }).store;
 }
 
-function mountSync(store: Store, ownerId: string, client = store.get(queryClientAtom)) {
+function mountSync(store: TestStore, ownerId: string, client = store.get(queryClientAtom)) {
   store.set(queryClientAtom, client);
   const wrapper = ({ children }: { children: ReactNode }) => (
     <Provider store={store}>

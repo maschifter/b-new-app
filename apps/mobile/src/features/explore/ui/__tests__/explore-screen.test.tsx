@@ -1,18 +1,8 @@
+import { renderWithProviders } from "@/test-utils/render-with-providers";
 import { CURRENT_VERSION, DEFAULT_TEMPLATE_ID } from "@bnewapp/studio-core";
 import type { ExploreRoom, ExploreRoomsPage } from "@bnewapp/types";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  act,
-  fireEvent,
-  fireEventAsync,
-  renderAsync,
-  screen,
-  waitFor,
-} from "@testing-library/react-native";
-import { Provider, createStore } from "jotai";
-import { queryClientAtom } from "jotai-tanstack-query";
+import { act, fireEvent, fireEventAsync, screen, waitFor } from "@testing-library/react-native";
 
-import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
 import { getExploreRooms } from "../../api";
 import { ExploreScreen } from "../explore-screen";
 
@@ -52,19 +42,9 @@ function serve(pages: Record<string, ExploreRoomsPage>): string[] {
 }
 
 async function mountExplore() {
-  const store = createStore();
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY, retry: false } },
+  await renderWithProviders(<ExploreScreen />, {
+    auth: { userId: "viewer", accessToken: "token" },
   });
-  store.set(queryClientAtom, queryClient);
-  store.set(queryAuthAtom, { userId: "viewer", accessToken: "token" });
-  await renderAsync(
-    <QueryClientProvider client={queryClient}>
-      <Provider store={store}>
-        <ExploreScreen />
-      </Provider>
-    </QueryClientProvider>,
-  );
 }
 
 function label(ownerId: string): string {

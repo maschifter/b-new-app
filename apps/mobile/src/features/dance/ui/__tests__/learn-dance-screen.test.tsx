@@ -1,11 +1,8 @@
+import { renderWithProviders } from "@/test-utils/render-with-providers";
 import type { DanceMove } from "@bnewapp/types";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEventAsync, renderAsync, screen, waitFor } from "@testing-library/react-native";
-import { Provider, createStore } from "jotai";
-import { queryClientAtom } from "jotai-tanstack-query";
+import { act, fireEventAsync, screen, waitFor } from "@testing-library/react-native";
 import { Dimensions } from "react-native";
 
-import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
 import { getDanceMove } from "../../api";
 import { LearnDanceScreen } from "../learn-dance-screen";
 
@@ -65,19 +62,9 @@ function move(overrides: Partial<DanceMove> = {}): DanceMove {
 }
 
 async function mount() {
-  const store = createStore();
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY, retry: false } },
+  return renderWithProviders(<LearnDanceScreen moveId="00000000-0000-4000-8000-000000000001" />, {
+    auth: { userId: "dancer", accessToken: "token" },
   });
-  store.set(queryClientAtom, queryClient);
-  store.set(queryAuthAtom, { userId: "dancer", accessToken: "token" });
-  return renderAsync(
-    <QueryClientProvider client={queryClient}>
-      <Provider store={store}>
-        <LearnDanceScreen moveId="00000000-0000-4000-8000-000000000001" />
-      </Provider>
-    </QueryClientProvider>,
-  );
 }
 
 beforeEach(() => {

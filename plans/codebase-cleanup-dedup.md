@@ -315,19 +315,27 @@ Seventeen test files each rebuild the same wrapper: `createStore()` →
 → `store.set(queryClientAtom, queryClient)` → `store.set(queryAuthAtom, …)` →
 nested `<Provider><QueryClientProvider>`.
 
-- [ ] Add `apps/mobile/src/test-utils/render-with-providers.tsx` exposing the
-      store and query client to the caller (several tests assert on them).
-- [ ] Migrate the 17 files: `explore-screen`, `explore-room-screen`,
-      `shop-screen`, `studio-flow`, `studio-sync`, `studio-provider`,
-      `studio/state/atoms`, `catalog/_atoms/queries`, `dance/_atoms/queries`,
-      `dance/_atoms/effects`, `dance-result-screen`,
-      `choose-dance-moves-screen`, `dance-post-grid`, `record-dance-screen`,
-      `learn-dance-screen`, `dance-post-detail-screen`, `session-provider`.
-      The four `_atoms`/state tests drive atoms directly rather than rendering a
-      screen, so they may need a store-only variant of the helper — do not force
-      a render on them.
-- [ ] Check `jest.config.js` `moduleNameMapper` / `testPathIgnorePatterns` so the
-      new `test-utils/` directory is not collected as a test suite.
+- [x] Add `apps/mobile/src/test-utils/render-with-providers.tsx` exposing the
+      store and query client to the caller (several tests assert on them). Ships
+      three pieces: `createTestQueryClient(overrides)` (merges over
+      `gcTime: Infinity, retry: false`), `createTestStore({ queryClient, auth })`
+      (the store-only variant), and `renderWithProviders(ui, options)`, which
+      returns the render result plus `store` and `queryClient`.
+- [x] Migrate the 17 files. **15 migrated; 2 left alone, deliberately:**
+      - `lib/auth/__tests__/session-provider.test.tsx` — it tests the provider that
+        *writes* the auth atom, so it must not be seeded, and its client keeps
+        react-query's default `retry` on purpose. Its local `mount` wrapper stays.
+      - `dance/_atoms/__tests__/queries.test.ts` — `danceScoreAtom` owns its own
+        retry/refetch policy, so the client must leave `retry` at the default
+        rather than take the helper's `retry: false`. Kept local with a comment
+        saying why; the file is otherwise unchanged.
+      `dance/_atoms/__tests__/effects.test.ts` needed no change either: it drives
+      plain atoms and never builds a query client.
+      The four `_atoms`/state tests use the store-only `createTestStore`, as planned.
+- [x] Check `jest.config.js` `moduleNameMapper` / `testPathIgnorePatterns` so the
+      new `test-utils/` directory is not collected as a test suite. No edit needed:
+      jest-expo collects `__tests__/**` and `*.test.*`, and `src/test-utils/` is
+      neither. Suite count is unchanged at 29.
 
 **Acceptance:** `corepack pnpm --filter @bnewapp/mobile test` green, same test count.
 
@@ -485,7 +493,7 @@ the Studio/Explore/Shop screens render a real room end to end on device.
 | 4 | Server constants & select strings | low | [x] |
 | 5 | Admin app constants | very low | [x] STATUS_CHOICES only |
 | 6 | Mobile query-atom helper | medium | [x] reduced |
-| 7 | Mobile test render helper | low | [ ] |
+| 7 | Mobile test render helper | low | [x] |
 | 8 | Mobile color tokens | low | [ ] |
 | 9 | Mobile API layer consistency | low | [ ] |
 | 10 | Shared package boundaries | medium-high | [ ] |

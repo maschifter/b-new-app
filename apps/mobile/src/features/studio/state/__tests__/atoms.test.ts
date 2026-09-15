@@ -1,22 +1,14 @@
+import { type TestStore, createTestStore } from "@/test-utils/render-with-providers";
 import { CATALOG } from "@bnewapp/studio-core";
 import type { StudioCatalog } from "@bnewapp/types";
-import { QueryClient } from "@tanstack/react-query";
-import { createStore } from "jotai";
 import { queryClientAtom } from "jotai-tanstack-query";
 import { decorationAtom } from "../atoms";
 
-type Store = ReturnType<typeof createStore>;
-
-function testStore(): Store {
-  const store = createStore();
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY, retry: false } },
-  });
-  store.set(queryClientAtom, queryClient);
-  return store;
+function testStore(): TestStore {
+  return createTestStore().store;
 }
 
-function withCatalog(catalog: StudioCatalog): Store {
+function withCatalog(catalog: StudioCatalog): TestStore {
   const store = testStore();
   store.get(queryClientAtom).setQueryData(["studio-catalog", null], catalog);
   return store;
@@ -25,7 +17,7 @@ function withCatalog(catalog: StudioCatalog): Store {
 // atomWithStorage only syncs with MMKV while the atom is mounted (its onMount
 // reads storage; its writes flush to storage). Components mount atoms via
 // useAtom, so this mirrors real usage: subscribe, run, unsubscribe.
-function withRoom<T>(store: Store, ownerId: string, run: () => T): T {
+function withRoom<T>(store: TestStore, ownerId: string, run: () => T): T {
   const unsub = store.sub(decorationAtom(ownerId), () => {});
   try {
     return run();

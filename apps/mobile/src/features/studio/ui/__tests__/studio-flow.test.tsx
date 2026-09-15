@@ -1,8 +1,9 @@
 import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
+import { createTestQueryClient, createTestStore } from "@/test-utils/render-with-providers";
 import type { StudioCatalog } from "@bnewapp/types";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react-native";
-import { Provider, createStore } from "jotai";
+import { Provider } from "jotai";
 import { queryClientAtom } from "jotai-tanstack-query";
 import { MMKV } from "react-native-mmkv";
 import { getCatalog } from "../../../catalog/api";
@@ -22,14 +23,8 @@ jest.mock("../../../shop/api", () => ({
 const mockedGetCatalog = jest.mocked(getCatalog);
 const mockedGetInventory = jest.mocked(getInventory);
 
-function testStore(
-  queryClient = new QueryClient({
-    defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY, retry: false } },
-  }),
-) {
-  const store = createStore();
-  store.set(queryClientAtom, queryClient);
-  return store;
+function testStore(queryClient = createTestQueryClient()) {
+  return createTestStore({ queryClient }).store;
 }
 
 // Wire the real stage + picker to provider state without the route chrome

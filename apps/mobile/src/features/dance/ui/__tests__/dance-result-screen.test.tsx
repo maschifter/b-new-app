@@ -1,9 +1,6 @@
-import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
+import { createTestQueryClient, renderWithProviders } from "@/test-utils/render-with-providers";
 import { mergeAudioOffsetMs } from "@bnewapp/dance-core";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEventAsync, renderAsync, screen } from "@testing-library/react-native";
-import { Provider, createStore } from "jotai";
-import { queryClientAtom } from "jotai-tanstack-query";
+import { fireEventAsync, screen } from "@testing-library/react-native";
 import {
   createDancePost,
   discardUploadingDancePost,
@@ -62,25 +59,19 @@ const mockedMarkDancePostUploaded = markDancePostUploaded as jest.Mock;
 const mockedUploadDanceVideo = uploadDanceVideo as jest.Mock;
 
 async function mount(clipAudioOffsetMs?: number) {
-  const store = createStore();
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { gcTime: 0 } },
-  });
-  store.set(queryClientAtom, queryClient);
-  store.set(queryAuthAtom, { userId: "dancer", accessToken: "token" });
-  return renderAsync(
-    <QueryClientProvider client={queryClient}>
-      <Provider store={store}>
-        <DanceResultScreen
-          moveId={MOVE_ID}
-          clipPath="file:///tmp/dance-attempt.mp4"
-          clipDuration={12.4}
-          {...(clipAudioOffsetMs === undefined ? {} : { clipAudioOffsetMs })}
-          onRecordAgain={onRecordAgain}
-          onDone={onDone}
-        />
-      </Provider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <DanceResultScreen
+      moveId={MOVE_ID}
+      clipPath="file:///tmp/dance-attempt.mp4"
+      clipDuration={12.4}
+      {...(clipAudioOffsetMs === undefined ? {} : { clipAudioOffsetMs })}
+      onRecordAgain={onRecordAgain}
+      onDone={onDone}
+    />,
+    {
+      queryClient: createTestQueryClient({ queries: { gcTime: 0 }, mutations: { gcTime: 0 } }),
+      auth: { userId: "dancer", accessToken: "token" },
+    },
   );
 }
 

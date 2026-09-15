@@ -1,10 +1,7 @@
+import { renderWithProviders } from "@/test-utils/render-with-providers";
 import type { DanceGenre, DanceMove, DanceMovesPage } from "@bnewapp/types";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEventAsync, renderAsync, screen, waitFor } from "@testing-library/react-native";
-import { Provider, createStore } from "jotai";
-import { queryClientAtom } from "jotai-tanstack-query";
+import { act, fireEventAsync, screen, waitFor } from "@testing-library/react-native";
 
-import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
 import { getDanceGenres, getDanceMoves } from "../../api";
 import { ChooseDanceMovesScreen } from "../choose-dance-moves-screen";
 
@@ -65,19 +62,9 @@ function genre(id: string): DanceGenre {
 }
 
 async function mount() {
-  const store = createStore();
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY, retry: false } },
+  await renderWithProviders(<ChooseDanceMovesScreen onOpenMove={jest.fn()} />, {
+    auth: { userId: "dancer", accessToken: "token" },
   });
-  store.set(queryClientAtom, queryClient);
-  store.set(queryAuthAtom, { userId: "dancer", accessToken: "token" });
-  await renderAsync(
-    <QueryClientProvider client={queryClient}>
-      <Provider store={store}>
-        <ChooseDanceMovesScreen onOpenMove={jest.fn()} />
-      </Provider>
-    </QueryClientProvider>,
-  );
 }
 
 beforeEach(() => {

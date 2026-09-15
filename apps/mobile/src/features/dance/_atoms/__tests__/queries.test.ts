@@ -35,6 +35,8 @@ function status(overrides: Partial<ScanStatus> = {}): ScanStatus {
   };
 }
 
+// Not `createTestStore`: the atom under test owns retry/refetch, so this client must
+// leave `retry` at its default rather than the shared helper's `retry: false`.
 function scanStore(startedAt: number) {
   const store = createStore();
   const queryClient = new QueryClient({

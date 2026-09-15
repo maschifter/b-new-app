@@ -1,11 +1,14 @@
+import {
+  createTestQueryClient,
+  createTestStore,
+  renderWithProviders,
+} from "@/test-utils/render-with-providers";
 import type { DanceMove } from "@bnewapp/types";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEventAsync, renderAsync, screen, waitFor } from "@testing-library/react-native";
-import { Provider, createStore } from "jotai";
-import { queryClientAtom } from "jotai-tanstack-query";
+import type { QueryClient } from "@tanstack/react-query";
+import { act, fireEventAsync, screen, waitFor } from "@testing-library/react-native";
+import type { createStore } from "jotai";
 import { Camera, useVideoOutput } from "react-native-vision-camera";
 
-import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
 import { simulatedDanceRecordingEnabledAtom, useBackDanceCameraAtom } from "../../_atoms/ui";
 import { getDanceMove, getDanceMoves } from "../../api";
 import { createSimulatedDanceRecorder } from "../../recording-adapter";
@@ -110,24 +113,16 @@ function move(overrides: Partial<DanceMove> = {}): DanceMove {
 async function mount(danceMove: DanceMove = move(), configure?: (store: JotaiStore) => void) {
   mockedGetDanceMove.mockResolvedValue(danceMove);
   mockedGetDanceMoves.mockResolvedValue({ items: [], nextCursor: null });
-  const store = createStore();
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { gcTime: Number.POSITIVE_INFINITY, retry: false },
-      mutations: { gcTime: 0 },
-    },
+  const { store, queryClient } = createTestStore({
+    queryClient: createTestQueryClient({ mutations: { gcTime: 0 } }),
+    auth: { userId: "dancer", accessToken: "token" },
   });
   queryClients.push(queryClient);
-  store.set(queryClientAtom, queryClient);
-  store.set(queryAuthAtom, { userId: "dancer", accessToken: "token" });
   configure?.(store);
 
-  const result = await renderAsync(
-    <QueryClientProvider client={queryClient}>
-      <Provider store={store}>
-        <RecordDanceScreen moveId={MOVE_ID} onRecordingComplete={mockRecordingComplete} />
-      </Provider>
-    </QueryClientProvider>,
+  const result = await renderWithProviders(
+    <RecordDanceScreen moveId={MOVE_ID} onRecordingComplete={mockRecordingComplete} />,
+    { store },
   );
   mountedScreens.push(result);
   return result;
