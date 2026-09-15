@@ -1,9 +1,18 @@
+import type { DanceContentStatus } from "@bnewapp/types";
 import { z } from "zod";
 
 export const PRO_DANCER_VIDEO_ERROR = "A dance move requires a pro dancer video URL";
 export const DANCER_TIP_VIDEO_ERROR = "A dance move requires a dancer tip video URL";
 
 const status = z.enum(["draft", "published"]);
+
+// Narrows the plain `text` status column Supabase reads back. The declared return
+// type keeps the enum above and the shared DanceContentStatus from drifting apart.
+export function parseDanceContentStatus(value: string): DanceContentStatus {
+  const parsed = status.safeParse(value);
+  if (!parsed.success) throw new Error(`Unexpected dance content status: ${value}`);
+  return parsed.data;
+}
 const uuid = z.string().uuid();
 const nullableUrl = z.string().trim().url().nullable();
 const requiredUrl = z.string().trim().url();

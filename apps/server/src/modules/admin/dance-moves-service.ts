@@ -4,10 +4,11 @@ import type { FastifyInstance } from "fastify";
 import { pickDefined } from "../../lib/pick-defined.js";
 import {
   type CreateDanceMoveBody,
-  DANCE_MOVE_UPDATE_COLUMNS,
   DANCER_TIP_VIDEO_ERROR,
+  DANCE_MOVE_UPDATE_COLUMNS,
   PRO_DANCER_VIDEO_ERROR,
   type UpdateDanceMoveBody,
+  parseDanceContentStatus,
 } from "./dance-content-schemas.js";
 
 const MOVE_COLUMNS =
@@ -48,16 +49,11 @@ interface ListDanceMovesOptions {
   ids?: string[];
 }
 
-function normalizeStatus(value: string): DanceContentStatus {
-  if (value === "draft" || value === "published") return value;
-  throw new Error(`Unexpected dance content status: ${value}`);
-}
-
 function toAdminMove(row: DanceMoveWithGenres): AdminDanceMove {
   const { dance_move_genres, filter: _filter, status, ...move } = row;
   return {
     ...move,
-    status: normalizeStatus(status),
+    status: parseDanceContentStatus(status),
     genre_ids: dance_move_genres.map(({ genre_id }) => genre_id),
   };
 }

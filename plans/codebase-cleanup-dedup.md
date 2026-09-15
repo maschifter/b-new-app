@@ -13,7 +13,8 @@ changes. Every phase must land with the same observable behavior it started with
 - One commit per phase, landed directly on `master`. Do not bundle phases — the
   point is that each is independently revertible.
 - Each phase ends green on: `corepack pnpm typecheck`, `corepack pnpm test`,
-  `corepack pnpm lint`.
+  `corepack pnpm lint`. Run `corepack pnpm format` too — `lint` is `biome lint`,
+  which does not check import order.
 - No unrelated cleanup inside a phase. If something new is spotted, add it to
   §"Backlog / not scheduled" instead of fixing it in place.
 - Mobile phases that touch rendered UI need device verification, not just tests.
@@ -163,9 +164,11 @@ same `{ rows, total }` return, same error ladder.
 `normalizeStatus` is copy-pasted **verbatim three times**:
 `dance-genres-service.ts:28`, `music-tracks-service.ts:31`, `dance-moves-service.ts:49`.
 
-- [ ] Step 3a — extract `parseDanceContentStatus` to a single module (server
-      `lib/`, or `packages/types` if it should be shared with admin). Replace all
-      three copies. Land this on its own; it is independently useful.
+- [x] Step 3a — extract `parseDanceContentStatus` to a single module. Landed in
+      `modules/admin/dance-content-schemas.ts` rather than `lib/`, so it reuses the
+      Zod `status` enum already defined there instead of restating the literals;
+      `DanceContentStatus` never leaves the server, so `packages/types` was not
+      needed. All three copies replaced.
 - [ ] Step 3b — extract the list-query builder:
       `applyListQuery(query, { ids, start, end, sort, order, sortable, defaultSort })`.
       Adopt it in genres, tracks, moves, and the catalog service. Keep each
@@ -453,7 +456,7 @@ the Studio/Explore/Shop screens render a real room end to end on device.
 | 0 | Dead code removal | none | [x] |
 | 1 | Server test helpers | low | [x] |
 | 2 | `pickDefined` | low | [x] |
-| 3 | Shared admin resource service | medium | [ ] |
+| 3 | Shared admin resource service | medium | 3a done; 3b/3c pending |
 | 4 | Server constants & select strings | low | [ ] |
 | 5 | Admin app constants | very low | [ ] |
 | 6 | Mobile query-atom helper | medium | [ ] |

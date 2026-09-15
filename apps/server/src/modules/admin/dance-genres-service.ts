@@ -6,6 +6,7 @@ import {
   type CreateDanceGenreBody,
   DANCE_GENRE_UPDATE_COLUMNS,
   type UpdateDanceGenreBody,
+  parseDanceContentStatus,
 } from "./dance-content-schemas.js";
 
 const COLUMNS = "id, legacy_id, name, status, sort_order, created_at, updated_at";
@@ -30,13 +31,8 @@ interface ListDanceGenresOptions {
   ids?: string[];
 }
 
-function normalizeStatus(value: string): DanceContentStatus {
-  if (value === "draft" || value === "published") return value;
-  throw new Error(`Unexpected dance content status: ${value}`);
-}
-
 function toAdminGenre(row: Database["public"]["Tables"]["dance_genres"]["Row"]): AdminDanceGenre {
-  return { ...row, status: normalizeStatus(row.status) };
+  return { ...row, status: parseDanceContentStatus(row.status) };
 }
 
 function genreUpdate(body: UpdateDanceGenreBody) {

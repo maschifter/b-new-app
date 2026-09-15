@@ -6,6 +6,7 @@ import {
   type CreateMusicTrackBody,
   MUSIC_TRACK_UPDATE_COLUMNS,
   type UpdateMusicTrackBody,
+  parseDanceContentStatus,
 } from "./dance-content-schemas.js";
 
 const COLUMNS =
@@ -33,13 +34,8 @@ interface ListMusicTracksOptions {
   ids?: string[];
 }
 
-function normalizeStatus(value: string): DanceContentStatus {
-  if (value === "draft" || value === "published") return value;
-  throw new Error(`Unexpected dance content status: ${value}`);
-}
-
 function toAdminTrack(row: Database["public"]["Tables"]["music_tracks"]["Row"]): AdminMusicTrack {
-  return { ...row, status: normalizeStatus(row.status) };
+  return { ...row, status: parseDanceContentStatus(row.status) };
 }
 
 function trackUpdate(body: UpdateMusicTrackBody) {
