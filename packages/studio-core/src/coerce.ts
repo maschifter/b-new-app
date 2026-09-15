@@ -11,7 +11,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isContentRef(value: unknown): value is ContentRef {
+export function isContentRef(value: unknown): value is ContentRef {
   return (
     isRecord(value) &&
     (value.source === "catalog" || value.source === "video") &&
@@ -32,4 +32,19 @@ export function coerceSnapshot(value: unknown): DecorationSnapshot {
     templateId: value.templateId,
     map: value.map as Record<string, ContentRef>,
   };
+}
+
+/**
+ * Every catalog item id placed in a raw decoration map, deduped. Unlike
+ * `coerceSnapshot`, this is tolerant per entry: a malformed placement is skipped
+ * rather than discarding the whole map, because a caller asking "what does this
+ * user have placed?" must not lose real placements to one bad neighbour.
+ */
+export function catalogItemIdsIn(map: unknown): string[] {
+  if (!isRecord(map)) return [];
+  const ids = new Set<string>();
+  for (const value of Object.values(map)) {
+    if (isContentRef(value) && value.source === "catalog") ids.add(value.id);
+  }
+  return [...ids];
 }

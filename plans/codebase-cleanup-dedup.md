@@ -481,10 +481,14 @@ The `migrate(coerceSnapshot(...))` → `templateById(id) ?? ROOM_TEMPLATE` →
 hand-rolls `ContentRef` validation (`source === "catalog"` + `typeof id === "string"`)
 that `coerceSnapshot` already performs.
 
-- [ ] Either route it through `coerceSnapshot`, or export a narrow
-      `catalogItemIdsIn(map)` from `studio-core`.
-- [ ] Add a studio-core test covering a map that mixes `catalog` and `video`
-      refs plus malformed entries.
+- [x] Exported a narrow `catalogItemIdsIn(map)` from `studio-core` rather than
+      routing through `coerceSnapshot`. `coerceSnapshot` is all-or-nothing by
+      design — one malformed placement discards the whole map — so reusing it here
+      would make a single bad entry hide every item the user really has placed.
+      `catalogItemIdsIn` is tolerant per entry, matching the behavior it replaces,
+      and both now share the one `isContentRef` guard.
+- [x] Add a studio-core test covering a map that mixes `catalog` and `video`
+      refs plus malformed entries (also: dedup, and a non-object map).
 
 **Acceptance:** full `corepack pnpm test` green; server starts; mobile builds and
 the Studio/Explore/Shop screens render a real room end to end on device.
@@ -505,7 +509,7 @@ the Studio/Explore/Shop screens render a real room end to end on device.
 | 7 | Mobile test render helper | low | [x] |
 | 8 | Mobile color tokens | low | [x] code; device check pending |
 | 9 | Mobile API layer consistency | low | [x] |
-| 10 | Shared package boundaries | medium-high | [ ] |
+| 10 | Shared package boundaries | medium-high | [x] |
 
 Phases 0, 1, 5 and 8 are independent and can be done in any order or in
 parallel. Phase 3 requires 1 and 2. Phase 7 should follow 6. Phase 10 should be

@@ -1,3 +1,4 @@
+import { catalogItemIdsIn } from "@bnewapp/studio-core";
 import type { Database, Inventory, PurchaseItemResult, Wallet } from "@bnewapp/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -20,24 +21,6 @@ export class InsufficientGlowError extends Error {
     super("Not enough Glow to purchase this item");
     this.name = "InsufficientGlowError";
   }
-}
-
-function placedCatalogItemIds(map: unknown): string[] {
-  if (typeof map !== "object" || map === null || Array.isArray(map)) return [];
-  const ids = new Set<string>();
-  for (const value of Object.values(map)) {
-    if (
-      typeof value === "object" &&
-      value !== null &&
-      "source" in value &&
-      value.source === "catalog" &&
-      "id" in value &&
-      typeof value.id === "string"
-    ) {
-      ids.add(value.id);
-    }
-  }
-  return [...ids];
 }
 
 function mapGlow(value: number | null): number {
@@ -72,7 +55,7 @@ export function createShopService(supabase: SupabaseClient<Database>) {
     }
 
     const starterIds = (starterRows ?? []).map(({ id }) => id);
-    const placedIds = placedCatalogItemIds(room?.map);
+    const placedIds = catalogItemIdsIn(room?.map);
     let existingPlacedIds: string[] = [];
     if (placedIds.length > 0) {
       const { data, error } = await supabase.from("catalog_items").select("id").in("id", placedIds);
