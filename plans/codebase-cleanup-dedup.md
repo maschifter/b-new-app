@@ -10,8 +10,8 @@ changes. Every phase must land with the same observable behavior it started with
 ## Ground rules
 
 - Run from the repository root with `corepack pnpm`, never bare `pnpm`.
-- One phase per branch/PR. Do not bundle phases — the point is that each is
-  independently revertible.
+- One commit per phase, landed directly on `master`. Do not bundle phases — the
+  point is that each is independently revertible.
 - Each phase ends green on: `corepack pnpm typecheck`, `corepack pnpm test`,
   `corepack pnpm lint`.
 - No unrelated cleanup inside a phase. If something new is spotted, add it to
@@ -80,7 +80,7 @@ The same three helpers are copy-pasted across the suite today:
 | Helper | Duplicated in |
 |---|---|
 | `testConfig` (verbatim) | `admin.test.ts`, `dance-routes.test.ts`, `studio.test.ts`, `shop.test.ts` |
-| `httpErrors` object | `admin.test.ts`, `admin-catalog.test.ts`, `admin-dance-content.test.ts`, `dance-media-service.test.ts`, `dance-post-service.test.ts` |
+| `httpErrors` object | `admin.test.ts`, `admin-catalog.test.ts`, `admin-dance-content.test.ts`, `dance-media-service.test.ts`, `dance-post-service.test.ts`; `dance-routes.test.ts` and `shop.test.ts` build the same object inline in their fake Fastify app |
 | chainable Supabase query-builder mock | 11 files |
 
 The query-builder copies have **drifted**: `shop.test.ts` stubs
@@ -89,24 +89,24 @@ The query-builder copies have **drifted**: `shop.test.ts` stubs
 method the code under test calls produces a confusing crash — or, worse, a pass
 down an unintended path. This is the real reason to fix it, not tidiness.
 
-- [ ] Create `apps/server/tests/helpers/config.ts` exporting `testConfig`.
-- [ ] Create `apps/server/tests/helpers/http-errors.ts` exporting `httpError`
+- [x] Create `apps/server/tests/helpers/config.ts` exporting `testConfig`.
+- [x] Create `apps/server/tests/helpers/http-errors.ts` exporting `httpError`
       and the `httpErrors` object (`badRequest`, `forbidden`, `conflict`,
       `notFound`, `internalServerError`, `serviceUnavailable`).
-- [ ] Create `apps/server/tests/helpers/supabase.ts` exporting one
+- [x] Create `apps/server/tests/helpers/supabase.ts` exporting one
       `queryBuilder(result)` that stubs the **union** of every method currently
       stubbed anywhere, plus `single`, `maybeSingle`, and the `then` thenable
       (keep the `biome-ignore lint/suspicious/noThenProperty` comment).
-- [ ] Migrate the 4 `testConfig` files. `health.test.ts` is **not** one of
+- [x] Migrate the 4 `testConfig` files. `health.test.ts` is **not** one of
       them: it inlines three config literals that deliberately differ
       (`NODE_ENV: "production"`, `ALLOWED_ORIGINS`). Only fold it in if the
       helper takes an override argument; otherwise leave it alone.
-- [ ] Migrate the 5 `httpErrors` files.
-- [ ] Migrate the 11 query-builder files **one at a time**, running that file's
+- [x] Migrate the 5 `httpErrors` files.
+- [x] Migrate the 11 query-builder files **one at a time**, running that file's
       tests after each. Where a local mock was deliberately narrower (asserting a
       method is *not* reached), keep the local variant and add a comment saying
       why — do not force it onto the shared helper.
-- [ ] Note any test that changes behavior under the wider mock. That is a
+- [x] Note any test that changes behavior under the wider mock. That is a
       finding, not a merge blocker; record it in the PR description.
 
 **Acceptance:** `corepack pnpm --filter @bnewapp/server test` green with the same
@@ -448,7 +448,7 @@ the Studio/Explore/Shop screens render a real room end to end on device.
 | Phase | Area | Risk | Status |
 |---|---|---|---|
 | 0 | Dead code removal | none | [x] |
-| 1 | Server test helpers | low | [ ] |
+| 1 | Server test helpers | low | [x] |
 | 2 | `pickDefined` | low | [ ] |
 | 3 | Shared admin resource service | medium | [ ] |
 | 4 | Server constants & select strings | low | [ ] |
