@@ -445,11 +445,9 @@ describe("dance post service", () => {
 
     await expect(service.discardUploadingPost(OWNER_ID, POST_ID)).resolves.toBeUndefined();
 
-    expect(remove).toHaveBeenCalledWith([
-      `${OWNER_ID}/${POST_ID}.mp4`,
-      `${OWNER_ID}/${POST_ID}-merged.mp4`,
-      `${OWNER_ID}/${POST_ID}.jpg`,
-    ]);
+    // Only the recording: an uploading post has no derived objects, so listing them would
+    // be an unconditional delete for paths that never exist.
+    expect(remove).toHaveBeenCalledWith([`${OWNER_ID}/${POST_ID}.mp4`]);
     expect(deleted.delete).toHaveBeenCalledOnce();
     expect(deleted.select).toHaveBeenCalledWith("video_path");
     expect(deleted.eq).toHaveBeenCalledWith("status", "uploading");

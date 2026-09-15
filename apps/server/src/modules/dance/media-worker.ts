@@ -190,8 +190,10 @@ export function createMediaWorker(options: MediaWorkerOptions) {
       const isTerminal = error instanceof TerminalMediaError || attempts >= MAX_ATTEMPTS;
       // A terminal failure leaves the post untouched: it keeps playing the original
       // silent recording, which is today's behaviour.
+      // The only signal a terminal failure produces: the UI stays silent by design, so the
+      // log carries everything needed to trace one back to the post the user sees.
       options.logger.error(
-        { err: error, jobId: job.id, terminal: isTerminal },
+        { err: error, jobId: job.id, postId: job.post_id, attempts, terminal: isTerminal },
         "Dance media job failed",
       );
       const { error: updateError } = await options.supabase

@@ -1,8 +1,8 @@
 # Dance Post Media — Music Merge, Thumbnail, Blurhash (Plan)
 
-Status: **in progress**. All four milestones shipped (2026-09-15); what remains is device
-verification, the staging container check in §5, and the §8 sign-offs. Proposed 2026-09-14
-and revised four times after review. Follow-up to `plans/dance-flow.md`, which shipped V1 with the
+Status: **in progress**. All four milestones shipped and the §8 questions settled
+(2026-09-15); what remains is device verification and the staging container check in §5.
+Proposed 2026-09-14 and revised four times after review. Follow-up to `plans/dance-flow.md`, which shipped V1 with the
 *original, silent* recording as the only stored artifact.
 
 ## Goal
@@ -711,28 +711,69 @@ Three pieces of server plumbing this implies, none of which are optional:
   managed queue).
 - HLS/adaptive playback; progressive MP4 is fine at this size.
 
-## 8. Open questions
+## 8. Decisions (settled 2026-09-15)
 
-All four carry a proposed answer; review concurred with each and none is blocking. They are kept
-open for owner sign-off, not because the trade-off is still undecided. The last one's proposed
-answer is "do it now", so it needs a decision before milestone 2 rather than after shipping.
+All four were proposed with an answer and are now closed. Three keep the proposed answer;
+the fourth is implemented differently from its proposal, and says why.
 
-- Should a terminal media failure surface anywhere in the UI, or stay silent (the post
-  simply keeps the original video)? Proposed: silent, with a server log + metric.
-- Nothing invalidates the posts query when a media job completes. The result screen polls
-  the score only, so a post recorded a moment ago renders the video-player cell and only
-  upgrades to poster + blurhash on the next pull-to-refresh or tab remount. Proposed:
-  accept it — the fallback cell is today's behaviour and the window is one job — but it is
-  a decision, not an oversight. The alternative is extending the existing score poll to
-  also watch `thumbnailUrl`, which keeps a screen polling for something cosmetic.
-- Retention: keep the original after a successful merge (cheap insurance, doubles
-  storage) or delete it once the scan has completed? Proposed: keep for now, revisit when
-  storage cost is measurable.
-- Derived-object cleanup. `discardUploadingPost` removes only `video_path`, and it only fires
-  pre-upload, so nothing deletes `<postId>-merged.mp4` / `<postId>.jpg` if a post is ever
-  removed. Harmless today (posts are not deletable), which is exactly why this is cheap now
-  and expensive later. **Proposed: settle it in this plan rather than defer it** — add a
-  `derivedObjectPaths(ownerId, postId)` helper next to the worker's upload step and call it
-  from `discardUploadingPost`, so the single place that knows the derived naming scheme is
-  also the place any future deletion path will find. The retention question above is
-  genuinely open; this one is only open because nobody has written the three lines.
+**1. A terminal media failure stays silent in the UI.** Confirmed. The post keeps the
+original silent recording and the video cell, which is exactly the pre-plan behaviour, so
+there is nothing the user could act on and no retry to offer them — a banner would be noise
+about something they never asked for. The signal is the server log, which now carries
+`postId` alongside `jobId`, `attempts` and a `terminal` flag so a failure is traceable to
+the post the user actually sees.
+
+The proposal's "+ metric" is **deliberately not implemented**: the repo has no metrics stack
+(no prometheus/statsd/otel anywhere in `apps/server`), and introducing one is its own change
+with its own deployment story, not a footnote to this plan. Revisit when terminal failures
+stop being rare enough to read in logs.
+
+**2. Nothing invalidates the posts query when a media job completes — accepted.** Verified
+rather than waved through: `/profile` is a **pushed stack route** (`app/profile.tsx`), not a
+tab, so `DancePostGrid` remounts on every visit; and the app's `QueryClient` is constructed
+with the defaults (`staleTime: 0`, `refetchOnMount: true`), so each visit background-refetches
+`["dance-posts", userId]` and picks up whatever media state the server has by then. The media
+job also runs concurrently with the scan the result screen is already polling, and the scan is
+the slower of the two, so in the common path the poster is ready before the user ever reaches
+the grid.
+
+The real exposure is therefore only "the job finishes while the grid is already on screen",
+which pull-to-refresh or the next visit resolves, and whose fallback is today's behaviour.
+
+**This answer depends on Profile staying a pushed route.** If it ever becomes a tab that stays
+mounted, the list stops refreshing on its own — and what breaks first is not the poster but the
+newly recorded post itself, which relies on the same refetch. Revisit the two together.
+
+**3. Keep the original recording after a successful merge.** Confirmed, and for stronger
+reasons than "cheap insurance":
+
+- The scan worker reads `video_path` on its own retry schedule, independent of the media job.
+  Deleting the original on merge would race a scan that has not finished.
+- The media job's re-run safety depends on its input still existing: both uploads are
+  `upsert: true` and the job is retryable precisely because the recording is still there.
+  Deleting it makes any post whose merge later needs re-running unrecoverable.
+
+Storage cost at V1 volume is not measurable. Revisit only against a real storage bill, and
+then only for posts whose scan has reached `completed`.
+
+**4. Derived-object cleanup — the naming helper shipped; the `discardUploadingPost` call did
+not.** This is the one place the implementation departs from the proposal.
+
+What shipped: `derivedObjectPaths(ownerId, postId)` lives in `modules/dance/media-paths.ts`,
+a leaf module so `service.ts` does not drag the worker's `ffmpeg-static` imports into its
+graph. The worker uploads through it. That satisfies the actual goal — one home for the
+naming scheme, which any future deletion path will find.
+
+What did not: calling it from `discardUploadingPost`. That path fires only on a post still in
+`uploading`, and a post has no derived objects until `markUploaded` enqueues its media job —
+nothing anywhere moves a post back to `uploading`, and the orphan sweep excludes that status
+explicitly. So the removal would be a guaranteed no-op that nonetheless issues an
+unconditional Storage delete for two paths that never exist, resting on an unverified
+assumption about how the Storage API treats missing prefixes. If it errors rather than
+ignoring them, every abandoned upload starts 500-ing *and* leaks the recording, because the
+three paths share one `remove` call. `discardUploadingPost` therefore removes only the
+recording it is actually responsible for.
+
+Posts are still not deletable, so nothing is leaked today. When a real deletion path is added,
+it is the thing that should call `derivedObjectPaths` — and it should verify the
+missing-prefix behaviour first, since by then the objects genuinely may or may not exist.

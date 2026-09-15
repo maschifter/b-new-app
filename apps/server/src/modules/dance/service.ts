@@ -15,7 +15,6 @@ import type {
 } from "@bnewapp/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyBaseLogger, FastifyInstance } from "fastify";
-import { derivedObjectPaths } from "./media-paths.js";
 import type { DanceMovesCursor, DancePostsCursor } from "./schemas.js";
 
 const MOVE_SELECT =
@@ -448,19 +447,17 @@ export function createDanceService(
       if (deleteError) throw httpErrors.internalServerError("Could not discard dance post");
       if (!deletedPost) return;
 
-      // The derived objects are named here too: an uploading post has none yet, but this
-      // is the one call site a future deletion path will copy, so it removes them with the
-      // recording rather than leaving orphans behind.
-      const derived = derivedObjectPaths(ownerId, postId);
-      const objectPaths = [
-        ...(deletedPost.video_path === null ? [] : [deletedPost.video_path]),
-        derived.mergedVideo,
-        derived.thumbnail,
-      ];
-      const { error: storageError } = await supabase.storage
-        .from(danceVideoBucket)
-        .remove(objectPaths);
-      if (storageError) throw httpErrors.internalServerError("Could not remove dance video");
+      // Only the recording: a post is `uploading` until `markUploaded` enqueues its media
+      // job, so it cannot have derived objects yet, and nothing moves a post back to
+      // `uploading`. Listing them here would add an unconditional Storage delete for paths
+      // that never exist. A real post-deletion path is what needs `derivedObjectPaths`
+      // (`media-paths.ts`) — that helper exists so the naming scheme has one home.
+      if (deletedPost.video_path !== null) {
+        const { error: storageError } = await supabase.storage
+          .from(danceVideoBucket)
+          .remove([deletedPost.video_path]);
+        if (storageError) throw httpErrors.internalServerError("Could not remove dance video");
+      }
     },
 
     async getScoreStatus(ownerId: string, postId: string): Promise<ScanStatus> {
