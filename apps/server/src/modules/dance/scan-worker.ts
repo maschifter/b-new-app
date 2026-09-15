@@ -2,17 +2,15 @@ import { finalScore, generateFallbackScore } from "@bnewapp/dance-core";
 import type { Database } from "@bnewapp/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyBaseLogger, FastifyInstance } from "fastify";
+import {
+  type ClaimedJob,
+  MAX_ATTEMPTS,
+  STUCK_LOCK_GRACE_MS,
+  createJobQueue,
+  errorMessage,
+  retryAt,
+} from "./job-queue.js";
 import { createScanningClient } from "./scanning-client.js";
-
-const TICK_INTERVAL_MS = 2_000;
-const STUCK_LOCK_GRACE_MS = 60_000;
-const MAX_ATTEMPTS = 3;
-const RETRY_BASE_MS = 3_000;
-
-type ClaimedScan = Pick<
-  Database["public"]["Tables"]["dance_scans"]["Row"],
-  "id" | "post_id" | "owner_id" | "attempts"
->;
 
 interface ScanWorkerOptions {
   concurrency: number;
@@ -23,23 +21,12 @@ interface ScanWorkerOptions {
   supabase: SupabaseClient<Database>;
 }
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message.slice(0, 500) : "Unknown scan error";
-}
-
-function retryAt(attempts: number): string {
-  return new Date(Date.now() + RETRY_BASE_MS * 2 ** (attempts - 1)).toISOString();
-}
-
 export function createScanWorker(options: ScanWorkerOptions) {
   const client = createScanningClient({ serverUrls: options.scanServerUrls });
   const performScan = options.scan ?? ((request) => client.scan(request));
-  const stuckLockMs = client.maxDurationMs + STUCK_LOCK_GRACE_MS;
-  let timer: ReturnType<typeof setInterval> | undefined;
-  let isTicking = false;
 
   async function completeScan(
-    scan: ClaimedScan,
+    scan: ClaimedJob,
     danceMoveId: string,
     rawScore: number,
     isExternalScore: boolean,
@@ -92,7 +79,7 @@ export function createScanWorker(options: ScanWorkerOptions) {
     throw new Error("Could not complete dance scan");
   }
 
-  async function processClaim(scan: ClaimedScan) {
+  async function processClaim(scan: ClaimedJob) {
     try {
       const { data: post, error: postError } = await options.supabase
         .from("dance_posts")
@@ -141,7 +128,7 @@ export function createScanWorker(options: ScanWorkerOptions) {
           status: "pending",
           next_run_at: retryAt(attempts),
           locked_at: null,
-          error: errorMessage(error),
+          error: errorMessage(error, "Unknown scan error"),
         })
         .eq("id", scan.id)
         .eq("status", "processing");
@@ -160,78 +147,26 @@ export function createScanWorker(options: ScanWorkerOptions) {
     }
   }
 
-  async function tick() {
-    if (isTicking) return;
-    isTicking = true;
-    try {
-      const now = new Date();
-      const { error: reapError } = await options.supabase
-        .from("dance_scans")
-        .update({ status: "pending", locked_at: null })
-        .eq("status", "processing")
-        .lt("locked_at", new Date(now.getTime() - stuckLockMs).toISOString());
-      if (reapError) options.logger.error({ err: reapError }, "Could not reap stuck dance scans");
-
-      const { count, error: countError } = await options.supabase
-        .from("dance_scans")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "processing");
-      if (countError) throw new Error("Could not count active dance scans");
-      const budget = options.concurrency - (count ?? 0);
-      if (budget <= 0) return;
-
-      const { data: candidates, error: candidatesError } = await options.supabase
-        .from("dance_scans")
-        .select("id, post_id, owner_id, attempts")
-        .eq("status", "pending")
-        .lte("next_run_at", now.toISOString())
-        .order("created_at", { ascending: true })
-        .limit(budget);
-      if (candidatesError) throw new Error("Could not load pending dance scans");
-
-      const claims = await Promise.all(
-        (candidates ?? []).map(async (candidate) => {
-          const { data, error } = await options.supabase
-            .from("dance_scans")
-            .update({ status: "processing", locked_at: new Date().toISOString() })
-            .eq("id", candidate.id)
-            .eq("status", "pending")
-            .select("id, post_id, owner_id, attempts")
-            .maybeSingle();
-          if (error) throw new Error("Could not claim dance scan");
-          if (!data) return null;
-          const { error: postError } = await options.supabase
-            .from("dance_posts")
-            .update({ status: "scoring" })
-            .eq("id", data.post_id)
-            .eq("owner_id", data.owner_id);
-          if (postError) throw new Error("Could not mark dance post as scoring");
-          return data;
-        }),
-      );
-      await Promise.all(
-        claims.filter((claim): claim is ClaimedScan => claim !== null).map(processClaim),
-      );
-    } catch (error) {
-      options.logger.error({ err: error }, "Dance scan worker tick failed");
-    } finally {
-      isTicking = false;
-    }
+  /** The post transition belongs to the claim: a claimed scan is a scoring post. */
+  async function markPostScoring(scan: ClaimedJob) {
+    const { error } = await options.supabase
+      .from("dance_posts")
+      .update({ status: "scoring" })
+      .eq("id", scan.post_id)
+      .eq("owner_id", scan.owner_id);
+    if (error) throw new Error("Could not mark dance post as scoring");
   }
 
-  return {
-    start() {
-      if (timer) return;
-      timer = setInterval(() => void tick(), TICK_INTERVAL_MS);
-      void tick();
-    },
-    stop() {
-      if (!timer) return;
-      clearInterval(timer);
-      timer = undefined;
-    },
-    tick,
-  };
+  return createJobQueue({
+    concurrency: options.concurrency,
+    logger: options.logger,
+    name: "dance scan",
+    onClaimed: markPostScoring,
+    process: processClaim,
+    stuckLockMs: client.maxDurationMs + STUCK_LOCK_GRACE_MS,
+    supabase: options.supabase,
+    table: "dance_scans",
+  });
 }
 
 export function startScanWorker(

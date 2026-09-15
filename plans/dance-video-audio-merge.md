@@ -1,8 +1,8 @@
 # Dance Post Media — Music Merge, Thumbnail, Blurhash (Plan)
 
-Status: **in progress**. Milestones 1-3 shipped (2026-09-15); what remains is device
-verification, the staging container check in §5, the §8 sign-offs, and the optional queue
-extraction. Proposed 2026-09-14 and revised four times after review. Follow-up to `plans/dance-flow.md`, which shipped V1 with the
+Status: **in progress**. All four milestones shipped (2026-09-15); what remains is device
+verification, the staging container check in §5, and the §8 sign-offs. Proposed 2026-09-14
+and revised four times after review. Follow-up to `plans/dance-flow.md`, which shipped V1 with the
 *original, silent* recording as the only stored artifact.
 
 ## Goal
@@ -534,6 +534,16 @@ service scales out, that is the number to reason about — not `workerConcurrenc
 Once both workers are green, consider extracting the shared claim/reap/backoff loop into
 `modules/dance/job-queue.ts`. Separate commit, no behaviour change.
 
+*Done 2026-09-15.* `createJobQueue` owns the tick guard, the reap, the concurrency count,
+the candidate read, the conditional claim and the interval, plus `retryAt` / `errorMessage`
+and the shared constants. Two hooks carry the differences — `onTickStart` for the media
+sweep and `onClaimed` for the scan worker's post transition — and **failure handling stays
+in each worker**, because a scan that exhausts its attempts writes a fallback score while a
+media job simply fails. The evidence for "no behaviour change" is that all 17 pre-existing
+server test files passed untouched; the queue then got its own tests for what only the
+workers' duplication used to cover implicitly — chiefly the `isTicking` re-entrancy guard,
+which nothing tested before.
+
 ## 3. Types (`packages/types`)
 
 ```ts
@@ -683,7 +693,7 @@ Three pieces of server plumbing this implies, none of which are optional:
    *Shipped 2026-09-15*, device verification still owed. The detail screen's poster overlay
    is dismissed by `VideoView`'s `onFirstFrameRender` — the prop that stands in for the
    `poster` this component does not have.
-4. **Optional** — extract the shared queue loop.
+4. **Optional** — extract the shared queue loop. *Shipped 2026-09-15; see §2.6.*
 
 ## 7. Deferred
 

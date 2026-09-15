@@ -10,13 +10,17 @@ import type { Database } from "@bnewapp/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyBaseLogger, FastifyInstance } from "fastify";
 import { DANCE_MEDIA_JOB_TIMEOUT_MS } from "./config.js";
+import {
+  type ClaimedJob,
+  MAX_ATTEMPTS,
+  STUCK_LOCK_GRACE_MS,
+  createJobQueue,
+  errorMessage,
+  retryAt,
+} from "./job-queue.js";
 import { derivedObjectPaths } from "./media-paths.js";
 import { type DanceMediaProcessor, createDanceMediaProcessor } from "./media-processor.js";
 
-const TICK_INTERVAL_MS = 2_000;
-const STUCK_LOCK_GRACE_MS = 60_000;
-const MAX_ATTEMPTS = 3;
-const RETRY_BASE_MS = 3_000;
 const SIGNED_READ_TTL_SECONDS = 5 * 60;
 
 // The sweep is an anti-join over a table that only grows, so it must not run at the tick
@@ -25,11 +29,6 @@ const SIGNED_READ_TTL_SECONDS = 5 * 60;
 const SWEEP_EVERY_TICKS = 30;
 const SWEEP_LIMIT = 20;
 const SWEEP_WINDOW_MS = 24 * 60 * 60 * 1000;
-
-type ClaimedJob = Pick<
-  Database["public"]["Tables"]["dance_media_jobs"]["Row"],
-  "id" | "post_id" | "owner_id" | "attempts"
->;
 
 export interface MediaWorkerOptions {
   concurrency: number;
@@ -45,14 +44,6 @@ export interface MediaWorkerOptions {
 
 /** A failure that re-running cannot fix, so it must not burn the remaining attempts. */
 class TerminalMediaError extends Error {}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message.slice(0, 500) : "Unknown dance media error";
-}
-
-function retryAt(attempts: number): string {
-  return new Date(Date.now() + RETRY_BASE_MS * 2 ** (attempts - 1)).toISOString();
-}
 
 function withTimeout<T>(work: Promise<T>, timeoutMs: number, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -77,10 +68,7 @@ async function downloadTo(url: string, destination: string, timeoutMs: number): 
 export function createMediaWorker(options: MediaWorkerOptions) {
   const processMedia =
     options.process ?? createDanceMediaProcessor({ ffmpegTimeoutMs: options.ffmpegTimeoutMs });
-  const stuckLockMs = DANCE_MEDIA_JOB_TIMEOUT_MS + STUCK_LOCK_GRACE_MS;
   const storage = () => options.supabase.storage.from(options.danceVideoBucket);
-  let timer: ReturnType<typeof setInterval> | undefined;
-  let isTicking = false;
   let ticksUntilSweep = 0;
 
   async function runJob(job: ClaimedJob): Promise<void> {
@@ -212,7 +200,7 @@ export function createMediaWorker(options: MediaWorkerOptions) {
           attempts,
           status: isTerminal ? "failed" : "pending",
           locked_at: null,
-          error: errorMessage(error),
+          error: errorMessage(error, "Unknown dance media error"),
           ...(isTerminal ? {} : { next_run_at: retryAt(attempts) }),
         })
         .eq("id", job.id)
@@ -261,79 +249,26 @@ export function createMediaWorker(options: MediaWorkerOptions) {
     }
   }
 
-  async function tick() {
-    if (isTicking) return;
-    isTicking = true;
-    try {
-      if (ticksUntilSweep <= 0) {
-        ticksUntilSweep = SWEEP_EVERY_TICKS;
-        await sweepOrphans();
-      }
+  /** Bounded and periodic: the sweep is an anti-join over a table that only grows. */
+  async function maybeSweep() {
+    if (ticksUntilSweep > 0) {
       ticksUntilSweep -= 1;
-
-      const now = new Date();
-      const { error: reapError } = await options.supabase
-        .from("dance_media_jobs")
-        .update({ status: "pending", locked_at: null })
-        .eq("status", "processing")
-        .lt("locked_at", new Date(now.getTime() - stuckLockMs).toISOString());
-      if (reapError) {
-        options.logger.error({ err: reapError }, "Could not reap stuck dance media jobs");
-      }
-
-      const { count, error: countError } = await options.supabase
-        .from("dance_media_jobs")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "processing");
-      if (countError) throw new Error("Could not count active dance media jobs");
-      const budget = options.concurrency - (count ?? 0);
-      if (budget <= 0) return;
-
-      const { data: candidates, error: candidatesError } = await options.supabase
-        .from("dance_media_jobs")
-        .select("id, post_id, owner_id, attempts")
-        .eq("status", "pending")
-        .lte("next_run_at", now.toISOString())
-        .order("created_at", { ascending: true })
-        .limit(budget);
-      if (candidatesError) throw new Error("Could not load pending dance media jobs");
-
-      const claims = await Promise.all(
-        (candidates ?? []).map(async (candidate) => {
-          const { data, error } = await options.supabase
-            .from("dance_media_jobs")
-            .update({ status: "processing", locked_at: new Date().toISOString() })
-            .eq("id", candidate.id)
-            .eq("status", "pending")
-            .select("id, post_id, owner_id, attempts")
-            .maybeSingle();
-          if (error) throw new Error("Could not claim dance media job");
-          return data;
-        }),
-      );
-      await Promise.all(
-        claims.filter((claim): claim is ClaimedJob => claim !== null).map(processClaim),
-      );
-    } catch (error) {
-      options.logger.error({ err: error }, "Dance media worker tick failed");
-    } finally {
-      isTicking = false;
+      return;
     }
+    ticksUntilSweep = SWEEP_EVERY_TICKS - 1;
+    await sweepOrphans();
   }
 
-  return {
-    start() {
-      if (timer) return;
-      timer = setInterval(() => void tick(), TICK_INTERVAL_MS);
-      void tick();
-    },
-    stop() {
-      if (!timer) return;
-      clearInterval(timer);
-      timer = undefined;
-    },
-    tick,
-  };
+  return createJobQueue({
+    concurrency: options.concurrency,
+    logger: options.logger,
+    name: "dance media job",
+    onTickStart: maybeSweep,
+    process: processClaim,
+    stuckLockMs: DANCE_MEDIA_JOB_TIMEOUT_MS + STUCK_LOCK_GRACE_MS,
+    supabase: options.supabase,
+    table: "dance_media_jobs",
+  });
 }
 
 export function startMediaWorker(
