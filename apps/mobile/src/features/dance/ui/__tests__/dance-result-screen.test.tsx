@@ -49,7 +49,7 @@ const mockedGetDanceScoreStatus = getDanceScoreStatus as jest.Mock;
 const mockedMarkDancePostUploaded = markDancePostUploaded as jest.Mock;
 const mockedUploadDanceVideo = uploadDanceVideo as jest.Mock;
 
-async function mount() {
+async function mount(clipAudioOffsetMs?: number) {
   const store = createStore();
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { gcTime: 0 } },
@@ -63,6 +63,7 @@ async function mount() {
           moveId={MOVE_ID}
           clipPath="file:///tmp/dance-attempt.mp4"
           clipDuration={12.4}
+          {...(clipAudioOffsetMs === undefined ? {} : { clipAudioOffsetMs })}
           onRecordAgain={onRecordAgain}
           onDone={onDone}
         />
@@ -140,4 +141,52 @@ it("keeps the clip on the result screen and retries a failed upload", async () =
   expect(await screen.findByText("You scored 88 points!")).toBeOnTheScreen();
   expect(mockedUploadDanceVideo).toHaveBeenCalledTimes(2);
   expect(mockedDiscardUploadingDancePost).toHaveBeenCalledWith("token", POST_ID);
+});
+
+it.each([
+  ["a measured offset", 12_346],
+  ["a measured zero, which is a real offset", 0],
+])("forwards %s to the create call", async (_label, clipAudioOffsetMs) => {
+  mockedCreateDancePost.mockResolvedValue({
+    postId: POST_ID,
+    upload: { signedUrl: "https://storage.example.test/upload", path: "dancer/attempt.mp4" },
+  });
+  mockedUploadDanceVideo.mockResolvedValue(undefined);
+  mockedMarkDancePostUploaded.mockResolvedValue({ id: POST_ID, status: "uploaded" });
+  mockedGetDanceScoreStatus.mockResolvedValue({
+    status: "scored",
+    hasScore: true,
+    score: 90,
+    isExternalScore: true,
+    jobState: "completed",
+  });
+
+  await mount(clipAudioOffsetMs);
+
+  expect(await screen.findByText("You scored 90 points!")).toBeOnTheScreen();
+  expect(mockedCreateDancePost).toHaveBeenCalledWith(
+    "token",
+    expect.objectContaining({ audioOffsetMs: clipAudioOffsetMs }),
+  );
+});
+
+it("omits the offset from the create call when the clip carries none", async () => {
+  mockedCreateDancePost.mockResolvedValue({
+    postId: POST_ID,
+    upload: { signedUrl: "https://storage.example.test/upload", path: "dancer/attempt.mp4" },
+  });
+  mockedUploadDanceVideo.mockResolvedValue(undefined);
+  mockedMarkDancePostUploaded.mockResolvedValue({ id: POST_ID, status: "uploaded" });
+  mockedGetDanceScoreStatus.mockResolvedValue({
+    status: "scored",
+    hasScore: true,
+    score: 90,
+    isExternalScore: true,
+    jobState: "completed",
+  });
+
+  await mount();
+
+  expect(await screen.findByText("You scored 90 points!")).toBeOnTheScreen();
+  expect(mockedCreateDancePost.mock.calls[0]?.[1]).not.toHaveProperty("audioOffsetMs");
 });

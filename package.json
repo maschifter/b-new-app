@@ -38,6 +38,6 @@
   },
   "pnpm": {
     "overrides": { "react": "19.2.0", "react-dom": "19.2.0" },
-    "onlyBuiltDependencies": ["@biomejs/biome", "esbuild"]
+    "onlyBuiltDependencies": ["@biomejs/biome", "esbuild", "ffmpeg-static"]
   }
 }

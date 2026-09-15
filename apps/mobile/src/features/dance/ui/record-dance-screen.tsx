@@ -41,6 +41,12 @@ const VIDEO_BIT_RATE = 1_500_000;
 export interface RecordedDanceClip {
   path: string;
   duration: number;
+  /**
+   * Music playhead at the first recorded frame, in milliseconds. Undefined — never 0 —
+   * when the player never started, because 0 is a legitimate offset and would silently
+   * mux the track from its very start instead of reaching the server's fallback.
+   */
+  audioOffsetMs?: number | undefined;
 }
 
 interface RecordDanceScreenProps {
@@ -111,6 +117,9 @@ function RecordDanceContent({ moveId, onBack, onRecordingComplete }: RecordDance
   const stopRequestedRef = useRef(false);
   const isMountedRef = useRef(true);
   const recordingStartedAtRef = useRef<number | null>(null);
+  // `finishRecording` is a useCallback closed over its own deps, so the playhead read
+  // inside `beginRecording` cannot reach it by any other route.
+  const audioOffsetMsRef = useRef<number | null>(null);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   // One extra second of headroom so the capture never cuts the last beat off.
   const recordingLength =
@@ -188,7 +197,9 @@ function RecordDanceContent({ moveId, onBack, onRecordingComplete }: RecordDance
       clearTimers();
       const startedAt = recordingStartedAtRef.current;
       const duration = Math.max(startedAt === null ? 0 : (Date.now() - startedAt) / 1_000, 0.1);
+      const audioOffsetMs = audioOffsetMsRef.current;
       recordingStartedAtRef.current = null;
+      audioOffsetMsRef.current = null;
       recorderRef.current = null;
       stopRequestedRef.current = false;
       musicPlayer.pause();
@@ -196,7 +207,11 @@ function RecordDanceContent({ moveId, onBack, onRecordingComplete }: RecordDance
       referencePlayer.currentTime = 0;
       simulatedCameraPlayer.pause();
       setStep(FilmStep.FINISHED);
-      onRecordingComplete({ path: path.startsWith("file://") ? path : `file://${path}`, duration });
+      onRecordingComplete({
+        path: path.startsWith("file://") ? path : `file://${path}`,
+        duration,
+        ...(audioOffsetMs === null ? {} : { audioOffsetMs }),
+      });
     },
     [clearTimers, musicPlayer, onRecordingComplete, referencePlayer, simulatedCameraPlayer],
   );
@@ -210,6 +225,7 @@ function RecordDanceContent({ moveId, onBack, onRecordingComplete }: RecordDance
     void recorder.stopRecording().catch(() => {
       if (!isMountedRef.current) return;
       recordingStartedAtRef.current = null;
+      audioOffsetMsRef.current = null;
       recorderRef.current = null;
       stopRequestedRef.current = false;
       setStep(FilmStep.READY);
@@ -236,6 +252,7 @@ function RecordDanceContent({ moveId, onBack, onRecordingComplete }: RecordDance
         if (!isMountedRef.current) return;
         didFailToStart = true;
         recordingStartedAtRef.current = null;
+        audioOffsetMsRef.current = null;
         recorderRef.current = null;
         stopRequestedRef.current = false;
         setRecordingError("Couldn't record your dance. Please try again.");
@@ -246,6 +263,19 @@ function RecordDanceContent({ moveId, onBack, onRecordingComplete }: RecordDance
         return;
       }
       if (didFailToStart) return;
+      // Both measurements are taken at the same instant, now that the recorder has
+      // genuinely started. The pre-`await` stamp above stays as the floor — moving it
+      // instead of overwriting it would let a callback fire before it is ever set, and
+      // `finishRecording` floors a null start to 0.1 s.
+      recordingStartedAtRef.current = Date.now();
+      // The playhead is already post-seek and post-latency, so it needs no timeline
+      // reconstruction. `isLoaded && playing` is the only way to tell a real 0 from a
+      // player that never started: `startDance` swallows seek/play failures, and a move
+      // with no music gives `useAudioPlayer` no source at all.
+      audioOffsetMsRef.current =
+        musicPlayer.isLoaded && musicPlayer.playing
+          ? Math.round(musicPlayer.currentTime * 1_000)
+          : null;
       setStep(FilmStep.RECORDING);
       referencePlayer.play();
       if (simulatedRecordingEnabled) simulatedCameraPlayer.play();
@@ -253,6 +283,7 @@ function RecordDanceContent({ moveId, onBack, onRecordingComplete }: RecordDance
     } catch {
       if (!isMountedRef.current) return;
       recordingStartedAtRef.current = null;
+      audioOffsetMsRef.current = null;
       recorderRef.current = null;
       stopRequestedRef.current = false;
       setRecordingError("Couldn't start the camera. Please try again.");
@@ -260,6 +291,7 @@ function RecordDanceContent({ moveId, onBack, onRecordingComplete }: RecordDance
     }
   }, [
     finishRecording,
+    musicPlayer,
     recordingLength,
     referencePlayer,
     requestStopRecording,

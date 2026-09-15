@@ -14,7 +14,8 @@ import type {
   ScanStatus,
 } from "@bnewapp/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { FastifyInstance } from "fastify";
+import type { FastifyBaseLogger, FastifyInstance } from "fastify";
+import { derivedObjectPaths } from "./media-paths.js";
 import type { DanceMovesCursor, DancePostsCursor } from "./schemas.js";
 
 const MOVE_SELECT =
@@ -147,6 +148,7 @@ export function createDanceService(
   supabase: SupabaseClient<Database>,
   httpErrors: HttpErrors,
   danceVideoBucket = "dance-videos",
+  logger?: Pick<FastifyBaseLogger, "error">,
 ) {
   // Signs a whole page in one Storage call: three paths per row would otherwise turn a
   // page of 18 into 54 round trips.
@@ -419,6 +421,18 @@ export function createDanceService(
           { onConflict: "post_id", ignoreDuplicates: true },
         );
       if (scanError) throw httpErrors.internalServerError("Could not queue dance scan");
+
+      // Fail-soft: derived media is cosmetic, and failing here would lose a scan that is
+      // already queued. The media worker's orphan sweep re-enqueues what is missed.
+      const { error: mediaError } = await supabase
+        .from("dance_media_jobs")
+        .upsert(
+          { post_id: postId, owner_id: ownerId, status: "pending" },
+          { onConflict: "post_id", ignoreDuplicates: true },
+        );
+      if (mediaError) {
+        logger?.error({ err: mediaError, postId }, "Could not queue dance media job");
+      }
       return toDancePost(post, httpErrors);
     },
 
@@ -434,12 +448,19 @@ export function createDanceService(
       if (deleteError) throw httpErrors.internalServerError("Could not discard dance post");
       if (!deletedPost) return;
 
-      if (deletedPost.video_path !== null) {
-        const { error: storageError } = await supabase.storage
-          .from(danceVideoBucket)
-          .remove([deletedPost.video_path]);
-        if (storageError) throw httpErrors.internalServerError("Could not remove dance video");
-      }
+      // The derived objects are named here too: an uploading post has none yet, but this
+      // is the one call site a future deletion path will copy, so it removes them with the
+      // recording rather than leaving orphans behind.
+      const derived = derivedObjectPaths(ownerId, postId);
+      const objectPaths = [
+        ...(deletedPost.video_path === null ? [] : [deletedPost.video_path]),
+        derived.mergedVideo,
+        derived.thumbnail,
+      ];
+      const { error: storageError } = await supabase.storage
+        .from(danceVideoBucket)
+        .remove(objectPaths);
+      if (storageError) throw httpErrors.internalServerError("Could not remove dance video");
     },
 
     async getScoreStatus(ownerId: string, postId: string): Promise<ScanStatus> {

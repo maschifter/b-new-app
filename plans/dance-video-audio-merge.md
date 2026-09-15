@@ -1,8 +1,9 @@
 # Dance Post Media — Music Merge, Thumbnail, Blurhash (Plan)
 
-Status: **proposed (2026-09-14)**, revised four times after review (2026-09-14). Follow-up to
-`plans/dance-flow.md`, which shipped V1 with the *original, silent* recording as the only
-stored artifact.
+Status: **in progress**. Milestones 1 and 2 shipped (2026-09-15); milestone 3 (mobile
+consumption: poster/blurhash grid, merged playback) is next. Proposed 2026-09-14 and revised
+four times after review. Follow-up to `plans/dance-flow.md`, which shipped V1 with the
+*original, silent* recording as the only stored artifact.
 
 ## Goal
 
@@ -643,6 +644,11 @@ Three pieces of server plumbing this implies, none of which are optional:
   a Homebrew ffmpeg on `PATH` and fails on Railway, which is exactly the case the staging
   check below exists to catch. Scraping `ffmpeg -i` stderr for duration and codec avoids the
   second dependency at the cost of parsing human-readable output; prefer the real binary.
+- **`ffmpeg-static` must be listed in the root `package.json#pnpm.onlyBuiltDependencies`.**
+  It fetches its binary in a postinstall script, and pnpm 10 blocks those by default — the
+  install then succeeds, `require("ffmpeg-static")` still returns a path, and the file is
+  simply not there. `sharp` and `ffprobe-static` ship their binaries inside the tarball and
+  need no entry, which is why nothing in the repo forced this to be discovered earlier.
 - Railway (glibc x64) runs its own install, so the platform binaries are fetched at build
   time like `sharp`'s. Verify on a staging deploy that **both** binaries are executable and
   that `/tmp` is writable in the container.
@@ -664,6 +670,13 @@ Three pieces of server plumbing this implies, none of which are optional:
    fallback to verify, and the device-latency correction that §"Audio alignment" exists for
    would go untested until the last milestone. Exit criterion: merged files from a real device
    recording play with sound and in sync.
+
+   *Shipped 2026-09-15.* The `-shortest` behaviour was verified against the pinned
+   `ffmpeg-static` b6.1.1 build: a 10 s recording merged with a 20 s track seeked to 15 s
+   yields a 10.000 s h264 (copied) + 9.938 s aac file — the audio is cut to the video, and
+   `apad` covers the 5 s the seeked track could not fill. A 0.4 s clip produces a poster and
+   blurhash instead of burning its attempts on a seek past EOF. Staging still owes the
+   container check above.
 3. **Mobile consumption** — poster/blurhash grid, merged playback in the detail screen, tests,
    device verification.
 4. **Optional** — extract the shared queue loop.

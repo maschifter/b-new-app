@@ -11,10 +11,17 @@ export default function DanceRecordRoute() {
     <RecordDanceScreen
       moveId={moveId}
       onBack={() => router.back()}
-      onRecordingComplete={({ path, duration }) =>
+      onRecordingComplete={({ path, duration, audioOffsetMs }) =>
         router.replace({
           pathname: "/dance/[moveId]/result",
-          params: { moveId, clipPath: path, clipDuration: String(duration) },
+          params: {
+            moveId,
+            clipPath: path,
+            clipDuration: String(duration),
+            // Omitted rather than stringified when absent, so the result route can tell
+            // "never measured" from a measured 0.
+            ...(audioOffsetMs === undefined ? {} : { clipAudioOffsetMs: String(audioOffsetMs) }),
+          },
         })
       }
     />

@@ -359,16 +359,18 @@ describe("dance post service", () => {
     expect(cleanup.eq).toHaveBeenCalledWith("owner_id", OWNER_ID);
   });
 
-  it("queues a scan only after the owned video object is present", async () => {
+  it("queues a scan and a media job only after the owned video object is present", async () => {
     const existing = queryBuilder({ data: postRow(), error: null });
     const uploaded = queryBuilder({ data: postRow("uploaded"), error: null });
-    const queued = queryBuilder({ error: null });
+    const queuedScan = queryBuilder({ error: null });
+    const queuedMedia = queryBuilder({ error: null });
     const list = vi.fn().mockResolvedValue({ data: [{ name: `${POST_ID}.mp4` }], error: null });
     const from = vi
       .fn()
       .mockReturnValueOnce(existing)
       .mockReturnValueOnce(uploaded)
-      .mockReturnValueOnce(queued);
+      .mockReturnValueOnce(queuedScan)
+      .mockReturnValueOnce(queuedMedia);
     const service = createDanceService(
       { from, storage: { from: vi.fn(() => ({ list })) } } as never,
       httpErrors as never,
@@ -378,10 +380,40 @@ describe("dance post service", () => {
       status: "uploaded",
     });
     expect(list).toHaveBeenCalledWith(OWNER_ID, { limit: 1, search: `${POST_ID}.mp4` });
-    expect(queued.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ owner_id: OWNER_ID, post_id: POST_ID, status: "pending" }),
-      { ignoreDuplicates: true, onConflict: "post_id" },
+    for (const queued of [queuedScan, queuedMedia]) {
+      expect(queued.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ owner_id: OWNER_ID, post_id: POST_ID, status: "pending" }),
+        { ignoreDuplicates: true, onConflict: "post_id" },
+      );
+    }
+    expect(from).toHaveBeenNthCalledWith(4, "dance_media_jobs");
+  });
+
+  it("still queues the scan and succeeds when enqueuing the media job fails", async () => {
+    const existing = queryBuilder({ data: postRow(), error: null });
+    const uploaded = queryBuilder({ data: postRow("uploaded"), error: null });
+    const queuedScan = queryBuilder({ error: null });
+    const queuedMedia = queryBuilder({ error: { message: "media queue unavailable" } });
+    const list = vi.fn().mockResolvedValue({ data: [{ name: `${POST_ID}.mp4` }], error: null });
+    const from = vi
+      .fn()
+      .mockReturnValueOnce(existing)
+      .mockReturnValueOnce(uploaded)
+      .mockReturnValueOnce(queuedScan)
+      .mockReturnValueOnce(queuedMedia);
+    const logger = { error: vi.fn() };
+    const service = createDanceService(
+      { from, storage: { from: vi.fn(() => ({ list })) } } as never,
+      httpErrors as never,
+      "dance-videos",
+      logger,
     );
+
+    await expect(service.markUploaded(OWNER_ID, POST_ID)).resolves.toMatchObject({
+      status: "uploaded",
+    });
+    expect(queuedScan.upsert).toHaveBeenCalledOnce();
+    expect(logger.error).toHaveBeenCalledOnce();
   });
 
   it("does not transition or queue a post whose video object is absent", async () => {
@@ -413,7 +445,11 @@ describe("dance post service", () => {
 
     await expect(service.discardUploadingPost(OWNER_ID, POST_ID)).resolves.toBeUndefined();
 
-    expect(remove).toHaveBeenCalledWith([`${OWNER_ID}/${POST_ID}.mp4`]);
+    expect(remove).toHaveBeenCalledWith([
+      `${OWNER_ID}/${POST_ID}.mp4`,
+      `${OWNER_ID}/${POST_ID}-merged.mp4`,
+      `${OWNER_ID}/${POST_ID}.jpg`,
+    ]);
     expect(deleted.delete).toHaveBeenCalledOnce();
     expect(deleted.select).toHaveBeenCalledWith("video_path");
     expect(deleted.eq).toHaveBeenCalledWith("status", "uploading");

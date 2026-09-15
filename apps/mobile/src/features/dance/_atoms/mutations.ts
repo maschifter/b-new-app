@@ -12,6 +12,11 @@ export interface SubmitDanceRecordingInput {
   /** Local `file://` path of the captured clip. */
   path: string;
   videoLength: number;
+  /**
+   * Music playhead at the first recorded frame. Omitted when the player never started;
+   * the server then falls back to the computed timeline offset.
+   */
+  audioOffsetMs?: number | undefined;
 }
 
 /**
@@ -27,11 +32,15 @@ export const submitDanceRecordingMutationAtom = atomWithMutation<
   const auth = get(queryAuthAtom);
   return {
     mutationKey: ["dance-submit-recording", auth?.userId ?? null],
-    mutationFn: async ({ danceMoveId, path, videoLength }) => {
+    mutationFn: async ({ danceMoveId, path, videoLength, audioOffsetMs }) => {
       if (!auth) throw new Error("Not authenticated");
       let postId: string | null = null;
       try {
-        const created = await createDancePost(auth.accessToken, { danceMoveId, videoLength });
+        const created = await createDancePost(auth.accessToken, {
+          danceMoveId,
+          videoLength,
+          ...(audioOffsetMs === undefined ? {} : { audioOffsetMs }),
+        });
         postId = created.postId;
         await uploadDanceVideo(created.upload.signedUrl, path);
         await markDancePostUploaded(auth.accessToken, postId);

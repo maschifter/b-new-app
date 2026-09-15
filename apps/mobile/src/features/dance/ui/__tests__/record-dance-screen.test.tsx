@@ -18,6 +18,15 @@ const mockCreateRecorder = jest.fn();
 const mockAudioPlayerPause = jest.fn();
 const mockVideoPlayerPause = jest.fn();
 const mockUseIsFocused = jest.fn(() => true);
+// Mutable so a test can put the player in the state the offset capture gates on.
+const mockAudioPlayer = {
+  currentTime: 0,
+  isLoaded: false,
+  playing: false,
+  pause: mockAudioPlayerPause,
+  play: jest.fn(),
+  seekTo: jest.fn().mockResolvedValue(undefined),
+};
 const mockCameraPermission = {
   hasPermission: false,
   canRequestPermission: true,
@@ -36,11 +45,7 @@ jest.mock("../../recording-adapter", () => ({
 jest.mock("expo-blur", () => ({ BlurView: "BlurView" }));
 jest.mock("expo-audio", () => ({
   setAudioModeAsync: jest.fn().mockResolvedValue(undefined),
-  useAudioPlayer: () => ({
-    pause: mockAudioPlayerPause,
-    play: jest.fn(),
-    seekTo: jest.fn().mockResolvedValue(undefined),
-  }),
+  useAudioPlayer: () => mockAudioPlayer,
 }));
 jest.mock("expo-video", () => ({
   VideoView: "VideoView",
@@ -184,6 +189,9 @@ beforeEach(() => {
   mockUseVideoOutput.mockClear();
   mockUseIsFocused.mockReturnValue(true);
   mockAudioPlayerPause.mockReset();
+  mockAudioPlayer.currentTime = 0;
+  mockAudioPlayer.isLoaded = false;
+  mockAudioPlayer.playing = false;
   mockVideoPlayerPause.mockReset();
   mockRecordingComplete.mockReset();
   mockedCreateSimulatedRecorder.mockReset();
@@ -281,4 +289,47 @@ it("records through the simulated adapter, and never the camera, when the dev sw
   expect(mockedCreateSimulatedRecorder).toHaveBeenCalledTimes(1);
   expect(mockCreateRecorder).not.toHaveBeenCalled();
   expect(mockRecordingComplete).toHaveBeenCalledTimes(1);
+});
+
+it("hands over the music playhead measured at the first recorded frame", async () => {
+  mockCameraPermission.hasPermission = true;
+  mockAudioPlayer.isLoaded = true;
+  mockAudioPlayer.playing = true;
+  mockAudioPlayer.currentTime = 12.3456;
+
+  await mount(move({ bpm: FAST_BPM }));
+  await recordAClip();
+
+  expect(mockRecordingComplete).toHaveBeenCalledWith(
+    expect.objectContaining({ audioOffsetMs: 12_346 }),
+  );
+});
+
+it("keeps a measured zero as a real offset rather than dropping it", async () => {
+  mockCameraPermission.hasPermission = true;
+  mockAudioPlayer.isLoaded = true;
+  mockAudioPlayer.playing = true;
+  mockAudioPlayer.currentTime = 0;
+
+  await mount(move({ bpm: FAST_BPM }));
+  await recordAClip();
+
+  expect(mockRecordingComplete).toHaveBeenCalledWith(expect.objectContaining({ audioOffsetMs: 0 }));
+});
+
+// A 0 here would mux the track from its very start instead of reaching the server's
+// computed fallback, so the field has to be absent, not zero.
+it.each([
+  ["the player never loaded", { isLoaded: false, playing: true }],
+  ["the player loaded but never started", { isLoaded: true, playing: false }],
+])("omits the offset entirely when %s", async (_label, state) => {
+  mockCameraPermission.hasPermission = true;
+  mockAudioPlayer.isLoaded = state.isLoaded;
+  mockAudioPlayer.playing = state.playing;
+  mockAudioPlayer.currentTime = 7.5;
+
+  await mount(move({ bpm: FAST_BPM }));
+  await recordAClip();
+
+  expect(mockRecordingComplete.mock.calls[0]?.[0]).not.toHaveProperty("audioOffsetMs");
 });

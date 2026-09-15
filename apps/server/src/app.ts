@@ -10,7 +10,8 @@ import type { Env } from "./config.js";
 import { errorHandlerPlugin } from "./lib/errors.js";
 import { adminRoutes } from "./modules/admin/routes.js";
 import { catalogRoutes } from "./modules/catalog/routes.js";
-import { DANCE_SCAN_CONFIG } from "./modules/dance/config.js";
+import { DANCE_MEDIA_CONFIG, DANCE_SCAN_CONFIG } from "./modules/dance/config.js";
+import { startMediaWorker } from "./modules/dance/media-worker.js";
 import { danceRoutes } from "./modules/dance/routes.js";
 import { startScanWorker } from "./modules/dance/scan-worker.js";
 import { devRoutes } from "./modules/dev/routes.js";
@@ -76,6 +77,16 @@ export async function buildApp(config: Env) {
       concurrency: DANCE_SCAN_CONFIG.workerConcurrency,
       danceVideoBucket: DANCE_SCAN_CONFIG.danceVideoBucket,
       scanServerUrls: DANCE_SCAN_CONFIG.scanServerUrls,
+    });
+  }
+  if (config.NODE_ENV !== "test" && DANCE_MEDIA_CONFIG.workerEnabled) {
+    startMediaWorker(app, {
+      concurrency: DANCE_MEDIA_CONFIG.workerConcurrency,
+      danceVideoBucket: DANCE_MEDIA_CONFIG.danceVideoBucket,
+      downloadTimeoutMs: DANCE_MEDIA_CONFIG.downloadTimeoutMs,
+      ffmpegTimeoutMs: DANCE_MEDIA_CONFIG.ffmpegTimeoutMs,
+      maxUploadBytes: DANCE_MEDIA_CONFIG.maxUploadBytes,
+      uploadTimeoutMs: DANCE_MEDIA_CONFIG.uploadTimeoutMs,
     });
   }
   await app.register(danceRoutes, {

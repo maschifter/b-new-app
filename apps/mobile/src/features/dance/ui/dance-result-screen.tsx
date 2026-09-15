@@ -2,7 +2,7 @@ import { BouncablePress } from "@/components/bouncable-press";
 import { useFocusedPlayback } from "@/lib/media/use-focused-playback";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { startDanceScorePollingAtom } from "../_atoms/effects";
@@ -17,6 +17,8 @@ interface DanceResultScreenProps {
   moveId: string;
   clipPath: string;
   clipDuration: number;
+  /** Music playhead at the first recorded frame; absent when the player never started. */
+  clipAudioOffsetMs?: number | undefined;
   onRecordAgain: () => void;
   onDone: () => void;
 }
@@ -26,6 +28,7 @@ export function DanceResultScreen({
   moveId,
   clipPath,
   clipDuration,
+  clipAudioOffsetMs,
   onRecordAgain,
   onDone,
 }: DanceResultScreenProps) {
@@ -48,17 +51,28 @@ export function DanceResultScreen({
     scoreError: score.error ?? null,
   });
 
+  const submissionInput = useMemo(
+    () => ({
+      danceMoveId: moveId,
+      path: clipPath,
+      videoLength: clipDuration,
+      // Spread, not `audioOffsetMs: clipAudioOffsetMs`: exactOptionalPropertyTypes makes
+      // an explicit undefined a type error, and a measured 0 must survive as 0.
+      ...(clipAudioOffsetMs === undefined ? {} : { audioOffsetMs: clipAudioOffsetMs }),
+    }),
+    [clipAudioOffsetMs, clipDuration, clipPath, moveId],
+  );
+
   useEffect(() => {
-    submit.mutate({ danceMoveId: moveId, path: clipPath, videoLength: clipDuration });
+    submit.mutate(submissionInput);
     return () => setActiveScan(null);
-  }, [clipDuration, clipPath, moveId, setActiveScan, submit.mutate]);
+  }, [setActiveScan, submissionInput, submit.mutate]);
 
   useEffect(() => {
     if (submit.isSuccess && submit.data !== undefined) startScorePolling(submit.data);
   }, [startScorePolling, submit.data, submit.isSuccess]);
 
-  const retrySubmission = () =>
-    submit.mutate({ danceMoveId: moveId, path: clipPath, videoLength: clipDuration });
+  const retrySubmission = () => submit.mutate(submissionInput);
   const canFinish = submission.kind === "scored" || submission.kind === "failed";
 
   return (

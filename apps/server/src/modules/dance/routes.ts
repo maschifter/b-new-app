@@ -27,7 +27,7 @@ interface DanceRouteOptions {
 }
 
 export async function danceRoutes(app: FastifyInstance, options: DanceRouteOptions = {}) {
-  const dance = createDanceService(app.supabase, app.httpErrors, options.danceVideoBucket);
+  const dance = createDanceService(app.supabase, app.httpErrors, options.danceVideoBucket, app.log);
 
   app.get(
     "/genres",
