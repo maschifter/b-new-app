@@ -3,4 +3,4 @@ export {
   createTestQueryClient,
   createTestStore,
   renderWithProviders,
-} from "@bnewapp/mobile-kit/testing";
+} from "./render-with-providers";

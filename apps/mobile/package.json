@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "@bnewapp/dance-core": "workspace:*",
+    "@bnewapp/mobile-kit": "workspace:*",
     "@bnewapp/studio-core": "workspace:*",
     "@bnewapp/types": "workspace:*",
     "@react-native-async-storage/async-storage": "~2.2.0",

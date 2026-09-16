@@ -2,6 +2,7 @@ import { BouncablePress } from "@/components/bouncable-press";
 import { MobileQueryErrorBoundary } from "@/components/error-boundary";
 import { useFocusedPlayback } from "@/lib/media/use-focused-playback";
 import { COLORS } from "@/lib/theme/colors";
+import { DanceSkeleton } from "@bnewapp/mobile-kit/ui";
 import type { DanceMove } from "@bnewapp/types";
 import { Ionicons } from "@expo/vector-icons";
 import { VideoView, useVideoPlayer } from "expo-video";
@@ -18,7 +19,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { danceMoveDetailAtomFamily } from "../_atoms/queries";
 import { danceVideoRateAtom } from "../_atoms/ui";
-import { DanceSkeleton } from "./dance-skeleton";
 
 interface LearnDanceScreenProps {
   moveId: string;

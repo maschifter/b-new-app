@@ -1,1 +1,1 @@
-export { MobileQueryErrorBoundary } from "./mobile-query-error-boundary";
+export { MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";

@@ -1,7 +1,15 @@
+import { validatePublishedBuildApiUrl } from "@bnewapp/mobile-kit/api-url";
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
 const APP_NAME = "BNewApp";
 const BUILD_PROFILE = process.env.EAS_BUILD_PROFILE;
+
+// Only a real EAS build ships the profile's bundle. `prebuild` runs the staging
+// profile locally to generate the native projects, where .env leaves the API URL
+// unset on purpose so devices reach Metro's LAN host.
+if (process.env.EAS_BUILD === "true") {
+  validatePublishedBuildApiUrl(BUILD_PROFILE, process.env.EXPO_PUBLIC_API_URL);
+}
 
 const BUNDLE_ID_SUFFIX = (() => {
   switch (BUILD_PROFILE) {

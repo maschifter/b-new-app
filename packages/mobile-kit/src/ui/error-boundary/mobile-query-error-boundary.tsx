@@ -1,9 +1,9 @@
-import { BouncablePress } from "@/components/bouncable-press";
-import { queryErrorResetVersionAtom } from "@/lib/react-query/query-error-reset";
 import { QueryErrorResetBoundary, useQueryClient } from "@tanstack/react-query";
 import { useSetAtom } from "jotai";
 import { Component, type ReactNode } from "react";
 import { Text, View } from "react-native";
+import { queryErrorResetVersionAtom } from "../../react-query/query-error-reset";
+import { BouncablePress } from "../bouncable-press";
 
 interface MobileQueryErrorBoundaryProps {
   children: ReactNode;

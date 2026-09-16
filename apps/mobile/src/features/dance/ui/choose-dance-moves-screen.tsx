@@ -1,6 +1,7 @@
 import { BouncablePress } from "@/components/bouncable-press";
 import { MobileQueryErrorBoundary } from "@/components/error-boundary";
 import { COLORS } from "@/lib/theme/colors";
+import { DanceSkeleton } from "@bnewapp/mobile-kit/ui";
 import type { DanceGenre, DanceMove } from "@bnewapp/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useAtom, useAtomValue } from "jotai";
@@ -19,7 +20,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { danceGenresAtom, danceMovesAtom, danceMovesInfiniteAtom } from "../_atoms/queries";
 import { selectedDanceGenreIdAtom, selectedDanceMoveIdAtom } from "../_atoms/ui";
 import { DanceMoveCard } from "./dance-move-card";
-import { DanceSkeleton } from "./dance-skeleton";
 
 interface ChooseDanceMovesScreenProps {
   onOpenMove: (moveId: string) => void;

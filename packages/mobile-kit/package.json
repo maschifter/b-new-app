@@ -1,0 +1,85 @@
+{
+  "name": "@bnewapp/mobile-kit",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    ".": {
+      "react-native": "./src/index.ts",
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./api-url": {
+      "react-native": "./src/api/api-url.ts",
+      "types": "./src/api/api-url.ts",
+      "default": "./src/api/api-url.ts"
+    },
+    "./ui": {
+      "react-native": "./src/ui/index.ts",
+      "types": "./src/ui/index.ts",
+      "default": "./src/ui/index.ts"
+    },
+    "./media/use-focused-playback": {
+      "react-native": "./src/media/use-focused-playback.ts",
+      "types": "./src/media/use-focused-playback.ts",
+      "default": "./src/media/use-focused-playback.ts"
+    },
+    "./media/use-synced-music-track": {
+      "react-native": "./src/media/use-synced-music-track.ts",
+      "types": "./src/media/use-synced-music-track.ts",
+      "default": "./src/media/use-synced-music-track.ts"
+    },
+    "./expo": {
+      "react-native": "./src/expo/index.ts",
+      "types": "./src/expo/index.ts",
+      "default": "./src/expo/index.ts"
+    },
+    "./testing": {
+      "react-native": "./src/testing/index.ts",
+      "types": "./src/testing/index.ts",
+      "default": "./src/testing/index.ts"
+    },
+    "./theme/colors": "./theme/colors.js",
+    "./theme/tailwind-preset": "./theme/tailwind-preset.js",
+    "./testing/jest/config": "./testing/jest/config.js",
+    "./testing/jest/setup": "./testing/jest/setup.js",
+    "./testing/jest/after-env": "./testing/jest/after-env.js",
+    "./testing/jest/style-mock": "./testing/jest/style-mock.js",
+    "./testing/jest/mocks/react-native-mmkv": "./testing/jest/mocks/react-native-mmkv.js"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@bnewapp/types": "workspace:*"
+  },
+  "peerDependencies": {
+    "@react-navigation/native": "*",
+    "@tanstack/react-query": "*",
+    "@testing-library/react-native": "*",
+    "expo-audio": "*",
+    "expo-constants": "*",
+    "expo-device": "*",
+    "jotai": "*",
+    "jotai-tanstack-query": "*",
+    "nativewind": "*",
+    "react": "*",
+    "react-native": "*",
+    "react-native-mmkv": "*",
+    "react-native-reanimated": "*",
+    "react-native-worklets": "*"
+  },
+  "peerDependenciesMeta": {
+    "@testing-library/react-native": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@testing-library/react-native": "13.3.3",
+    "@types/jest": "^29.5.14",
+    "babel-preset-expo": "~55.0.24",
+    "jest": "~29.7.0",
+    "jest-expo": "~55.0.20",
+    "react-test-renderer": "19.2.0"
+  }
+}

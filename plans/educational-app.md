@@ -388,7 +388,7 @@ see, so an unowned device check silently converts them into unverified assumptio
 | Phase | Status | Summary |
 |---|---|---|
 | R0 — Decisions | ✅ Done | Recorded in "Decisions locked in" above |
-| R1 — `packages/mobile-kit` | ☐ | Extract RN primitives + transport + theme preset + test harness behind re-export shims; widen the tailwind glob; settle the RN-package mechanics |
+| R1 — `packages/mobile-kit` | ✅ Done | Extract RN primitives + transport + theme preset + test harness behind re-export shims; widen the tailwind glob; settle the RN-package mechanics. See "R1 outcome" below |
 | R2 — De-app-ify the dance feature | ☐ | Inject the API base URL and MMKV namespace instead of importing app-local config |
 | R3 — `packages/dance-flow` | ☐ | Extract the record/result flow by export; `apps/mobile` consumes it |
 | R5a — Anonymous identity | ☐ | Signup-trigger migration + the invariant it falsifies + enable anonymous sign-ins. Database-only, parallelizable with R1–R3, required before P0 signs in |
@@ -579,6 +579,53 @@ for this one — see "Device verification" under Phases.
    See the third NativeWind bullet above.
 4. Does a `jest-expo` config inside a package work for its own component tests, *with the shared
    harness resolved from `./testing`*? If not, apply bail-out step 1.
+
+#### R1 outcome — what the four day-one items settled
+
+1. **tsconfig base: `tsconfig.base.json`.** The RN packages inherit the repo's strictness like
+   every other package; they are not an exception. The whole moving set compiles under
+   `exactOptionalPropertyTypes` with **one** casualty: `bouncable-press.tsx` passed
+   `className={className}` explicitly, which `exactOptionalPropertyTypes` rejects. It now flows
+   through the rest spread instead, which is optional-to-optional and needs no cast.
+2. **Content glob widened and verified.** `apps/mobile/tailwind.config.js` scans
+   `../../packages/*/src/**/*.{ts,tsx}` and consumes `@bnewapp/mobile-kit/theme/tailwind-preset`
+   instead of requiring the app-local palette. Proven by compiling the app's CSS with a utility
+   that exists only in a package file and finding it in the output.
+3. **The NativeWind babel transform does reach `packages/`, and this is checkable in CI.** A real
+   Metro bundle (`expo export --platform android --no-bytecode`) compiles
+   `packages/mobile-kit/src/ui/*.tsx` through `nativewind/jsx-runtime`, and `w-[84%]` — a class
+   present only in `dance-skeleton.tsx` — lands in the bundle's injected style registry as
+   `{width:"84%"}`. The plan expected this to be device-only; it is not. A device run is still
+   worth having for final confidence, but the invisible-failure mechanism is now covered by an
+   automatable check.
+4. **`jest-expo` runs inside a package. The bail-out is not triggered.** All four moving suites
+   pass from `packages/mobile-kit` with the harness resolved through `./testing/jest/config`, and
+   no existing assertion changed.
+
+Three decisions the phase forced that the plan left open or assumed:
+
+- **Shared jest fragment shape: a spreadable config object**, `mobileKitJestConfig`, merged beside
+  `preset: "jest-expo"`. Each app spreads it and adds its own `moduleNameMapper` entries. Every
+  path inside it is a `require.resolve` relative to the fragment, never `<rootDir>`.
+- **No god barrel — one `exports` entry per concern.** A single `.` barrel made every consumer
+  load `expo-audio`, which broke four `apps/mobile` suites that never touch audio. Metro does not
+  tree-shake, so this was a bundling cost too, not only a test artifact: `apps/edu` would have had
+  to declare `expo-audio` to render a button. The map is now `.` (transport, auth, jotai,
+  react-query — no native imports), `./ui`, `./expo`, `./testing`, the two media hooks as separate
+  entries because their native dependencies are disjoint, plus the CJS theme and jest entries.
+  **Record this for R3:** `dance-flow` must be split the same way.
+- **`validatePublishedBuildApiUrl` is wired, not dropped — and gated on `EAS_BUILD`.**
+  `app.config.ts` calls it, and `npx expo config` was confirmed to resolve a TypeScript source
+  subpath from the package (`@bnewapp/mobile-kit/api-url`) and to fail the config load for a
+  staging/production profile with a missing or non-HTTPS `EXPO_PUBLIC_API_URL`.
+  **The profile alone is not the trigger:** `mobile:prebuild` runs the *staging* profile locally to
+  generate the native projects, while `.env` deliberately leaves `EXPO_PUBLIC_API_URL` unset so
+  devices reach Metro's LAN host — so an ungated guard breaks local prebuild. It fires only when
+  `EAS_BUILD === "true"`, which is the case that actually ships a bundle. `requirePublishedApiUrl`
+  still protects both apps at launch. `apps/edu` must copy the gate, not just the call.
+
+**Outstanding from R1:** the Android device run. The two failures it was meant to catch are now
+covered by the checks above, so this is confirmation rather than discovery.
 
 ### R2 — De-app-ify the dance feature
 
@@ -911,12 +958,12 @@ one entry here with a real cost of change, so re-decide it before P0 runs, not a
 
 | Topic | Question | Settled by |
 |---|---|---|
-| tsconfig strictness for RN packages | Do the ~15 moving files compile under `tsconfig.base.json`'s `exactOptionalPropertyTypes`, or do the RN packages extend `expo/tsconfig.base` instead? | Running `tsc` on day one of R1 (mechanic 1) |
-| NativeWind transform scope | Does the `jsxImportSource: "nativewind"` transform reach files under `packages/`? Separate mechanism from both the content glob and typechecking | A device check in R1, day-one item 3 |
-| Package test home | Does `jest-expo` run inside a package, with the harness resolved through `./testing`? | R1 day-one item 4, on the media hooks. This is the bail-out trigger |
-| Shared jest harness | If the harness cannot ship from `mobile-kit/testing`, is duplicating the worklets / async-storage / MMKV mocks into `apps/edu` accepted? | R1, alongside the above |
-| Shared jest fragment shape | Spreadable config object merged beside `preset: "jest-expo"`, or a preset module re-exporting jest-expo's? `preset` is singular, so one of the two | R1, when the `./testing` entry is written |
+| ~~tsconfig strictness for RN packages~~ | **Settled in R1: `tsconfig.base.json`.** One file needed a fix (`bouncable-press.tsx`) | R1 |
+| ~~NativeWind transform scope~~ | **Settled in R1: yes.** Verified in a real Metro bundle, not on a device | R1 |
+| ~~Package test home~~ | **Settled in R1: yes.** Bail-out not triggered | R1 |
+| ~~Shared jest harness~~ | **Moot — it ships from `mobile-kit/testing`.** No duplication needed | R1 |
+| ~~Shared jest fragment shape~~ | **Settled in R1: spreadable config object** (`mobileKitJestConfig`) | R1 |
 | MMKV configure mechanism | Lazy initialization on first read, or a configure-before-first-read guard? A module-scope `new MMKV()` cannot wait for a bootstrap call | R2, where the gap is |
-| Device verification owner | Who runs the Android check (R1 item 3, R3 end-to-end) and the iOS build (P0)? Android is enough for R1 and R3; P0's iOS half needs a Mac | Before R1 starts — see "Device verification" under Phases |
+| Device verification owner | Who runs the Android check (R3 end-to-end) and the iOS build (P0)? R1's share of it is now covered by the bundle check; R3 and P0 still need hardware | Before R3 starts — see "Device verification" under Phases |
 | Anonymous bootstrap in P0 | Does the scaffold sign in anonymously (needs R5a first), or ship a placeholder screen with no auth and defer R5a? | Decide before P0; R5a is small either way |
 | Trigger rollback | Does an identified signup still insert a profile row after the trigger change? | R5a, proven before the migration is pushed |

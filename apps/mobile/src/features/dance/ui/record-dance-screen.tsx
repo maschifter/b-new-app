@@ -11,6 +11,7 @@ import {
   isFilmMusicPlaying,
   musicSeekSeconds,
 } from "@bnewapp/dance-core";
+import { DanceSkeleton } from "@bnewapp/mobile-kit/ui";
 import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useAtomValue } from "jotai";
@@ -33,7 +34,6 @@ import {
   preloadSimulatedDanceVideo,
 } from "../recording-adapter";
 import { CameraPermissionOverlay } from "./camera-permission-overlay";
-import { DanceSkeleton } from "./dance-skeleton";
 
 const DEFAULT_RECORDING_LENGTH_SECONDS = 60;
 const VIDEO_BIT_RATE = 1_500_000;
