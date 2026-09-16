@@ -126,6 +126,19 @@ export async function danceRoutes(app: FastifyInstance, options: DanceRouteOptio
     async (request): Promise<ApiSuccess<null>> => {
       const params = DancePostIdParams.safeParse(request.params);
       if (!params.success) throw app.httpErrors.badRequest("Invalid dance post id");
+      await dance.deleteRecordedPost(request.user.sub, params.data.id);
+      return { data: null };
+    },
+  );
+
+  // The upload, not the post: this rolls back a recording whose transfer never finished,
+  // and refuses to touch a post the user already owns a finished recording for.
+  app.delete(
+    "/posts/:id/upload",
+    { preHandler: app.authenticate },
+    async (request): Promise<ApiSuccess<null>> => {
+      const params = DancePostIdParams.safeParse(request.params);
+      if (!params.success) throw app.httpErrors.badRequest("Invalid dance post id");
       await dance.discardUploadingPost(request.user.sub, params.data.id);
       return { data: null };
     },

@@ -22,6 +22,7 @@ jest.mock("expo/fetch", () => ({
 
 import {
   createDancePost,
+  deleteRecordedDancePost,
   discardUploadingDancePost,
   getDancePost,
   getDancePosts,
@@ -113,7 +114,21 @@ it("discards an incomplete post with the caller's authorization", async () => {
   await discardUploadingDancePost("token", "00000000-0000-4000-8000-000000000010");
 
   expect(fetchMock).toHaveBeenCalledWith(
-    expect.stringContaining("/api/dance/posts/00000000-0000-4000-8000-000000000010"),
+    expect.stringContaining("/api/dance/posts/00000000-0000-4000-8000-000000000010/upload"),
+    expect.objectContaining({
+      method: "DELETE",
+      headers: expect.objectContaining({ Authorization: "Bearer token" }),
+    }),
+  );
+});
+
+it("deletes a recorded post through the post resource, not the upload sub-resource", async () => {
+  fetchMock.mockResolvedValueOnce(success(null));
+
+  await deleteRecordedDancePost("token", "00000000-0000-4000-8000-000000000010");
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    expect.stringMatching(/\/api\/dance\/posts\/00000000-0000-4000-8000-000000000010$/),
     expect.objectContaining({
       method: "DELETE",
       headers: expect.objectContaining({ Authorization: "Bearer token" }),

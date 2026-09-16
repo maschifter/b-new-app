@@ -43,6 +43,70 @@ const postMove = {
 const postMusic = { title: "The Track", artist: "The Artist" };
 
 describe("dance post service", () => {
+  it("scopes recorded-post deletion and its media cleanup to the authenticated owner", async () => {
+    const deleted = queryBuilder({ data: { id: POST_ID }, error: null });
+    const from = vi.fn().mockReturnValue(deleted);
+    const remove = vi.fn().mockResolvedValue({ error: null });
+    const service = createDanceService(
+      { from, storage: { from: vi.fn(() => ({ remove })) } } as never,
+      httpErrors as never,
+    );
+    await expect(service.deleteRecordedPost(OWNER_ID, POST_ID)).resolves.toBeUndefined();
+    expect(deleted.eq).toHaveBeenCalledWith("owner_id", OWNER_ID);
+    expect(deleted.eq).toHaveBeenCalledWith("id", POST_ID);
+    expect(deleted.neq).toHaveBeenCalledWith("status", "uploading");
+    // The deleted row answers the uploading question, so the happy path stays one query.
+    expect(from).toHaveBeenCalledOnce();
+    expect(remove).toHaveBeenCalledWith([
+      `${OWNER_ID}/${POST_ID}.mp4`,
+      `${OWNER_ID}/${POST_ID}-merged.mp4`,
+      `${OWNER_ID}/${POST_ID}.jpg`,
+    ]);
+  });
+
+  it.each(["database", "verification", "uploading", "storage"])(
+    "handles deletion failure: %s",
+    async (failure) => {
+      const deleted = queryBuilder({
+        data: failure === "storage" ? { id: POST_ID } : null,
+        error: failure === "database" ? { message: "offline" } : null,
+      });
+      const remaining = queryBuilder({
+        data: failure === "uploading" ? { id: POST_ID } : null,
+        error: failure === "verification" ? { message: "offline" } : null,
+      });
+      const remove = vi.fn().mockResolvedValue({ error: { message: "offline" } });
+      const service = createDanceService(
+        {
+          from: vi.fn().mockReturnValueOnce(deleted).mockReturnValueOnce(remaining),
+          storage: { from: vi.fn(() => ({ remove })) },
+        } as never,
+        httpErrors as never,
+      );
+      await expect(service.deleteRecordedPost(OWNER_ID, POST_ID)).rejects.toMatchObject({
+        statusCode: failure === "uploading" ? 409 : 500,
+      });
+      if (failure !== "storage") expect(remove).not.toHaveBeenCalled();
+    },
+  );
+
+  it("stays idempotent so a retry can finish the storage cleanup", async () => {
+    const from = vi.fn(() => queryBuilder({ data: null, error: null }));
+    const remove = vi
+      .fn()
+      .mockResolvedValueOnce({ error: { message: "offline" } })
+      .mockResolvedValueOnce({ error: null });
+    const service = createDanceService(
+      { from, storage: { from: vi.fn(() => ({ remove })) } } as never,
+      httpErrors as never,
+    );
+    await expect(service.deleteRecordedPost(OWNER_ID, POST_ID)).rejects.toMatchObject({
+      statusCode: 500,
+    });
+    await expect(service.deleteRecordedPost(OWNER_ID, POST_ID)).resolves.toBeUndefined();
+    expect(remove).toHaveBeenCalledTimes(2);
+  });
+
   it("returns an owned recorded post with metadata even when its move is no longer published", async () => {
     const post = queryBuilder({ data: { ...postRow("scored"), music_id: MUSIC_ID }, error: null });
     const move = queryBuilder({ data: postMove, error: null });

@@ -1,10 +1,12 @@
-import { renderWithProviders } from "@/test-utils/render-with-providers";
+import { createTestQueryClient, renderWithProviders } from "@/test-utils/render-with-providers";
 import type { DancePostDetail } from "@bnewapp/types";
-import { fireEventAsync, screen } from "@testing-library/react-native";
-import { getDancePost } from "../../api";
+import { InfiniteQueryObserver } from "@tanstack/react-query";
+import { act, fireEventAsync, screen, waitFor } from "@testing-library/react-native";
+import { dancePostDetailQueryKey, dancePostsQueryKey } from "../../_atoms/queries";
+import { deleteRecordedDancePost, getDancePost } from "../../api";
 import { DancePostDetailScreen } from "../dance-post-detail-screen";
 
-jest.mock("../../api", () => ({ getDancePost: jest.fn() }));
+jest.mock("../../api", () => ({ getDancePost: jest.fn(), deleteRecordedDancePost: jest.fn() }));
 jest.mock("@react-navigation/native", () => ({ useIsFocused: () => true }));
 jest.mock("expo-video", () => ({
   VideoView: "VideoView",
@@ -46,6 +48,7 @@ function post(overrides: Partial<DancePostDetail> = {}): DancePostDetail {
 
 async function mount(onBack = jest.fn()) {
   await renderWithProviders(<DancePostDetailScreen postId={POST_ID} onBack={onBack} />, {
+    queryClient: createTestQueryClient({ mutations: { gcTime: Number.POSITIVE_INFINITY } }),
     auth: { userId: "dancer", accessToken: "token" },
   });
   return onBack;
@@ -53,6 +56,7 @@ async function mount(onBack = jest.fn()) {
 
 beforeEach(() => {
   mockedGetDancePost.mockReset();
+  jest.mocked(deleteRecordedDancePost).mockReset();
 });
 
 it("shows a detail skeleton while the recorded dance is loading", async () => {
@@ -130,4 +134,119 @@ it("keeps playing the original silent recording until the merge lands", async ()
   expect(await screen.findByTestId("dance-post-detail-video")).toBeOnTheScreen();
   expect(mockPlayerSources).toContain("https://storage.example.test/attempt.mp4");
   expect(screen.queryByTestId("dance-post-detail-poster")).not.toBeOnTheScreen();
+});
+
+it("requires confirmation, deletes once, and returns to the profile", async () => {
+  mockedGetDancePost.mockResolvedValue(post());
+  let finish: (() => void) | undefined;
+  jest.mocked(deleteRecordedDancePost).mockImplementation(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const onBack = await mount();
+  await screen.findByText("Electric Slide");
+  await fireEventAsync.press(screen.getByRole("button", { name: "Post options" }));
+  await fireEventAsync.press(screen.getByRole("button", { name: "Delete post" }));
+  expect(deleteRecordedDancePost).not.toHaveBeenCalled();
+  await fireEventAsync.press(screen.getByRole("button", { name: "Confirm delete post" }));
+  expect(await screen.findByText(/Deleting/)).toBeOnTheScreen();
+  await fireEventAsync.press(screen.getByRole("button", { name: "Confirm delete post" }));
+  expect(deleteRecordedDancePost).toHaveBeenCalledTimes(1);
+  expect(deleteRecordedDancePost).toHaveBeenCalledWith("token", POST_ID);
+  await act(async () => finish?.());
+  await waitFor(() => expect(onBack).toHaveBeenCalledTimes(1));
+});
+
+it("removes the deleted post from cached profile pages without changing another user's history", async () => {
+  mockedGetDancePost.mockResolvedValue(post());
+  jest.mocked(deleteRecordedDancePost).mockResolvedValue(undefined);
+  const queryClient = createTestQueryClient({ mutations: { gcTime: Number.POSITIVE_INFINITY } });
+  const history = { pages: [{ items: [post()], nextCursor: null }], pageParams: [null] };
+  queryClient.setQueryData(dancePostsQueryKey("dancer"), history);
+  queryClient.setQueryData(dancePostsQueryKey("other-user"), history);
+  const fetchHistory = jest.fn(async () => history.pages[0]);
+  const observer = new InfiniteQueryObserver(queryClient, {
+    queryKey: dancePostsQueryKey("dancer"),
+    queryFn: fetchHistory,
+    initialPageParam: null,
+    getNextPageParam: () => undefined,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  const unsubscribe = observer.subscribe(() => {});
+  const onBack = jest.fn(() => {
+    expect(screen.queryByRole("button", { name: "Confirm delete post" })).toBeNull();
+  });
+  await renderWithProviders(<DancePostDetailScreen postId={POST_ID} onBack={onBack} />, {
+    queryClient,
+    auth: { userId: "dancer", accessToken: "token" },
+  });
+  await screen.findByText("Electric Slide");
+  await fireEventAsync.press(screen.getByRole("button", { name: "Post options" }));
+  await fireEventAsync.press(screen.getByRole("button", { name: "Delete post" }));
+  await fireEventAsync.press(screen.getByRole("button", { name: "Confirm delete post" }));
+  await waitFor(() => expect(onBack).toHaveBeenCalledTimes(1));
+  expect(queryClient.getQueryData(dancePostsQueryKey("dancer"))).toEqual({
+    pages: [{ items: [], nextCursor: null }],
+    pageParams: [null],
+  });
+  expect(queryClient.getQueryData(dancePostsQueryKey("other-user"))).toEqual(history);
+  // The deleted post must not keep its detail — and dropping it must not make the screen
+  // it is still mounted on refetch a post the server has already removed.
+  expect(queryClient.getQueryData(dancePostDetailQueryKey("dancer", POST_ID))).toBeUndefined();
+  expect(fetchHistory).not.toHaveBeenCalled();
+  expect(mockedGetDancePost).toHaveBeenCalledTimes(1);
+  unsubscribe();
+});
+
+it.each(["success", "failure"])(
+  "does not navigate after leaving a pending delete (%s)",
+  async (outcome) => {
+    mockedGetDancePost.mockResolvedValue(post());
+    let complete: (() => void) | undefined;
+    jest.mocked(deleteRecordedDancePost).mockImplementation(
+      () =>
+        new Promise<void>((resolve, reject) => {
+          complete = () => (outcome === "success" ? resolve() : reject(new Error("offline")));
+        }),
+    );
+    const onBack = jest.fn();
+    const { unmountAsync } = await renderWithProviders(
+      <DancePostDetailScreen postId={POST_ID} onBack={onBack} />,
+      {
+        queryClient: createTestQueryClient({ mutations: { gcTime: Number.POSITIVE_INFINITY } }),
+        auth: { userId: "dancer", accessToken: "token" },
+      },
+    );
+    await screen.findByText("Electric Slide");
+    await fireEventAsync.press(screen.getByRole("button", { name: "Post options" }));
+    await fireEventAsync.press(screen.getByRole("button", { name: "Delete post" }));
+    await fireEventAsync.press(screen.getByRole("button", { name: "Confirm delete post" }));
+    await unmountAsync();
+    await act(async () => complete?.());
+    expect(onBack).not.toHaveBeenCalled();
+  },
+);
+
+it("cancels deletion and allows retry after an API failure", async () => {
+  mockedGetDancePost.mockResolvedValue(post());
+  jest
+    .mocked(deleteRecordedDancePost)
+    .mockReset()
+    .mockRejectedValueOnce(new Error("offline"))
+    .mockResolvedValueOnce(undefined);
+  const onBack = await mount();
+  await screen.findByText("Electric Slide");
+  await fireEventAsync.press(screen.getByRole("button", { name: "Post options" }));
+  await fireEventAsync.press(screen.getByRole("button", { name: "Delete post" }));
+  await fireEventAsync.press(screen.getByRole("button", { name: "Cancel" }));
+  expect(deleteRecordedDancePost).not.toHaveBeenCalled();
+  await fireEventAsync.press(screen.getByRole("button", { name: "Post options" }));
+  await fireEventAsync.press(screen.getByRole("button", { name: "Delete post" }));
+  await fireEventAsync.press(screen.getByRole("button", { name: "Confirm delete post" }));
+  expect(await screen.findByText("Couldn't delete this post. Please try again.")).toBeOnTheScreen();
+  expect(onBack).not.toHaveBeenCalled();
+  await fireEventAsync.press(screen.getByRole("button", { name: "Confirm delete post" }));
+  await waitFor(() => expect(onBack).toHaveBeenCalledTimes(1));
 });

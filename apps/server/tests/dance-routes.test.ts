@@ -101,13 +101,17 @@ describe("dance consumer routes", () => {
       method: "POST",
       url: `/api/dance/posts/${MOVE_ID}/uploaded`,
     });
-    const discard = await app.inject({ method: "DELETE", url: `/api/dance/posts/${MOVE_ID}` });
+    const deleted = await app.inject({ method: "DELETE", url: `/api/dance/posts/${MOVE_ID}` });
     const score = await app.inject({ method: "GET", url: `/api/dance/posts/${MOVE_ID}/score` });
     expect(create.statusCode).toBe(401);
     expect(list.statusCode).toBe(401);
     expect(detail.statusCode).toBe(401);
     expect(uploaded.statusCode).toBe(401);
-    expect(discard.statusCode).toBe(401);
+    expect(deleted.statusCode).toBe(401);
+    expect(
+      (await app.inject({ method: "DELETE", url: `/api/dance/posts/${MOVE_ID}/upload` }))
+        .statusCode,
+    ).toBe(401);
     expect(score.statusCode).toBe(401);
     await app.close();
   });
@@ -292,7 +296,30 @@ describe("dance consumer routes", () => {
     await expect(
       handlers["DELETE /posts/:id"]?.({ params: { id: "not-a-uuid" }, user: { sub: GENRE_ID } }),
     ).rejects.toMatchObject({ statusCode: 400, message: "Invalid dance post id" });
+    await expect(
+      handlers["DELETE /posts/:id/upload"]?.({
+        params: { id: "invalid" },
+        user: { sub: GENRE_ID },
+      }),
+    ).rejects.toMatchObject({ statusCode: 400 });
     expect(from).not.toHaveBeenCalled();
+  });
+
+  it("deletes a recorded post using the authenticated owner", async () => {
+    const deleted = queryBuilder({ data: { id: MOVE_ID }, error: null });
+    const remove = vi.fn().mockResolvedValue({ error: null });
+    const { app, handlers } = registerDance({
+      from: vi.fn(() => deleted),
+      storage: { from: vi.fn(() => ({ remove })) },
+    });
+    await danceRoutes(app as never);
+    await expect(
+      handlers["DELETE /posts/:id"]?.({
+        params: { id: MOVE_ID },
+        user: { sub: GENRE_ID },
+      }),
+    ).resolves.toEqual({ data: null });
+    expect(deleted.eq).toHaveBeenCalledWith("owner_id", GENRE_ID);
   });
 
   it("keeps a null audio offset absent instead of coercing it to a measured zero", () => {

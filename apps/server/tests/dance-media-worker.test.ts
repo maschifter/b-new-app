@@ -42,6 +42,7 @@ function storageStub() {
       .fn()
       .mockResolvedValue({ data: { signedUrl: "https://signed.example/recording" }, error: null }),
     upload: vi.fn().mockResolvedValue({ error: null }),
+    remove: vi.fn().mockResolvedValue({ error: null }),
   };
 }
 
@@ -145,7 +146,7 @@ describe("dance media worker", () => {
         queryBuilder({ data: [job], error: null }),
         queryBuilder({ data: job, error: null }),
         post,
-        queryBuilder({ error: null }),
+        queryBuilder({ data: { id: POST_ID }, error: null }),
         queryBuilder({ error: null }),
       ],
     });
@@ -177,7 +178,7 @@ describe("dance media worker", () => {
         queryBuilder({ data: [job], error: null }),
         queryBuilder({ data: job, error: null }),
         queryBuilder({ data: postRow({ audio_offset_ms: null }), error: null }),
-        queryBuilder({ error: null }),
+        queryBuilder({ data: { id: POST_ID }, error: null }),
         queryBuilder({ error: null }),
       ],
     });
@@ -190,7 +191,7 @@ describe("dance media worker", () => {
 
   it("stores a poster and blurhash but no merged path for a post without music", async () => {
     stubDownloads();
-    const update = queryBuilder({ error: null });
+    const update = queryBuilder({ data: { id: POST_ID }, error: null });
     const { storage, worker } = harness({
       process: fakeProcessor(),
       queries: [
@@ -325,5 +326,97 @@ describe("dance media worker", () => {
     // Three queries for the sweeping tick, two for the one that skips it.
     expect(from).toHaveBeenCalledTimes(5);
     expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])(
+    "cleans derived uploads when deletion races processing (upload failure: %s)",
+    async (failUpload) => {
+      stubDownloads();
+      const storage = storageStub();
+      if (failUpload)
+        storage.upload
+          .mockResolvedValueOnce({ error: null })
+          .mockRejectedValueOnce(new Error("offline"));
+      const { worker } = harness({
+        process: fakeProcessor(),
+        storage,
+        queries: [
+          ...tickPreamble(0),
+          queryBuilder({ data: [job], error: null }),
+          queryBuilder({ data: job, error: null }),
+          queryBuilder({ data: postRow(), error: null }),
+          queryBuilder({ data: null, error: null }),
+          queryBuilder({ error: null }),
+        ],
+      });
+
+      await worker.tick();
+
+      expect(storage.remove).toHaveBeenCalledWith([
+        `${OWNER_ID}/${POST_ID}-merged.mp4`,
+        `${OWNER_ID}/${POST_ID}.jpg`,
+      ]);
+    },
+  );
+
+  it("completes a job whose post was deleted before it could be processed", async () => {
+    const storage = storageStub();
+    const completed = queryBuilder({ error: null });
+    const { logger, worker } = harness({
+      process: fakeProcessor(),
+      storage,
+      queries: [
+        ...tickPreamble(0),
+        queryBuilder({ data: [job], error: null }),
+        queryBuilder({ data: job, error: null }),
+        queryBuilder({ data: null, error: null }),
+        completed,
+      ],
+    });
+
+    await worker.tick();
+
+    expect(storage.remove).toHaveBeenCalledWith([
+      `${OWNER_ID}/${POST_ID}-merged.mp4`,
+      `${OWNER_ID}/${POST_ID}.jpg`,
+    ]);
+    expect(completed.update).toHaveBeenCalledWith({
+      status: "completed",
+      error: null,
+      locked_at: null,
+    });
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it("records the original failure when cleaning up after it fails too", async () => {
+    stubDownloads();
+    const storage = storageStub();
+    storage.upload
+      .mockResolvedValueOnce({ error: null })
+      .mockRejectedValueOnce(new Error("poster gone"));
+    const retry = queryBuilder({ error: null });
+    const { logger, worker } = harness({
+      process: fakeProcessor(),
+      storage,
+      queries: [
+        ...tickPreamble(0),
+        queryBuilder({ data: [job], error: null }),
+        queryBuilder({ data: job, error: null }),
+        queryBuilder({ data: postRow(), error: null }),
+        queryBuilder({ data: null, error: { message: "unreachable" } }),
+        retry,
+      ],
+    });
+
+    await worker.tick();
+
+    expect(storage.remove).not.toHaveBeenCalled();
+    expect(retry.update).toHaveBeenCalledWith(
+      expect.objectContaining({ attempts: 1, status: "pending", error: "poster gone" }),
+    );
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ jobId: JOB_ID }),
+      "Could not clean up dance media for a deleted post",
+    );
   });
 });

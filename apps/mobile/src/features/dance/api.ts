@@ -122,11 +122,19 @@ export async function discardUploadingDancePost(
   accessToken: string,
   postId: string,
 ): Promise<void> {
-  const response = await fetch(`${apiUrl}/api/dance/posts/${postId}`, {
+  const response = await fetch(`${apiUrl}/api/dance/posts/${postId}/upload`, {
     method: "DELETE",
     headers: authHeaders(accessToken),
   });
   await unwrapApiSuccess<null>(response, "Unable to discard incomplete dance scan");
+}
+
+export async function deleteRecordedDancePost(accessToken: string, postId: string): Promise<void> {
+  const response = await fetch(`${apiUrl}/api/dance/posts/${postId}`, {
+    method: "DELETE",
+    headers: authHeaders(accessToken),
+  });
+  await unwrapApiSuccess<null>(response, "Unable to delete this post. Please try again.");
 }
 
 export async function getDanceScoreStatus(

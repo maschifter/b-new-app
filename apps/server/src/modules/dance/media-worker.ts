@@ -71,6 +71,35 @@ export function createMediaWorker(options: MediaWorkerOptions) {
   const storage = () => options.supabase.storage.from(options.danceVideoBucket);
   let ticksUntilSweep = 0;
 
+  async function removeDerivedMedia(job: ClaimedJob): Promise<void> {
+    const paths = derivedObjectPaths(job.owner_id, job.post_id);
+    const { error } = await storage().remove([paths.mergedVideo, paths.thumbnail]);
+    if (error) throw new Error("Could not remove deleted dance post media");
+  }
+
+  /**
+   * Best effort by design: this runs while an original failure is propagating, so a throw
+   * here would replace the error that decides whether the job is terminal and what the
+   * job row records. A missed object is retried by the next attempt.
+   */
+  async function removeDerivedMediaAfterFailure(job: ClaimedJob): Promise<void> {
+    try {
+      const { data: parent, error } = await options.supabase
+        .from("dance_posts")
+        .select("id")
+        .eq("id", job.post_id)
+        .eq("owner_id", job.owner_id)
+        .maybeSingle();
+      if (error) throw new Error("Could not verify dance media owner");
+      if (!parent) await removeDerivedMedia(job);
+    } catch (cleanupError) {
+      options.logger.error(
+        { err: cleanupError, jobId: job.id, postId: job.post_id },
+        "Could not clean up dance media for a deleted post",
+      );
+    }
+  }
+
   async function runJob(job: ClaimedJob): Promise<void> {
     // The track is resolved through the post's own `music_id`, never through the move's
     // current one: admin can repoint a move after the recording, and merging the new
@@ -84,10 +113,20 @@ export function createMediaWorker(options: MediaWorkerOptions) {
       .eq("owner_id", job.owner_id)
       .maybeSingle();
     if (postError) throw new Error("Could not load dance post for media processing");
-    if (!post?.video_path) throw new TerminalMediaError("Dance post has no recording to process");
+    // `dance_media_jobs` is cascade-deleted with its post, so a missing post means the
+    // recording was deleted after this job was claimed: only an earlier attempt's outputs
+    // can be left, and taking them back is the whole remaining job.
+    if (!post) {
+      await removeDerivedMedia(job);
+      return;
+    }
+    if (!post.video_path) throw new TerminalMediaError("Dance post has no recording to process");
 
     const music = post.music_tracks;
     const workDir = await mkdtemp(join(tmpdir(), `dance-media-${job.post_id}-`));
+    // Flipped before each upload rather than after: a half-written object is still an
+    // object the deletion path has to be able to take back.
+    let startedDerivedUploads = false;
     try {
       const { data: signedRead, error: signedReadError } = await storage().createSignedUrl(
         post.video_path,
@@ -135,6 +174,7 @@ export function createMediaWorker(options: MediaWorkerOptions) {
         if (size > options.maxUploadBytes) {
           throw new TerminalMediaError("Merged dance video exceeds the storage size limit");
         }
+        startedDerivedUploads = true;
         await withTimeout(
           storage().upload(paths.mergedVideo, await readFile(result.mergedPath), {
             contentType: "video/mp4",
@@ -148,6 +188,7 @@ export function createMediaWorker(options: MediaWorkerOptions) {
         mergedVideoPath = paths.mergedVideo;
       }
 
+      startedDerivedUploads = true;
       await withTimeout(
         storage().upload(paths.thumbnail, await readFile(result.posterPath), {
           contentType: "image/jpeg",
@@ -160,8 +201,10 @@ export function createMediaWorker(options: MediaWorkerOptions) {
       });
 
       // Written before the job is marked completed: a crash in between leaves a retryable
-      // job, and both uploads plus this update are idempotent.
-      const { error: updateError } = await options.supabase
+      // job, and both uploads plus this update are idempotent. The returned row doubles as
+      // the deletion check: no row means the post was removed while this job ran, so the
+      // uploads above are orphans.
+      const { data: parent, error: updateError } = await options.supabase
         .from("dance_posts")
         .update({
           merged_video_path: mergedVideoPath,
@@ -169,8 +212,14 @@ export function createMediaWorker(options: MediaWorkerOptions) {
           blurhash: result.blurhash,
         })
         .eq("id", job.post_id)
-        .eq("owner_id", job.owner_id);
+        .eq("owner_id", job.owner_id)
+        .select("id")
+        .maybeSingle();
       if (updateError) throw new Error("Could not store dance post media");
+      if (!parent) await removeDerivedMedia(job);
+    } catch (error) {
+      if (startedDerivedUploads) await removeDerivedMediaAfterFailure(job);
+      throw error;
     } finally {
       await rm(workDir, { recursive: true, force: true });
     }

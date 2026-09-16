@@ -8,6 +8,7 @@ import { Suspense, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { dancePostDetailAtomFamily } from "../_atoms/queries";
+import { DancePostMenu } from "./dance-post-menu";
 
 interface DancePostDetailScreenProps {
   postId: string;
@@ -42,7 +43,11 @@ function DancePostDetailContent({ postId, onBack }: DancePostDetailScreenProps) 
 
   return (
     <ScrollView className="flex-1" contentContainerClassName="gap-6 px-4 pb-8 pt-3">
-      <AppHeader title="DANCE DETAIL" onBack={onBack} />
+      <AppHeader
+        title="DANCE DETAIL"
+        onBack={onBack}
+        trailing={<DancePostMenu postId={postId} onDeleted={onBack} />}
+      />
       <View className="aspect-[9/16] overflow-hidden rounded-3xl bg-black">
         <VideoView
           testID="dance-post-detail-video"

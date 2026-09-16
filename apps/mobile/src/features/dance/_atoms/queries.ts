@@ -97,6 +97,14 @@ export const optionalDanceMoveAtomFamily = atomFamily((moveId: string) =>
   }),
 );
 
+export function dancePostsQueryKey(userId: string | null): (string | null)[] {
+  return ["dance-posts", userId];
+}
+
+export function dancePostDetailQueryKey(userId: string | null, postId: string): (string | null)[] {
+  return ["dance-post", userId, postId];
+}
+
 export const dancePostsInfiniteAtom = atomWithInfiniteQuery<
   DancePostsPage,
   Error,
@@ -106,7 +114,7 @@ export const dancePostsInfiniteAtom = atomWithInfiniteQuery<
 >((get) => {
   const auth = readQueryAuth(get, { errorBoundaryReset: false });
   return {
-    queryKey: ["dance-posts", auth?.userId ?? null],
+    queryKey: dancePostsQueryKey(auth?.userId ?? null),
     enabled: auth !== null,
     initialPageParam: null,
     queryFn: async ({ pageParam }) =>
@@ -127,7 +135,7 @@ export const dancePostDetailAtomFamily = atomFamily((postId: string) =>
   atomWithSuspenseQuery<DancePostDetail>((get) => {
     const auth = readQueryAuth(get);
     return {
-      queryKey: ["dance-post", auth?.userId ?? null, postId],
+      queryKey: dancePostDetailQueryKey(auth?.userId ?? null, postId),
       queryFn: async () => getDancePost(requireAuth(auth).accessToken, postId),
     };
   }),

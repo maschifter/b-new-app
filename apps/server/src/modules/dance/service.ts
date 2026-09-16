@@ -15,6 +15,7 @@ import type {
 } from "@bnewapp/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyBaseLogger, FastifyInstance } from "fastify";
+import { derivedObjectPaths, recordingObjectName, recordingObjectPath } from "./media-paths.js";
 import type { DanceMovesCursor, DancePostsCursor } from "./schemas.js";
 
 const MOVE_SELECT =
@@ -353,7 +354,7 @@ export function createDanceService(
       if (!move) throw httpErrors.notFound("Dance move not found");
 
       const postId = randomUUID();
-      const path = `${ownerId}/${postId}.mp4`;
+      const path = recordingObjectPath(ownerId, postId);
       const { error: insertError } = await supabase.from("dance_posts").insert({
         id: postId,
         owner_id: ownerId,
@@ -386,7 +387,7 @@ export function createDanceService(
       if (existingError) throw httpErrors.internalServerError("Could not load dance post");
       if (!existing) throw httpErrors.notFound("Dance post not found");
 
-      const filename = `${postId}.mp4`;
+      const filename = recordingObjectName(postId);
       const { data: uploadedFiles, error: storageError } = await supabase.storage
         .from(danceVideoBucket)
         .list(ownerId, { limit: 1, search: filename });
@@ -432,6 +433,41 @@ export function createDanceService(
       return toDancePost(post, httpErrors);
     },
 
+    async deleteRecordedPost(ownerId: string, postId: string): Promise<void> {
+      // `discardUploadingPost` owns the uploading state and its storage layout, so this
+      // endpoint must never take a recording out from under an upload in flight.
+      const { data: deleted, error } = await supabase
+        .from("dance_posts")
+        .delete()
+        .eq("id", postId)
+        .eq("owner_id", ownerId)
+        .neq("status", "uploading")
+        .select("id")
+        .maybeSingle();
+      if (error) throw httpErrors.internalServerError("Could not delete dance post");
+
+      // Nothing deleted is either an already-gone post, which stays idempotent so a retry
+      // can finish the storage cleanup below, or a live upload this endpoint must refuse.
+      if (!deleted) {
+        const { data: remaining, error: readError } = await supabase
+          .from("dance_posts")
+          .select("id")
+          .eq("id", postId)
+          .eq("owner_id", ownerId)
+          .maybeSingle();
+        if (readError) throw httpErrors.internalServerError("Could not verify dance post deletion");
+        if (remaining) throw httpErrors.conflict("Dance post is still uploading");
+      }
+
+      // Canonical owner-scoped paths, so a retry after a failed removal still knows what
+      // to delete once the row is gone.
+      const paths = derivedObjectPaths(ownerId, postId);
+      const { error: storageError } = await supabase.storage
+        .from(danceVideoBucket)
+        .remove([recordingObjectPath(ownerId, postId), paths.mergedVideo, paths.thumbnail]);
+      if (storageError) throw httpErrors.internalServerError("Could not remove dance media");
+    },
+
     async discardUploadingPost(ownerId: string, postId: string): Promise<void> {
       const { data: deletedPost, error: deleteError } = await supabase
         .from("dance_posts")
@@ -444,11 +480,10 @@ export function createDanceService(
       if (deleteError) throw httpErrors.internalServerError("Could not discard dance post");
       if (!deletedPost) return;
 
-      // Only the recording: a post is `uploading` until `markUploaded` enqueues its media
-      // job, so it cannot have derived objects yet, and nothing moves a post back to
-      // `uploading`. Listing them here would add an unconditional Storage delete for paths
-      // that never exist. A real post-deletion path is what needs `derivedObjectPaths`
-      // (`media-paths.ts`) — that helper exists so the naming scheme has one home.
+      // Only the recording, and by the stored path rather than a rebuilt one: a post is
+      // `uploading` until `markUploaded` enqueues its media job, so it cannot have derived
+      // objects yet, and nothing moves a post back to `uploading`. Listing them here would
+      // add an unconditional Storage delete for paths that never exist.
       if (deletedPost.video_path !== null) {
         const { error: storageError } = await supabase.storage
           .from(danceVideoBucket)
