@@ -1,4 +1,4 @@
-import { BouncablePress } from "@/components/bouncable-press";
+import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import { Text, View } from "react-native";
 import type { SubmissionState } from "./submission-state";
 

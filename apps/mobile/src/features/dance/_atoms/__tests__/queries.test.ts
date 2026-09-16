@@ -1,4 +1,4 @@
-import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
+import { queryAuthAtom } from "@bnewapp/mobile-kit";
 import type { ScanStatus } from "@bnewapp/types";
 import { QueryClient } from "@tanstack/react-query";
 import { waitFor } from "@testing-library/react-native";

@@ -2,7 +2,7 @@ import {
   createTestQueryClient,
   createTestStore,
   renderWithProviders,
-} from "@/test-utils/render-with-providers";
+} from "@bnewapp/mobile-kit/testing";
 import type { DanceMove } from "@bnewapp/types";
 import type { QueryClient } from "@tanstack/react-query";
 import { act, fireEventAsync, screen, waitFor } from "@testing-library/react-native";
@@ -11,6 +11,7 @@ import { Camera, useVideoOutput } from "react-native-vision-camera";
 
 import { simulatedDanceRecordingEnabledAtom, useBackDanceCameraAtom } from "../../_atoms/ui";
 import { getDanceMove, getDanceMoves } from "../../api";
+import { configureDanceFlow } from "../../config";
 import { createSimulatedDanceRecorder } from "../../recording-adapter";
 import { RecordDanceScreen } from "../record-dance-screen";
 
@@ -66,6 +67,8 @@ jest.mock("react-native-vision-camera", () => ({
   useCameraPermission: () => mockCameraPermission,
   useVideoOutput: jest.fn(() => ({ createRecorder: mockCreateRecorder })),
 }));
+
+configureDanceFlow({ apiUrl: "http://api.test", mmkvId: "dance-test" });
 
 const mockedGetDanceMove = getDanceMove as jest.Mock;
 const mockedGetDanceMoves = getDanceMoves as jest.Mock;

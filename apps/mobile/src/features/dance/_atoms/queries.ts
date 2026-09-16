@@ -1,5 +1,5 @@
-import { readQueryAuth, requireAuth } from "@/lib/jotai/authed-query";
 import { shouldFinishScorePolling } from "@bnewapp/dance-core";
+import { readQueryAuth, requireAuth } from "@bnewapp/mobile-kit";
 import type {
   DanceGenre,
   DanceMove,

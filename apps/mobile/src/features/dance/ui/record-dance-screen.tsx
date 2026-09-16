@@ -1,7 +1,3 @@
-import { BouncablePress } from "@/components/bouncable-press";
-import { MobileQueryErrorBoundary } from "@/components/error-boundary";
-import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
-import { useFocusedPlayback } from "@/lib/media/use-focused-playback";
 import {
   FilmStep,
   countdownCompletionMs,
@@ -11,7 +7,9 @@ import {
   isFilmMusicPlaying,
   musicSeekSeconds,
 } from "@bnewapp/dance-core";
-import { DanceSkeleton } from "@bnewapp/mobile-kit/ui";
+import { queryAuthAtom } from "@bnewapp/mobile-kit";
+import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
+import { BouncablePress, DanceSkeleton, MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
 import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useAtomValue } from "jotai";

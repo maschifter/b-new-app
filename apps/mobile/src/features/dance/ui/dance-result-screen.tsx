@@ -1,7 +1,7 @@
-import { BouncablePress } from "@/components/bouncable-press";
-import { useFocusedPlayback } from "@/lib/media/use-focused-playback";
-import { useSyncedMusicTrack } from "@/lib/media/use-synced-music-track";
 import { mergeAudioOffsetMs } from "@bnewapp/dance-core";
+import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
+import { useSyncedMusicTrack } from "@bnewapp/mobile-kit/media/use-synced-music-track";
+import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useEffect, useMemo } from "react";

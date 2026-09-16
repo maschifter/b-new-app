@@ -1,5 +1,5 @@
-import { createTestQueryClient, renderWithProviders } from "@/test-utils/render-with-providers";
 import { mergeAudioOffsetMs } from "@bnewapp/dance-core";
+import { createTestQueryClient, renderWithProviders } from "@bnewapp/mobile-kit/testing";
 import { fireEventAsync, screen } from "@testing-library/react-native";
 import {
   createDancePost,
@@ -29,7 +29,7 @@ jest.mock("../../api", () => ({
   markDancePostUploaded: jest.fn(),
   uploadDanceVideo: jest.fn(),
 }));
-jest.mock("@/lib/media/use-synced-music-track", () => ({
+jest.mock("@bnewapp/mobile-kit/media/use-synced-music-track", () => ({
   useSyncedMusicTrack: (player: unknown, options: unknown) =>
     mockUseSyncedMusicTrack(player, options),
 }));

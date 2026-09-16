@@ -1,4 +1,4 @@
-import { apiUrl, authHeaders, jsonHeaders, unwrapApiSuccess } from "@/lib/api/client";
+import { authHeaders, jsonHeaders, unwrapApiSuccess } from "@bnewapp/mobile-kit";
 import type {
   CreateDancePostBody,
   CreateDancePostResult,
@@ -14,6 +14,7 @@ import type {
 } from "@bnewapp/types";
 import { File } from "expo-file-system";
 import { fetch as expoFetch } from "expo/fetch";
+import { danceApiUrl } from "./config";
 
 interface GetDanceMovesParams {
   genreId?: string | null;
@@ -22,7 +23,7 @@ interface GetDanceMovesParams {
 }
 
 export async function getDanceGenres(accessToken: string): Promise<DanceGenre[]> {
-  const response = await fetch(`${apiUrl}/api/dance/genres`, {
+  const response = await fetch(`${danceApiUrl()}/api/dance/genres`, {
     headers: authHeaders(accessToken),
   });
   return unwrapApiSuccess<DanceGenre[]>(response, "Unable to load dance genres");
@@ -35,14 +36,14 @@ export async function getDanceMoves(
   const params = new URLSearchParams({ limit: String(limit) });
   if (genreId) params.set("genre_id", genreId);
   if (cursor) params.set("cursor", JSON.stringify(cursor));
-  const response = await fetch(`${apiUrl}/api/dance/moves?${params.toString()}`, {
+  const response = await fetch(`${danceApiUrl()}/api/dance/moves?${params.toString()}`, {
     headers: authHeaders(accessToken),
   });
   return unwrapApiSuccess<DanceMovesPage>(response, "Unable to load dance moves");
 }
 
 export async function getDanceMove(accessToken: string, moveId: string): Promise<DanceMove> {
-  const response = await fetch(`${apiUrl}/api/dance/moves/${moveId}`, {
+  const response = await fetch(`${danceApiUrl()}/api/dance/moves/${moveId}`, {
     headers: authHeaders(accessToken),
   });
   return unwrapApiSuccess<DanceMove>(response, "Unable to load this dance move");
@@ -54,14 +55,14 @@ export async function getDancePosts(
 ): Promise<DancePostsPage> {
   const params = new URLSearchParams({ limit: String(limit) });
   if (cursor) params.set("cursor", JSON.stringify(cursor));
-  const response = await fetch(`${apiUrl}/api/dance/posts?${params.toString()}`, {
+  const response = await fetch(`${danceApiUrl()}/api/dance/posts?${params.toString()}`, {
     headers: authHeaders(accessToken),
   });
   return unwrapApiSuccess<DancePostsPage>(response, "Unable to load your dances");
 }
 
 export async function getDancePost(accessToken: string, postId: string): Promise<DancePostDetail> {
-  const response = await fetch(`${apiUrl}/api/dance/posts/${postId}`, {
+  const response = await fetch(`${danceApiUrl()}/api/dance/posts/${postId}`, {
     headers: authHeaders(accessToken),
   });
   return unwrapApiSuccess<DancePostDetail>(response, "Unable to load this recorded dance");
@@ -71,7 +72,7 @@ export async function createDancePost(
   accessToken: string,
   input: CreateDancePostBody,
 ): Promise<CreateDancePostResult> {
-  const response = await fetch(`${apiUrl}/api/dance/posts`, {
+  const response = await fetch(`${danceApiUrl()}/api/dance/posts`, {
     method: "POST",
     headers: jsonHeaders(accessToken),
     body: JSON.stringify(input),
@@ -111,7 +112,7 @@ export async function markDancePostUploaded(
   accessToken: string,
   postId: string,
 ): Promise<DancePost> {
-  const response = await fetch(`${apiUrl}/api/dance/posts/${postId}/uploaded`, {
+  const response = await fetch(`${danceApiUrl()}/api/dance/posts/${postId}/uploaded`, {
     method: "POST",
     headers: authHeaders(accessToken),
   });
@@ -122,7 +123,7 @@ export async function discardUploadingDancePost(
   accessToken: string,
   postId: string,
 ): Promise<void> {
-  const response = await fetch(`${apiUrl}/api/dance/posts/${postId}/upload`, {
+  const response = await fetch(`${danceApiUrl()}/api/dance/posts/${postId}/upload`, {
     method: "DELETE",
     headers: authHeaders(accessToken),
   });
@@ -130,7 +131,7 @@ export async function discardUploadingDancePost(
 }
 
 export async function deleteRecordedDancePost(accessToken: string, postId: string): Promise<void> {
-  const response = await fetch(`${apiUrl}/api/dance/posts/${postId}`, {
+  const response = await fetch(`${danceApiUrl()}/api/dance/posts/${postId}`, {
     method: "DELETE",
     headers: authHeaders(accessToken),
   });
@@ -141,7 +142,7 @@ export async function getDanceScoreStatus(
   accessToken: string,
   postId: string,
 ): Promise<ScanStatus> {
-  const response = await fetch(`${apiUrl}/api/dance/posts/${postId}/score`, {
+  const response = await fetch(`${danceApiUrl()}/api/dance/posts/${postId}/score`, {
     headers: authHeaders(accessToken),
   });
   return unwrapApiSuccess<ScanStatus>(response, "Unable to get dance score");

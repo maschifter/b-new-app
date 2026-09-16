@@ -1,8 +1,5 @@
-import { createAtomWithMMKV } from "@/lib/jotai/atom-with-mmkv";
 import { atom } from "jotai";
-import { MMKV } from "react-native-mmkv";
-
-const atomWithDanceMMKV = createAtomWithMMKV(new MMKV({ id: "dance" }));
+import { persistedDanceAtom } from "../config";
 
 /** The optional genre filter; null represents the complete published catalog. */
 export const selectedDanceGenreIdAtom = atom<string | null>(null);
@@ -25,10 +22,7 @@ export interface ActiveDanceScan {
 export const activeDanceScanAtom = atom<ActiveDanceScan | null>(null);
 
 /** Development-only switch surfaced by the global developer menu. */
-export const simulatedDanceRecordingEnabledAtom = atomWithDanceMMKV(
-  "dance:v1:simulated-recording",
-  false,
-);
+export const simulatedDanceRecordingEnabledAtom = persistedDanceAtom("simulated-recording", false);
 
 /** Development-only camera selection for recording a different dancer. */
-export const useBackDanceCameraAtom = atomWithDanceMMKV("dance:v1:use-back-camera", false);
+export const useBackDanceCameraAtom = persistedDanceAtom("use-back-camera", false);

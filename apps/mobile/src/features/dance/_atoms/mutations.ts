@@ -1,5 +1,4 @@
-import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
-import { requireAuth } from "@/lib/jotai/authed-query";
+import { queryAuthAtom, requireAuth } from "@bnewapp/mobile-kit";
 import type { DancePostsPage } from "@bnewapp/types";
 import type { InfiniteData } from "@tanstack/react-query";
 import { atomWithMutation, queryClientAtom } from "jotai-tanstack-query";

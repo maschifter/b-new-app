@@ -222,8 +222,10 @@ Four parts of that harness need naming, because "publish it from `./testing`" do
 the shared flow identity-agnostic.
 
 **`packages/dance-flow`** (from `apps/mobile/src/features/dance`):
-`api.ts`, `recording-adapter.ts`, `score-polling.ts`, `dev.ts`, and
+`api.ts`, `config.ts`, `recording-adapter.ts`, `score-polling.ts`, `dev.ts`, and
 `ui/{record-dance-screen,dance-result-screen,camera-permission-overlay,submission-feedback,submission-state}`.
+(`config.ts` is R2's output — the injected `apiUrl`/`mmkvId` and `persistedDanceAtom`. It moves with
+the flow; only `apps/mobile/src/lib/bootstrap/dance-flow.ts`, which calls it, stays behind.)
 
 The `_atoms/` files move **by export, not by file** — see R3; the flow/product seam runs through
 the middle of every one of them.
@@ -389,7 +391,7 @@ see, so an unowned device check silently converts them into unverified assumptio
 |---|---|---|
 | R0 — Decisions | ✅ Done | Recorded in "Decisions locked in" above |
 | R1 — `packages/mobile-kit` | ✅ Done | Extract RN primitives + transport + theme preset + test harness behind re-export shims; widen the tailwind glob; settle the RN-package mechanics. See "R1 outcome" below |
-| R2 — De-app-ify the dance feature | ☐ | Inject the API base URL and MMKV namespace instead of importing app-local config |
+| R2 — De-app-ify the dance feature | ✅ Done | Inject the API base URL and MMKV namespace instead of importing app-local config. See "R2 outcome" below |
 | R3 — `packages/dance-flow` | ☐ | Extract the record/result flow by export; `apps/mobile` consumes it |
 | R5a — Anonymous identity | ☐ | Signup-trigger migration + the invariant it falsifies + enable anonymous sign-ins. Database-only, parallelizable with R1–R3, required before P0 signs in |
 | P0 — Init `apps/edu` | ☐ | Scaffolding only, no feature code |
@@ -658,6 +660,45 @@ as *flow* in R3 — has any `@/` import left, including via an R1 shim; the movi
 `dance-post-detail-screen.tsx` keeps `@/components/app-header`, and the four staying screens keep
 `@/lib/theme/colors` through its shim. Existing tests unchanged and green.
 
+#### R2 outcome
+
+`features/dance/config.ts` holds `configureDanceFlow({ apiUrl, mmkvId })`, a
+`DanceFlowNotConfiguredError`, the lazy `danceApiUrl()` accessor and `persistedDanceAtom()`.
+`apps/mobile` supplies its values from `src/lib/bootstrap/dance-flow.ts`, imported for side effect
+by the root layout.
+
+- **MMKV mechanism settled: lazy initialization on first read.** The "configure-before-first-read
+  guard" alternative is not merely worse, it cannot work: jotai's `atomWithStorage` calls
+  `storage.getItem` when the atom is *created* (`utils.mjs:452`, under `getOnInit: true`), and the
+  atoms are created at module load, so any guard would throw before a bootstrap call could run.
+  `persistedDanceAtom` returns a proxy atom that builds and memoizes the real persisted atom on
+  first read.
+- **The `dance:v1:` prefix is deliberately *not* injected**, which the plan text left ambiguous
+  while its own `configureDanceFlow({ apiUrl, mmkvId })` signature did not include it. A distinct
+  MMKV store id already gives full isolation; the prefix is the *flow's* storage schema version,
+  so injecting it per app would let two apps silently disagree about it. Only the store id is
+  app-owned.
+- **Acceptance verified transitively, not per file.** A walk of the import graph from the 14
+  moving-set roots reports zero `@/` imports anywhere in the closure, including via an R1 shim.
+  The staying screens keep theirs, as intended.
+- **Two suites needed a `configureDanceFlow` setup call** — `__tests__/api.test.ts` and
+  `ui/__tests__/record-dance-screen.test.tsx`. No assertion changed anywhere, which is what the
+  lazy-accessor decision was chosen to buy.
+- **One test change was mandatory rather than cosmetic:**
+  `ui/__tests__/dance-result-screen.test.tsx` mocks the music hook by path, so the mock had to
+  follow the screen to `@bnewapp/mobile-kit/media/use-synced-music-track`; left alone it would
+  have silently stopped applying.
+- **`configureDanceFlow` is one-shot, and enforced.** The store is memoized on first read, so a
+  second call carrying a different `mmkvId` would be silently ignored while `apiUrl` did change —
+  a split-brain config rather than a repoint. A repeat call with identical values is a no-op; a
+  conflicting one throws `DanceFlowReconfiguredError`.
+- **New coverage owned by R2:** `__tests__/config.test.ts` pins the named error, the injected base
+  URL, that creating a persisted atom touches no MMKV, that writes land under
+  `dance:v1:` in the injected store and not in `apps/mobile`'s, and both sides of the
+  reconfiguration guard.
+- `mobile-kit` gained one export, `MMKVAtom<T>`, the return type of `createAtomWithMMKV`, so a
+  consumer can wrap a persisted atom without redeclaring its shape.
+
 ### R3 — `packages/dance-flow`
 
 Move the files listed above; `apps/mobile` re-exports them through its own
@@ -738,6 +779,7 @@ R1 moves four suites and names each; R3 moves more, and the `ui/__tests__/` dire
 | Suite | Follows |
 |---|---|
 | `__tests__/api.test.ts` | `api.ts` |
+| `__tests__/config.test.ts` | `config.ts` |
 | `__tests__/recording-adapter.test.ts` | `recording-adapter.ts` |
 | `_atoms/__tests__/queries.test.ts` | `danceScoreAtom` / `activeDanceScanAtom` |
 | `_atoms/__tests__/effects.test.ts` | `startDanceScorePollingAtom` |
@@ -963,7 +1005,7 @@ one entry here with a real cost of change, so re-decide it before P0 runs, not a
 | ~~Package test home~~ | **Settled in R1: yes.** Bail-out not triggered | R1 |
 | ~~Shared jest harness~~ | **Moot — it ships from `mobile-kit/testing`.** No duplication needed | R1 |
 | ~~Shared jest fragment shape~~ | **Settled in R1: spreadable config object** (`mobileKitJestConfig`) | R1 |
-| MMKV configure mechanism | Lazy initialization on first read, or a configure-before-first-read guard? A module-scope `new MMKV()` cannot wait for a bootstrap call | R2, where the gap is |
+| ~~MMKV configure mechanism~~ | **Settled in R2: lazy initialization on first read.** The guard alternative cannot work — `atomWithStorage` reads storage at atom *creation* | R2 |
 | Device verification owner | Who runs the Android check (R3 end-to-end) and the iOS build (P0)? R1's share of it is now covered by the bundle check; R3 and P0 still need hardware | Before R3 starts — see "Device verification" under Phases |
 | Anonymous bootstrap in P0 | Does the scaffold sign in anonymously (needs R5a first), or ship a placeholder screen with no auth and defer R5a? | Decide before P0; R5a is small either way |
 | Trigger rollback | Does an identified signup still insert a profile row after the trigger change? | R5a, proven before the migration is pushed |

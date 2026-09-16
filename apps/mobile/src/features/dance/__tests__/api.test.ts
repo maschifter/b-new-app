@@ -30,6 +30,9 @@ import {
   markDancePostUploaded,
   uploadDanceVideo,
 } from "../api";
+import { configureDanceFlow } from "../config";
+
+configureDanceFlow({ apiUrl: "http://api.test", mmkvId: "dance-test" });
 
 const fetchMock = jest.fn();
 

@@ -1,4 +1,4 @@
-import { BouncablePress } from "@/components/bouncable-press";
+import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import { BlurView } from "expo-blur";
 import { StyleSheet, Text } from "react-native";
 

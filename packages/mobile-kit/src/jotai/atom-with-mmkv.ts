@@ -4,6 +4,9 @@ import type { MMKV } from "react-native-mmkv";
 
 type SyncSetter<T> = T | ((prev: T) => T);
 
+/** The atom `createAtomWithMMKV` builds, for callers that wrap or re-expose one. */
+export type MMKVAtom<T> = WritableAtom<T, [SyncSetter<T>], void>;
+
 // MMKV is fully synchronous; we cast the atom's read/write types so callers
 // don't have to deal with the `T | Promise<T>` union that atomWithStorage
 // returns when it can't statically tell the storage is sync.
@@ -19,9 +22,9 @@ export function createAtomWithMMKV(mmkv: MMKV) {
   };
   const jsonStorage = createJSONStorage<unknown>(() => storage);
 
-  return function atomWithMMKV<T>(key: string, initial: T): WritableAtom<T, [SyncSetter<T>], void> {
+  return function atomWithMMKV<T>(key: string, initial: T): MMKVAtom<T> {
     return atomWithStorage<T>(key, initial, jsonStorage as never, {
       getOnInit: true,
-    }) as WritableAtom<T, [SyncSetter<T>], void>;
+    }) as MMKVAtom<T>;
   };
 }

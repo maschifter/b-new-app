@@ -1,4 +1,5 @@
 import "@/global.css";
+import "@/lib/bootstrap/dance-flow";
 import type { DevMenu as DevMenuComponent } from "@/features/dev-menu/dev-menu";
 import { NativeAnimatedWarningGuard } from "@/lib/animation/native-animated-warning-guard";
 import { AuthSessionProvider, useAuthSession } from "@/lib/auth/session-provider";
