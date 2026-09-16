@@ -7,6 +7,12 @@ port = 54321
 [db]
 port = 54322
 
+# apps/edu signs in anonymously on first launch. The hosted project needs the matching
+# dashboard switch (Authentication > Sign In / Providers > Anonymous sign-ins); this entry
+# only covers the local stack.
+[auth]
+enable_anonymous_sign_ins = true
+
 [storage.buckets.catalog-art]
 public = true
 file_size_limit = "5MiB"

@@ -16,6 +16,7 @@ These rules apply to `supabase`. Also follow the root `AGENTS.md`.
 - Enable and review Row Level Security for user-accessible tables.
 - Write policies around `auth.uid()` and the actual ownership model; do not trust client-provided owner ids.
 - Keep privileged service-role operations server-only.
+- Do not assume every `auth.users` row has a `public.profiles` row. Profiles exist only for identified users; anonymous sign-ins (`apps/edu`) deliberately have none. A new FK to `profiles`, or a PostgREST embed through one, restricts that relation to identified users — state that intent on the constraint.
 - Review grants, functions, triggers, and `security definer` search paths carefully.
 
 ## Types and Consumers

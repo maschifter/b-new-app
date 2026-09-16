@@ -393,7 +393,7 @@ see, so an unowned device check silently converts them into unverified assumptio
 | R1 — `packages/mobile-kit` | ✅ Done | Extract RN primitives + transport + theme preset + test harness behind re-export shims; widen the tailwind glob; settle the RN-package mechanics. See "R1 outcome" below |
 | R2 — De-app-ify the dance feature | ✅ Done | Inject the API base URL and MMKV namespace instead of importing app-local config. See "R2 outcome" below |
 | R3 — `packages/dance-flow` | ✅ Done | Extract the record/result flow by export; `apps/mobile` consumes it. See "R3 outcome" below |
-| R5a — Anonymous identity | ☐ | Signup-trigger migration + the invariant it falsifies + enable anonymous sign-ins. Database-only, parallelizable with R1–R3, required before P0 signs in |
+| R5a — Anonymous identity | ✅ Done (staging) | Signup-trigger migration + conversion branch + corrected invariant, pushed to `bnewapp(staging)` and proven against it: identified signup, anonymous sign-in, conversion, and an anonymous token reaching an owner-scoped dance endpoint. **Production push still outstanding.** See "R5a outcome" below |
 | P0 — Init `apps/edu` | ☐ | Scaffolding only, no feature code |
 | C1 — Delete the R1 shims | ☐ | Rewrite the ~88 `@/` import sites in `apps/mobile` to `@bnewapp/mobile-kit` and delete every shim **except `lib/api/client`, which graduates rather than disappears** — see R1's *"Consequence for the shim"* note. Unblocked once `apps/edu` exists (P0). The largest single diff in the programme, and **not optional**: leaving the shims permanently means both apps reach shared code through `apps/mobile`'s `@/` paths, which is the boundary violation this refactor exists to remove |
 
@@ -942,6 +942,83 @@ Also in this phase:
 app's path), an anonymous sign-in succeeds and reaches an owner-scoped dance endpoint, and the
 migration carries a rollback note plus the corrected `studio_rooms_owner_profile_fk` comment.
 
+#### R5a outcome — what landed and what is still owed
+
+**Landed (local, reversible):**
+
+- `supabase/migrations/20260916131240_allow_anonymous_users.sql`:
+  - `handle_new_user()` now guards its insert with `if new.email is not null`, so an anonymous
+    sign-in no longer fails at the trigger. The insert gained `on conflict (id) do nothing` so it
+    stays idempotent alongside the new update branch.
+  - **Blocker 3 is fixed, not recorded as a limitation.** A new
+    `on_auth_user_identified` trigger (`after update of email on auth.users`,
+    `when (old.email is null and new.email is not null)`) inserts the profile row on an
+    anonymous → permanent conversion. The `when` clause is what keeps it off the hot path —
+    `auth.users` is updated on every sign-in. The invariant it restores is worth the ten lines:
+    *every user with an email has a profile row*, at insert or at conversion.
+  - The `studio_rooms_owner_profile_fk` invariant is corrected in place with
+    `comment on constraint`, rather than by editing the already-applied
+    `20260813033848_add_profile_username.sql`.
+  - A rollback note is carried in the migration, including the ordering constraint: disable the
+    dashboard switch **before** rolling back, or every anonymous sign-in starts failing at the
+    trigger again.
+- `supabase/config.toml` gains `[auth] enable_anonymous_sign_ins = true` — the local-stack mirror
+  of the dashboard switch, so a local run does not silently disagree with the hosted project.
+- `supabase/AGENTS.md` records the durable rule: a `profiles` FK or a PostgREST embed through one
+  restricts that relation to identified users, and that intent must be stated on the constraint.
+
+**Two consequences worth knowing before the feature work** (neither is a defect; both follow from
+anonymous users having no `profiles` row):
+
+- `GET /api/user/me` answers `404` for an anonymous caller. `apps/edu` never calls it, per the
+  decisions table.
+- The admin panel's user list and its dashboard counts read from `profiles`
+  (`apps/server/src/modules/admin/service.ts`), so they count identified users only. If
+  `apps/edu`'s anonymous population ever needs to be visible there, that is a new admin query
+  against `auth.users`, not a change to this trigger.
+
+**Verified on `bnewapp(staging)`** (project ref `uuuoellkauugnjtmgvow`, GoTrue `v2.197.0`,
+Postgres `17.6.1.155`). `db:push` applied exactly this one migration — `migration list --linked`
+showed the other 14 already in sync, so nothing rode along with it. Every check cleaned up its
+test users, and `profilesLeft=0` after each delete confirms the cascade still works.
+
+| Check | Result |
+|---|---|
+| Identified signup still inserts a `profiles` row | **PASS** — `username=dancer-000010`, so the `dancer-NNNNNN` default this insert depends on still fires |
+| Anonymous sign-in succeeds, with **no** `profiles` row | **PASS** — `is_anonymous=true`, `role=authenticated`, `profiles=0` |
+| Conversion (email added) inserts the `profiles` row | **PASS** — `username=dancer-000011`, so the `after update of email` branch fires |
+| Anonymous token reaches an owner-scoped dance endpoint | **PASS** — `GET /api/dance/posts` → `200 {"items":[],"nextCursor":null}` |
+| Same endpoint without a token | **PASS** — `401`, so the `200` above is real authentication, not an open route |
+| `GET /api/user/me` for an anonymous caller | `404` — the documented consequence, not a defect |
+
+Run order mattered and is worth keeping: the first attempt returned `422 anonymous_provider_disabled`
+because the dashboard switch was still off. That is the migration sitting harmlessly ahead of the
+switch — the safe intermediate state, and the reason **push before flipping the switch** is the
+recorded order.
+
+Two things this settled that were previously hedged:
+
+- **`is_anonymous` is real and reaches the JWT.** It is the discriminator to use if the admin panel
+  ever needs to count the `apps/edu` population — a new query against `auth.users`, not a change to
+  this trigger.
+- **`db:types` produces an empty diff.** No table, column or enum changed, and `supabase gen types`
+  does not emit functions returning `trigger`. `database.generated.ts` is untouched by design.
+
+**The dashboard's own two warnings, against this schema:**
+
+- *"Anonymous users will use the `authenticated` role — review your RLS policies."* Already handled.
+  All 14 RLS-enabled tables scope by ownership (`auth.uid() = owner_id`), not by role, so an
+  anonymous JWT grants access to that anonymous user's own rows and nothing else. No policy grants
+  anything to `authenticated` broadly.
+- *"Enable captcha to prevent abuse that bloats your database and MAU costs."* Not done, and
+  deliberately out of scope — the anonymous-user growth and abuse policy is excluded from R5a by
+  the phase's own definition. It belongs with the scan flow's retention work. Note it is now a live
+  exposure on staging, not a hypothetical one.
+
+**Still outstanding: the production push.** Only staging is linked in this working copy. Production
+needs the same `db:push`, the same dashboard switch, and the same run order — and there the
+identified-signup check matters far more than it did here, because that is where real users sign up.
+
 ### P0 — Init `apps/edu` (scaffolding only)
 
 - `package.json` (`@bnewapp/edu`), workspace deps `@bnewapp/{types,dance-core,mobile-kit,dance-flow}`.
@@ -1062,5 +1139,5 @@ one entry here with a real cost of change, so re-decide it before P0 runs, not a
 | ~~Shared jest fragment shape~~ | **Settled in R1: spreadable config object** (`mobileKitJestConfig`) | R1 |
 | ~~MMKV configure mechanism~~ | **Settled in R2: lazy initialization on first read.** The guard alternative cannot work — `atomWithStorage` reads storage at atom *creation* | R2 |
 | Device verification owner | Who runs the Android check (R3 end-to-end) and the iOS build (P0)? R1's share of it is now covered by the bundle check; R3 and P0 still need hardware | Before R3 starts — see "Device verification" under Phases |
-| Anonymous bootstrap in P0 | Does the scaffold sign in anonymously (needs R5a first), or ship a placeholder screen with no auth and defer R5a? | Decide before P0; R5a is small either way |
-| Trigger rollback | Does an identified signup still insert a profile row after the trigger change? | R5a, proven before the migration is pushed |
+| Anonymous bootstrap in P0 | Does the scaffold sign in anonymously, or ship a placeholder with no auth? | **Unblocked on staging** — R5a is live there, so P0 can sign in for real against staging. Still a decision for production |
+| ~~Trigger rollback~~ | **Settled in R5a: yes.** Proven on staging after the push — an identified signup inserts a profile row and the `dancer-NNNNNN` default still fires | R5a |
