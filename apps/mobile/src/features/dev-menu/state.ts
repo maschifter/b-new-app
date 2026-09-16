@@ -1,4 +1,4 @@
-import { createAtomWithMMKV } from "@/lib/jotai/atom-with-mmkv";
+import { createAtomWithMMKV } from "@bnewapp/mobile-kit";
 import { MMKV } from "react-native-mmkv";
 
 const atomWithDevMenuMMKV = createAtomWithMMKV(new MMKV({ id: "dev-menu" }));

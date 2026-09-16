@@ -1,4 +1,4 @@
-import { COLORS } from "@/lib/theme/colors";
+import { COLORS } from "@bnewapp/mobile-kit/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import type { ComponentProps } from "react";

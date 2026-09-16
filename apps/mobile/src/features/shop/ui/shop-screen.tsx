@@ -1,6 +1,6 @@
-import { MobileQueryErrorBoundary } from "@/components/error-boundary";
 import { catalogAtom } from "@/features/catalog";
-import { COLORS } from "@/lib/theme/colors";
+import { COLORS } from "@bnewapp/mobile-kit/theme/colors";
+import { MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
 import { canAfford } from "@bnewapp/studio-core";
 import type { CatalogItemDTO } from "@bnewapp/types";
 import { useAtom, useAtomValue } from "jotai";

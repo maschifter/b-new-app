@@ -1,5 +1,5 @@
-import { MobileQueryErrorBoundary } from "@/components/error-boundary";
 import { StudioStage } from "@/features/studio";
+import { MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
 import { templateOrDefault } from "@bnewapp/studio-core";
 import { useAtomValue } from "jotai";
 import { Suspense } from "react";

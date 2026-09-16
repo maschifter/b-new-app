@@ -1,9 +1,9 @@
 import { AppHeader } from "@/components/app-header";
-import { BouncablePress } from "@/components/bouncable-press";
 import { Screen } from "@/components/screen";
 import { DancePostGrid } from "@/features/dance";
 import { useAuthSession } from "@/lib/auth/session-provider";
-import { COLORS } from "@/lib/theme/colors";
+import { COLORS } from "@bnewapp/mobile-kit/theme/colors";
+import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Text, View } from "react-native";

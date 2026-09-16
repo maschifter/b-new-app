@@ -1,4 +1,4 @@
-import { BouncablePress } from "@/components/bouncable-press";
+import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import { router } from "expo-router";
 import type { ReactNode } from "react";
 import { Text, View } from "react-native";

@@ -1,8 +1,8 @@
+import { type QueryAuth, queryAuthAtom } from "@bnewapp/mobile-kit";
 import type { Session } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSetAtom } from "jotai";
 import { type PropsWithChildren, createContext, useContext, useEffect, useState } from "react";
-import { type QueryAuth, queryAuthAtom } from "./query-auth-atom";
 import { supabase } from "./supabase";
 
 interface AuthSessionContextValue {

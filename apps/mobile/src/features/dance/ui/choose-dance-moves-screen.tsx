@@ -1,7 +1,5 @@
-import { BouncablePress } from "@/components/bouncable-press";
-import { MobileQueryErrorBoundary } from "@/components/error-boundary";
-import { COLORS } from "@/lib/theme/colors";
-import { DanceSkeleton } from "@bnewapp/mobile-kit/ui";
+import { COLORS } from "@bnewapp/mobile-kit/theme/colors";
+import { BouncablePress, DanceSkeleton, MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
 import type { DanceGenre, DanceMove } from "@bnewapp/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useAtom, useAtomValue } from "jotai";

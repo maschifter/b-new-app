@@ -1,5 +1,5 @@
-import { BouncablePress } from "@/components/bouncable-press";
 import type { ArtHitBox } from "@/features/catalog";
+import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import type { CatalogItem, ContentRef, Spot } from "@bnewapp/studio-core";
 import { Image } from "expo-image";
 import { Text, View } from "react-native";

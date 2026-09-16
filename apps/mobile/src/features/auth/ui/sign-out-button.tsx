@@ -1,5 +1,5 @@
-import { BouncablePress } from "@/components/bouncable-press";
 import { supabase } from "@/lib/auth/supabase";
+import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import { router } from "expo-router";
 import { Text } from "react-native";
 

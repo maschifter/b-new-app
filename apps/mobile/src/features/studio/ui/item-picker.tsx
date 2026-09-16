@@ -1,8 +1,7 @@
-import { BouncablePress } from "@/components/bouncable-press";
-import { MobileQueryErrorBoundary } from "@/components/error-boundary";
 import { artSource, catalogAtom } from "@/features/catalog";
 import { ownedItemIdsAtom } from "@/features/shop";
-import { COLORS } from "@/lib/theme/colors";
+import { COLORS } from "@bnewapp/mobile-kit/theme/colors";
+import { BouncablePress, MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
 import { type ContentRef, type Spot, fits } from "@bnewapp/studio-core";
 import { Image } from "expo-image";
 import { useAtomValue } from "jotai";

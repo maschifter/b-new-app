@@ -1,4 +1,4 @@
-import { readQueryAuth, requireAuth } from "@/lib/jotai/authed-query";
+import { readQueryAuth, requireAuth } from "@bnewapp/mobile-kit";
 import type { ExploreRoomsCursor, ExploreRoomsPage } from "@bnewapp/types";
 import type { InfiniteData } from "@tanstack/react-query";
 import { atomFamily } from "jotai-family";

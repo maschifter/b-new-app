@@ -1,6 +1,6 @@
 import { AppHeader } from "@/components/app-header";
-import { MobileQueryErrorBoundary } from "@/components/error-boundary";
-import { useFocusedPlayback } from "@/lib/media/use-focused-playback";
+import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
+import { MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
 import { Image } from "expo-image";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useAtomValue } from "jotai";

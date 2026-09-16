@@ -1,4 +1,4 @@
-import { BouncablePress } from "@/components/bouncable-press";
+import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StudioProvider, useStudio } from "../state/studio-provider";

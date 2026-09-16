@@ -228,8 +228,7 @@ Rules:
   client into `jotai-tanstack-query`'s `queryClientAtom`; never let the two APIs create
   separate caches.
 - Authenticated query atoms read `{ userId, accessToken }` through `readQueryAuth` /
-  `requireAuth` (`@/lib/jotai/authed-query`), which wrap the query-auth atom owned by
-  `@bnewapp/mobile-kit`. `AuthSessionProvider` (`@/lib/auth/session-provider`) keeps that
+  `requireAuth` (`@bnewapp/mobile-kit`), which wrap the query-auth atom that package owns. `AuthSessionProvider` (`@/lib/auth/session-provider`) keeps that
   single projection synchronized with the Supabase session; feature atoms must not call
   React auth hooks or create another auth source. Include `userId` in every user-scoped
   query key so cache identity does not depend on cleanup timing. When an authenticated
@@ -243,7 +242,7 @@ Rules:
   rather than merely broken — a wallet balance, an entitlement, anything the user is charged
   for — and `serverError: true` when the endpoint's failures are actionable and the server's
   own message should reach the user. Plain reads trust the declared type.
-- **Local persistence** = `createAtomWithMMKV` (`@/lib/jotai/atom-with-mmkv`), keyed by
+- **Local persistence** = `createAtomWithMMKV` (`@bnewapp/mobile-kit`), keyed by
   `ownerId`, under a **versioned namespace** (`<feature>:v1:`), with an `MMKV` instance
   scoped per feature (`new MMKV({ id: "<feature>" })`).
 - **Lists / feeds** = `atomWithInfiniteQuery` + **cursor pagination**, plus a derived
@@ -256,11 +255,16 @@ Rules:
 ### Where the shared mobile seam lives
 
 The transport, auth projection, query provider, MMKV/jotai helpers, UI primitives, media
-hooks, theme tokens and jest harness live in **`@bnewapp/mobile-kit`**.
-`apps/mobile/src/lib/*` keeps thin re-export shims (`@/lib/api/client`,
-`@/lib/jotai/authed-query`, `@/lib/jotai/atom-with-mmkv`, `@/lib/auth/query-auth-atom`, …)
-so feature code keeps importing `@/lib/...`. Change the implementation in `mobile-kit`, not
-in a feature, and never add a second copy of a primitive it already owns.
+hooks, theme tokens and jest harness live in **`@bnewapp/mobile-kit`**. Feature code imports
+them from the package directly — `@bnewapp/mobile-kit` (transport helpers, auth/query seam,
+jotai helpers, `QueryProvider`), `@bnewapp/mobile-kit/ui`, `@bnewapp/mobile-kit/theme/colors`
+and the two `@bnewapp/mobile-kit/media/*` hooks. One `exports` entry per concern, so a
+consumer never loads a native dependency it does not use. Change the implementation in
+`mobile-kit`, not in a feature, and never add a second copy of a primitive it already owns.
+
+`apps/mobile/src/lib/api/client.ts` is the one app-owned module in that seam: the package
+exposes `resolveExpoApiUrl`, and each app calls it once with its own env value and port to
+own the resulting `apiUrl` constant. `apps/edu` has the mirror-image module.
 
 **`@bnewapp/dance-flow`** owns the record and result screens plus the flow state behind
 them. The app's `dance` feature keeps catalog, learning, post history and feed UI. The app

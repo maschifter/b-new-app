@@ -395,9 +395,9 @@ see, so an unowned device check silently converts them into unverified assumptio
 | R3 — `packages/dance-flow` | ✅ Done | Extract the record/result flow by export; `apps/mobile` consumes it. See "R3 outcome" below |
 | R5a — Anonymous identity | ✅ Done (staging) | Signup-trigger migration + conversion branch + corrected invariant, pushed to `bnewapp(staging)` and proven against it: identified signup, anonymous sign-in, conversion, and an anonymous token reaching an owner-scoped dance endpoint. **Production push still outstanding.** See "R5a outcome" below |
 | P0 — Init `apps/edu` | ✅ Done (Android) | `apps/edu` (`@bnewapp/edu`, display name **Stepz**) builds, runs and shows its placeholder on an Android device, signed in anonymously against staging; workspace `typecheck` / `test` / `lint` green. **iOS build outstanding** — no Mac available, so the split acceptance applies. See "P0 outcome" below |
-| C1 — Delete the R1 shims | ☐ | Rewrite the ~88 `@/` import sites in `apps/mobile` to `@bnewapp/mobile-kit` and delete every shim **except `lib/api/client`, which graduates rather than disappears** — see R1's *"Consequence for the shim"* note. Unblocked once `apps/edu` exists (P0). The largest single diff in the programme, and **not optional**: leaving the shims permanently means both apps reach shared code through `apps/mobile`'s `@/` paths, which is the boundary violation this refactor exists to remove |
+| C1 — Delete the R1 shims | ✅ Done | Rewrite the ~88 `@/` import sites in `apps/mobile` to `@bnewapp/mobile-kit` and delete every shim **except `lib/api/client`, which graduates rather than disappears** — see R1's *"Consequence for the shim"* note. Unblocked once `apps/edu` exists (P0). The largest single diff in the programme, and **not optional**: leaving the shims permanently means both apps reach shared code through `apps/mobile`'s `@/` paths, which is the boundary violation this refactor exists to remove |
 
-**C1 is now unblocked**: `apps/edu` exists, so the R1 shims can be deleted.
+**All phases in this plan are now done.** See "C1 outcome" below for the closing one.
 
 **Where the phases stop.** P0's acceptance — `apps/edu` builds, runs and shows a placeholder, with
 the workspace green — is the end of this plan. The feed, the scan flow and the local profile, plus
@@ -1192,6 +1192,62 @@ end to end from a real device, not just from a script.
 - `userInterfaceStyle: "automatic"` prints an `expo-system-ui` prebuild warning. `apps/mobile`
   prints the identical warning with the identical config; parity was kept rather than silently
   diverging.
+
+### C1 — Delete the R1 shims
+
+**Done.** The ten pure re-export shims are gone and every consumer imports the package directly.
+
+| Deleted shim | Consumers now import |
+|---|---|
+| `src/components/bouncable-press.tsx` | `@bnewapp/mobile-kit/ui` |
+| `src/components/error-boundary/index.ts` | `@bnewapp/mobile-kit/ui` |
+| `src/lib/theme/colors.ts` | `@bnewapp/mobile-kit/theme/colors` |
+| `src/lib/media/use-focused-playback.ts` | `@bnewapp/mobile-kit/media/use-focused-playback` |
+| `src/lib/media/use-synced-music-track.ts` | *(no app consumer — `dance-flow` already imports the package)* |
+| `src/lib/jotai/authed-query.ts`, `atom-with-mmkv.ts` | `@bnewapp/mobile-kit` |
+| `src/lib/auth/query-auth-atom.ts` | `@bnewapp/mobile-kit` |
+| `src/lib/providers/query-provider.tsx` | `@bnewapp/mobile-kit` |
+| `src/lib/react-query/query-error-reset.ts` | *(no app consumer)* |
+
+**`src/lib/api/client.ts` stayed, and did not have to be renamed.** The plan's example name
+(`api-url-config.ts`) assumed the graduating module would own `apiUrl` alone. It does not need to:
+P0 had already written `apps/edu/src/lib/api/client.ts` as a real app-owned module — `apiUrl`
+resolved once through `resolveExpoApiUrl`, plus a re-export of the package's header and envelope
+helpers — and `apps/mobile`'s file is identical. Keeping the name keeps the two apps' seams
+mirror-images of each other and keeps CLAUDE.md §6's "from `@/lib/api/client`" rule true, so the
+five call sites needed no edit. The graduation the plan asked for had already happened in P0.
+
+**Scale, measured rather than estimated:** 54 rewritten import lines across 36 files plus 10
+deleted shims, not the ~88 sites the "Current state" table projected. That table counted every import of a *moved module*; R2 and R3
+then took the dance flow's 38 of them out of `apps/mobile` entirely, so C1 only had to rewrite what
+was left behind.
+
+**Two edits the mechanical rewrite did not cover:**
+
+- Two imports were *relative*, not `@/`-aliased, so they matched no shim path and only surfaced at
+  `tsc`: `components/app-header.tsx` imported `./bouncable-press`, and
+  `lib/auth/__tests__/session-provider.test.tsx` imported `../query-auth-atom`. A grep for the
+  alias alone would have left both broken.
+- `src/app/__tests__/room-route-guard.test.tsx` stubbed `QueryProvider` by mocking the module it
+  came from. That specifier is now `@bnewapp/mobile-kit`, whose root entry also exports
+  `createAtomWithMMKV` — which the dev menu the root layout pulls in calls at module load, so a
+  bare factory mock broke the suite. It now spreads `jest.requireActual`. `apps/edu`'s equivalent
+  test can mock the whole module because that app has no dev menu; `apps/mobile` cannot.
+
+**Checks:** `corepack pnpm typecheck` **PASS** (12/12), `corepack pnpm lint` **PASS**,
+`corepack pnpm test` **PASS** for every project except `@bnewapp/admin`, which fails on the same
+**pre-existing** missing `apps/admin/.env.local` recorded under P0 and is untouched by this phase.
+`apps/mobile`: 19 suites, 112 tests, all green, with no assertion changed.
+
+**Docs updated with the code:** CLAUDE.md §6 and its "Where the shared mobile seam lives" note now
+name the package entries instead of the deleted `@/` paths, and
+`.agents/skills/bnewapp-mobile-feature/references/current-patterns.md` points at
+`@bnewapp/mobile-kit` for the primitives, the error boundary, the MMKV adapter and `QueryProvider`.
+Earlier plans under `plans/` keep their original wording — they are records of what was true then.
+
+**Not covered by CI:** no device run. The change is import-path-only and the bundler already proved
+in R1 that it compiles `className` out of `packages/`, so the risk this leaves is the same one
+`typecheck` closes.
 
 ## Open decisions
 

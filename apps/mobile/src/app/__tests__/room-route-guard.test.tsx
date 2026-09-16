@@ -16,7 +16,10 @@ jest.mock("expo-router", () => {
   return { Stack };
 });
 
-jest.mock("@/lib/providers/query-provider", () => ({
+// Only the provider is stubbed; the dev menu pulled in by the layout still needs
+// the package's real MMKV helper.
+jest.mock("@bnewapp/mobile-kit", () => ({
+  ...jest.requireActual("@bnewapp/mobile-kit"),
   QueryProvider: ({ children }: { children: ReactNode }) => children,
 }));
 

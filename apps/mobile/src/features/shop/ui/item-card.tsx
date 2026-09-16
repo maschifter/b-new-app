@@ -1,5 +1,5 @@
-import { BouncablePress } from "@/components/bouncable-press";
 import { artSource } from "@/features/catalog";
+import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import { resolvePrice } from "@bnewapp/studio-core";
 import type { CatalogItemDTO } from "@bnewapp/types";
 import { Image } from "expo-image";

@@ -1,9 +1,9 @@
-import { BouncablePress } from "@/components/bouncable-press";
 import { type DevMenuFabPosition, devMenuFabPositionAtom } from "@/features/dev-menu/state";
 import {
   simulatedDanceRecordingEnabledAtom,
   useBackDanceCameraAtom,
 } from "@bnewapp/dance-flow/dev";
+import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import { useAtom } from "jotai";
 import { useMemo, useRef, useState } from "react";
 import { Dimensions, Modal, PanResponder, Switch, Text, View } from "react-native";

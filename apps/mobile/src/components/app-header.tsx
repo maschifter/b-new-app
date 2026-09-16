@@ -1,8 +1,8 @@
-import { COLORS } from "@/lib/theme/colors";
+import { COLORS } from "@bnewapp/mobile-kit/theme/colors";
+import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import { Ionicons } from "@expo/vector-icons";
 import type { ReactNode } from "react";
 import { Text, View } from "react-native";
-import { BouncablePress } from "./bouncable-press";
 
 interface AppHeaderProps {
   title: string;

@@ -1,9 +1,9 @@
+import { queryAuthAtom } from "@bnewapp/mobile-kit";
 import type { Session } from "@supabase/supabase-js";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, waitFor } from "@testing-library/react-native";
 import { Provider, createStore } from "jotai";
 import type { ReactNode } from "react";
-import { queryAuthAtom } from "../query-auth-atom";
 import { AuthSessionProvider } from "../session-provider";
 
 type AuthCallback = (event: string, session: Session | null) => void;

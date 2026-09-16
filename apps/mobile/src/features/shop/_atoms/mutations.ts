@@ -1,5 +1,4 @@
-import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
-import { requireAuth } from "@/lib/jotai/authed-query";
+import { queryAuthAtom, requireAuth } from "@bnewapp/mobile-kit";
 import type { PurchaseItemResult } from "@bnewapp/types";
 import { atomWithMutation, queryClientAtom } from "jotai-tanstack-query";
 import { purchaseItem } from "../api";

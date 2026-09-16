@@ -1,4 +1,4 @@
-import { readQueryAuth, requireAuth } from "@/lib/jotai/authed-query";
+import { readQueryAuth, requireAuth } from "@bnewapp/mobile-kit";
 import type { Inventory, Wallet } from "@bnewapp/types";
 import { atomWithQuery } from "jotai-tanstack-query";
 import { getInventory, getWallet } from "../api";

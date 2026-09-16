@@ -1,5 +1,5 @@
-import { queryAuthAtom } from "@/lib/auth/query-auth-atom";
 import { createTestQueryClient, createTestStore } from "@/test-utils/render-with-providers";
+import { queryAuthAtom } from "@bnewapp/mobile-kit";
 import type { StudioCatalog } from "@bnewapp/types";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react-native";

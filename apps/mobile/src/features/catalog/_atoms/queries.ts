@@ -1,4 +1,4 @@
-import { readQueryAuth } from "@/lib/jotai/authed-query";
+import { readQueryAuth } from "@bnewapp/mobile-kit";
 import { fallbackCatalog } from "@bnewapp/studio-core";
 import type { CatalogItemDTO, StudioCatalog } from "@bnewapp/types";
 import { Image } from "expo-image";

@@ -1,5 +1,5 @@
 import { catalogAtom } from "@/features/catalog";
-import { createAtomWithMMKV } from "@/lib/jotai/atom-with-mmkv";
+import { createAtomWithMMKV } from "@bnewapp/mobile-kit";
 import {
   type DecorationSnapshot,
   coerceSnapshot,

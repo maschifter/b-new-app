@@ -1,5 +1,5 @@
-import { MobileQueryErrorBoundary } from "@/components/error-boundary";
-import { COLORS } from "@/lib/theme/colors";
+import { COLORS } from "@bnewapp/mobile-kit/theme/colors";
+import { MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
 import type { ExploreRoom } from "@bnewapp/types";
 import { useAtomValue } from "jotai";
 import { Suspense, useEffect } from "react";

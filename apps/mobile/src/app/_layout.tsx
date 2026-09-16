@@ -3,7 +3,7 @@ import "@/lib/bootstrap/dance-flow";
 import type { DevMenu as DevMenuComponent } from "@/features/dev-menu/dev-menu";
 import { NativeAnimatedWarningGuard } from "@/lib/animation/native-animated-warning-guard";
 import { AuthSessionProvider, useAuthSession } from "@/lib/auth/session-provider";
-import { QueryProvider } from "@/lib/providers/query-provider";
+import { QueryProvider } from "@bnewapp/mobile-kit";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ActivityIndicator, View } from "react-native";

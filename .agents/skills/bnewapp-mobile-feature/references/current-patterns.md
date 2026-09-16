@@ -24,7 +24,7 @@ query-backed screen structure; inspect live files instead of copying snippets bl
 
 ## Component Placement
 
-- `apps/mobile/src/components/bouncable-press.tsx`: shared interaction primitive used by several features
+- `@bnewapp/mobile-kit/ui` (`BouncablePress`): shared interaction primitive used by several features
 - `apps/mobile/src/components/screen.tsx`: shared screen shell used across features
 - `apps/mobile/src/features/explore/ui/explore-list-feedback.tsx`: feature-owned pagination feedback
 - `apps/mobile/src/features/explore/ui/explore-room-layout.tsx`: feature-owned room header and message layout
@@ -38,8 +38,8 @@ control does not become common merely because it could theoretically be reused.
 - `apps/mobile/src/features/explore/_atoms/ui.ts`: async derived atom that awaits suspense query data
 - `apps/mobile/src/features/explore/ui/explore-screen.tsx`: initial feed Suspense boundary; explicit refresh and pagination state
 - `apps/mobile/src/features/explore/ui/explore-room-screen.tsx`: detail Suspense boundary with not-found content
-- `apps/mobile/src/components/error-boundary/mobile-query-error-boundary.tsx`: shared query error/retry boundary
-- `apps/mobile/src/lib/react-query/query-error-reset.ts`: reset revision for rejected Jotai suspense promises
+- `@bnewapp/mobile-kit/ui` (`MobileQueryErrorBoundary`): shared query error/retry boundary
+- `@bnewapp/mobile-kit` (`queryErrorResetVersionAtom`): reset revision for rejected Jotai suspense promises
 - `apps/mobile/src/features/explore/ui/__tests__/explore-screen.test.tsx`: React 19 async render and retry recovery coverage
 
 Use Suspense for the first meaningful query read, not for refresh, pagination, mutations, or form submission.
@@ -50,14 +50,16 @@ only mount after the protected route and auth projection are ready because suspe
 
 BNewApp uses NativeWind for static component styling. Keep `style` for runtime-computed values,
 animated styles, and components without NativeWind interop. Shared colors belong in
-`apps/mobile/tailwind.config.js`; use semantic token classes instead of repeating raw values.
+`packages/mobile-kit/theme/`, applied through its Tailwind preset in `apps/mobile/tailwind.config.js`;
+use semantic token classes instead of repeating raw values, and read runtime color props from
+`@bnewapp/mobile-kit/theme/colors`.
 
 ## Legacy Studio State and Synchronization
 
 - `apps/mobile/src/features/studio/state/atoms.ts`: persisted and ephemeral Jotai atoms keyed by owner
 - `apps/mobile/src/features/studio/state/studio-provider.tsx`: small configuration context over atomic state
 - `apps/mobile/src/features/studio/state/studio-sync.tsx`: TanStack Query synchronization around local persisted state
-- `apps/mobile/src/lib/jotai/atom-with-mmkv.ts`: persistence adapter
+- `@bnewapp/mobile-kit` (`createAtomWithMMKV`): persistence adapter
 
 Keep the useful principles: narrow subscriptions, explicit ownership, persisted-shape coercion, and server convergence. Do not reproduce the studio sync machinery for a feature that only needs an ordinary query or mutation.
 
@@ -66,13 +68,13 @@ query hooks, or imperative sync component as the structure for a new feature.
 
 ## API and Auth
 
-- `apps/mobile/src/lib/api/client.ts`: API URL resolution, bearer token, shared response types
+- `apps/mobile/src/lib/api/client.ts`: the app's own `apiUrl`, resolved once from `@bnewapp/mobile-kit/expo`, re-exporting the package's header and envelope helpers
 - `apps/mobile/src/lib/auth/session-provider.tsx`: session ownership
-- `apps/mobile/src/lib/providers/query-provider.tsx`: shared QueryClient lifecycle
+- `@bnewapp/mobile-kit` (`QueryProvider`): shared QueryClient lifecycle
 
-The endpoint functions currently in `src/lib/api/client.ts` predate the feature-owned `api.ts`
-standard. Keep shared transport concerns there, but put new feature endpoint functions in the
-owning feature. Do not create feature-local Supabase or QueryClient instances.
+`src/lib/api/client.ts` holds transport concerns only — the app's resolved `apiUrl` plus the
+package's header and envelope helpers. Endpoint functions belong in the owning feature's
+`api.ts`. Do not create feature-local Supabase or QueryClient instances.
 
 ## Testing
 

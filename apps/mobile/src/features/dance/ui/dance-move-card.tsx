@@ -1,5 +1,5 @@
-import { BouncablePress } from "@/components/bouncable-press";
-import { useFocusedPlayback } from "@/lib/media/use-focused-playback";
+import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
+import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import type { DanceMove } from "@bnewapp/types";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
