@@ -1,13 +1,14 @@
 interface ResolveApiUrlOptions {
   configuredUrl: string | undefined;
   isDevelopment: boolean;
+  isDevice: boolean;
   metroHost: string | undefined;
   platform: string;
   port: number;
 }
 
-function rewriteAndroidLocalhost(url: string, platform: string): string {
-  return platform === "android"
+function rewriteAndroidLocalhost(url: string, platform: string, isDevice: boolean): string {
+  return platform === "android" && !isDevice
     ? url.replace(/\/\/(localhost|127\.0\.0\.1)(?=[:/]|$)/, "//10.0.2.2")
     : url;
 }
@@ -51,6 +52,7 @@ export function validatePublishedBuildApiUrl(
 export function resolveApiUrl({
   configuredUrl,
   isDevelopment,
+  isDevice,
   metroHost,
   platform,
   port,
@@ -61,10 +63,12 @@ export function resolveApiUrl({
     return requirePublishedApiUrl(apiUrl);
   }
 
-  if (apiUrl) return rewriteAndroidLocalhost(apiUrl, platform);
+  if (apiUrl) return rewriteAndroidLocalhost(apiUrl, platform, isDevice);
 
   const defaultApiUrl = `http://localhost:${port}`;
-  return metroHost
-    ? rewriteAndroidLocalhost(`http://${metroHost}:${port}`, platform)
-    : defaultApiUrl;
+  return rewriteAndroidLocalhost(
+    metroHost ? `http://${metroHost}:${port}` : defaultApiUrl,
+    platform,
+    isDevice,
+  );
 }

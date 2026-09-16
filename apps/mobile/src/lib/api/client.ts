@@ -1,5 +1,6 @@
 import type { ApiSuccess } from "@bnewapp/types";
 import Constants from "expo-constants";
+import * as Device from "expo-device";
 import { Platform } from "react-native";
 import { resolveApiUrl as resolveConfiguredApiUrl } from "./api-url";
 
@@ -16,6 +17,7 @@ function resolveApiUrl(): string {
   return resolveConfiguredApiUrl({
     configuredUrl: process.env.EXPO_PUBLIC_API_URL,
     isDevelopment: __DEV__,
+    isDevice: Device.isDevice,
     metroHost: getMetroHost(),
     platform: Platform.OS,
     port: API_PORT,
