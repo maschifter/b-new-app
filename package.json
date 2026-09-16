@@ -26,6 +26,13 @@
     "mobile:prebuild": "pnpm --filter @bnewapp/mobile prebuild",
     "mobile:prebuild:staging": "pnpm --filter @bnewapp/mobile prebuild:staging",
     "mobile:prebuild:production": "pnpm --filter @bnewapp/mobile prebuild:production",
+    "edu": "pnpm --filter @bnewapp/edu start",
+    "edu:fresh": "pnpm --filter @bnewapp/edu start:fresh",
+    "edu:ios": "pnpm --filter @bnewapp/edu ios",
+    "edu:android": "pnpm --filter @bnewapp/edu android",
+    "edu:prebuild": "pnpm --filter @bnewapp/edu prebuild",
+    "edu:prebuild:staging": "pnpm --filter @bnewapp/edu prebuild:staging",
+    "edu:prebuild:production": "pnpm --filter @bnewapp/edu prebuild:production",
     "db:new": "npx supabase migration new",
     "db:push": "npx supabase db push",
     "db:types": "npx supabase gen types typescript --linked > packages/types/src/database.generated.ts"

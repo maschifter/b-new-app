@@ -38,6 +38,7 @@
       "types": "./src/testing/index.ts",
       "default": "./src/testing/index.ts"
     },
+    "./config-plugins/with-ios-min-deployment-target": "./config-plugins/with-ios-min-deployment-target.js",
     "./theme/colors": "./theme/colors.js",
     "./theme/tailwind-preset": "./theme/tailwind-preset.js",
     "./testing/jest/config": "./testing/jest/config.js",
@@ -57,6 +58,7 @@
     "@react-navigation/native": "*",
     "@tanstack/react-query": "*",
     "@testing-library/react-native": "*",
+    "expo": "*",
     "expo-audio": "*",
     "expo-constants": "*",
     "expo-device": "*",

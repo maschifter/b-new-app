@@ -3,7 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "exports": {
+    ".": {
+      "react-native": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": { "build": "tsc -p tsconfig.build.json", "typecheck": "tsc --noEmit" },
   "dependencies": {
     "@bnewapp/dance-core": "workspace:*",

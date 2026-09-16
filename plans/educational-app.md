@@ -394,8 +394,10 @@ see, so an unowned device check silently converts them into unverified assumptio
 | R2 — De-app-ify the dance feature | ✅ Done | Inject the API base URL and MMKV namespace instead of importing app-local config. See "R2 outcome" below |
 | R3 — `packages/dance-flow` | ✅ Done | Extract the record/result flow by export; `apps/mobile` consumes it. See "R3 outcome" below |
 | R5a — Anonymous identity | ✅ Done (staging) | Signup-trigger migration + conversion branch + corrected invariant, pushed to `bnewapp(staging)` and proven against it: identified signup, anonymous sign-in, conversion, and an anonymous token reaching an owner-scoped dance endpoint. **Production push still outstanding.** See "R5a outcome" below |
-| P0 — Init `apps/edu` | ☐ | Scaffolding only, no feature code |
+| P0 — Init `apps/edu` | ✅ Done (Android) | `apps/edu` (`@bnewapp/edu`, display name **Stepz**) builds, runs and shows its placeholder on an Android device, signed in anonymously against staging; workspace `typecheck` / `test` / `lint` green. **iOS build outstanding** — no Mac available, so the split acceptance applies. See "P0 outcome" below |
 | C1 — Delete the R1 shims | ☐ | Rewrite the ~88 `@/` import sites in `apps/mobile` to `@bnewapp/mobile-kit` and delete every shim **except `lib/api/client`, which graduates rather than disappears** — see R1's *"Consequence for the shim"* note. Unblocked once `apps/edu` exists (P0). The largest single diff in the programme, and **not optional**: leaving the shims permanently means both apps reach shared code through `apps/mobile`'s `@/` paths, which is the boundary violation this refactor exists to remove |
+
+**C1 is now unblocked**: `apps/edu` exists, so the R1 shims can be deleted.
 
 **Where the phases stop.** P0's acceptance — `apps/edu` builds, runs and shows a placeholder, with
 the workspace green — is the end of this plan. The feed, the scan flow and the local profile, plus
@@ -1119,6 +1121,78 @@ identified-signup check matters far more than it did here, because that is where
 under "Device verification" in Phases — Android verified, iOS explicitly outstanding — rather than
 counting P0 complete on Android alone.
 
+#### P0 outcome — what landed, and the one criterion still open
+
+**`apps/edu` exists and runs.** 42 tracked files, no feature code: every route renders a
+placeholder, and the two that matter (`scan`, `result`) compose `@bnewapp/dance-flow`'s real
+screens rather than a stub, so the shared packages are genuinely exercised by the build rather
+than merely declared as dependencies.
+
+**Verified on hardware** — Xiaomi `25078RA3EY`, Android 16, debug dev-client build
+(`BUILD SUCCESSFUL in 4m 18s`, 598 gradle tasks). The app installs, launches, signs in
+anonymously against `bnewapp(staging)` and renders the feed placeholder on the Boogiz
+background. That the `Stack` mounts at all *is* the auth proof: the root layout renders it only
+for `status === "ready"`, which requires a non-null session — so R5a's anonymous sign-in works
+end to end from a real device, not just from a script.
+
+| Check | Result |
+|---|---|
+| Android build + install + launch | **PASS** — device `25078RA3EY`, Android 16 |
+| Anonymous sign-in against staging, from the app | **PASS** — the navigator only mounts with a session |
+| Metro bundle (`expo export`, android) | **PASS** — 1763 modules, no resolution error |
+| Boogiz token values reach the bundle | **PASS** — `#ff2e88` and `#0b0b10` compiled in, so the preset + value-override chain works across the package boundary |
+| `dance-flow`'s native path really in the graph | **PASS** — VisionCamera and `configureDanceFlow` present in the bundle |
+| One hoisted copy of every shared dep | **PASS** — `pnpm why` reports a single version for all 21; `apps/edu/node_modules` holds only `@bnewapp/*` and `typescript` |
+| `expo-video` patch still applies | **PASS** — resolved `55.0.21`, patched hunk present in the installed copy |
+| Typed routes | **PASS** — `.expo/types/router.d.ts` generated, and `tsc --noEmit` validates every `push` / `replace` / `dismissTo` href against it |
+| Workspace `typecheck` / `lint` | **PASS** |
+| Workspace `test` | **PASS** for all 10 projects except `@bnewapp/admin`, which fails on a **pre-existing** missing `apps/admin/.env.local` (documented in `apps/admin/AGENTS.md`), untouched by this phase |
+| **iOS build** | **OUTSTANDING** — no Mac. The split acceptance from "Device verification" applies |
+
+**Decisions this phase had to take, and what was chosen:**
+
+- **`@bnewapp/types` resolution — fixed, not documented around.** The package's `exports` gained
+  a `react-native` condition pointing at `src/index.ts`. One line, and it removes the
+  Metro-resolution trap for `apps/mobile` too, which is why it beat the "note the build step in
+  `AGENTS.md`" alternative. `tsc` still reads `dist`, so the `corepack pnpm build` prerequisite
+  survives for a bare `tsc --noEmit`, and `apps/edu/AGENTS.md` says so.
+- **The iOS deployment-target plugin was promoted, not copied.** It now lives at
+  `packages/mobile-kit/config-plugins/with-ios-min-deployment-target.js`, exported as a subpath,
+  and **both** apps reference it by package specifier. Copying would have meant fixing the next
+  expo-router bump twice. The resolution risk this introduces was checked rather than assumed:
+  `expo config --type prebuild` resolves it for `apps/edu` *and* for `apps/mobile`, and
+  `apps/edu`'s Android prebuild ran clean. It stays unexercised on iOS until a Mac runs it —
+  which is the same outstanding item, not a second one. `packages/AGENTS.md` records what
+  `config-plugins/` is for.
+- **The scaffold signs in for real.** `apps/edu/.env` points at the same staging project as
+  `apps/mobile` — the backend, catalog and dance API are shared by design — so the open decision
+  "anonymous bootstrap in P0" is settled as *sign in*, not *placeholder with no auth*. Production
+  remains outstanding, unchanged from R5a.
+- **A session that cannot start is a retry, not a spinner.** `AnonymousSessionProvider` separates
+  "still bootstrapping" from "had an identity and lost it"; only the second shows the retry
+  surface. Without that split, a failed sign-in is an indistinguishable permanent spinner.
+- **`theme/colors.js` is the app's single palette source**, consumed by `tailwind.config.js` for
+  the token values and by `@/lib/theme/colors` for runtime color props. The alternative — token
+  values in the Tailwind config only — silently forces raw hex into every `ActivityIndicator`-shaped
+  prop and lets the two drift.
+- **`features/scan` is a seam, not an empty folder.** It re-exports `dance-flow`'s two screens so
+  routes never deep-import the package, and it is where Stepz's own additions (the device-only
+  recording, deleting the temporary upload once the score is terminal) will land.
+
+**Known, and deliberately not fixed here:**
+
+- **The app name `Stepz` is still the provisional one.** The plan asked for it to be re-decided
+  *before* P0 ran; it was not, so the first Android build has shipped `com.bnewapp.stepz.staging`.
+  Display name, slug and scheme stay cheap to change. **The iOS bundle identifier does not** — so
+  re-decide before the first iOS build, which has not happened yet. That window is still open.
+- `src/app/__tests__/` files are picked up as routes by expo-router's filesystem discovery
+  (`/__tests__/root-layout-session-gate.test` appears in the generated route table). `apps/mobile`
+  has had exactly the same artifact for all three of its route tests, so this is a repo-wide
+  pattern, not something `apps/edu` introduced. Fixing it belongs in its own change, across both apps.
+- `userInterfaceStyle: "automatic"` prints an `expo-system-ui` prebuild warning. `apps/mobile`
+  prints the identical warning with the identical config; parity was kept rather than silently
+  diverging.
+
 ## Open decisions
 
 **None of them blocks the start.** The product and data questions that used to sit here — style
@@ -1128,7 +1202,10 @@ is in this plan. With those out, nothing on the list below needs an answer from 
 before R1 begins; every entry is settled empirically, inside the phase that raises it.
 
 The app name is **decided provisionally** (see "Decisions locked in") rather than open. It is the
-one entry here with a real cost of change, so re-decide it before P0 runs, not after.
+one entry here with a real cost of change. P0 shipped on the provisional `Stepz` without that
+re-decision, so the deadline has moved rather than passed: the Android build used
+`com.bnewapp.stepz.staging`, but **no iOS build has run**, and the iOS bundle identifier is the
+only part that is expensive to change afterwards. Re-decide before the first iOS build.
 
 | Topic | Question | Settled by |
 |---|---|---|
@@ -1138,6 +1215,6 @@ one entry here with a real cost of change, so re-decide it before P0 runs, not a
 | ~~Shared jest harness~~ | **Moot — it ships from `mobile-kit/testing`.** No duplication needed | R1 |
 | ~~Shared jest fragment shape~~ | **Settled in R1: spreadable config object** (`mobileKitJestConfig`) | R1 |
 | ~~MMKV configure mechanism~~ | **Settled in R2: lazy initialization on first read.** The guard alternative cannot work — `atomWithStorage` reads storage at atom *creation* | R2 |
-| Device verification owner | Who runs the Android check (R3 end-to-end) and the iOS build (P0)? R1's share of it is now covered by the bundle check; R3 and P0 still need hardware | Before R3 starts — see "Device verification" under Phases |
-| Anonymous bootstrap in P0 | Does the scaffold sign in anonymously, or ship a placeholder with no auth? | **Unblocked on staging** — R5a is live there, so P0 can sign in for real against staging. Still a decision for production |
+| ~~Device verification owner~~ | **Android settled: run in-repo on device `25078RA3EY` (Android 16).** The iOS build still has no owner and no machine — it is P0's one open acceptance criterion | R3 / P0 |
+| ~~Anonymous bootstrap in P0~~ | **Settled in P0: it signs in.** `apps/edu/.env` points at the same staging project as `apps/mobile`, and the sign-in was proven from the device. Production still outstanding, as in R5a | P0 |
 | ~~Trigger rollback~~ | **Settled in R5a: yes.** Proven on staging after the push — an identified signup inserts a profile row and the `dancer-NNNNNN` default still fires | R5a |

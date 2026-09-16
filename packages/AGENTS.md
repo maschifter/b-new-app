@@ -51,9 +51,12 @@ declare a `build` script.
 
 **Source-only React Native packages** (`mobile-kit`, `dance-flow`) point runtime TypeScript
 exports (`react-native`, `types`, `default`) at source and ship **no `build` script**.
-Metro consumes that source through the `react-native` condition. Theme and Jest configuration
-subpaths instead export JavaScript for configuration tools.
+Metro consumes that source through the `react-native` condition. Theme, Jest and Expo
+config-plugin subpaths instead export JavaScript for configuration tools.
 
+- `mobile-kit/config-plugins/` holds Expo config plugins both apps apply from their own
+  `app.config.ts`. They are plain Node modules run by `expo prebuild`, not RN code, and a
+  native-build workaround shared by two apps belongs here rather than duplicated per app.
 - Still declare `typecheck` and `test`. Turbo only fans a task out to packages that declare
   it, so a missing script silently drops the package from `corepack pnpm typecheck`, leaving
   its sources checked only through a consuming app's looser tsconfig.
