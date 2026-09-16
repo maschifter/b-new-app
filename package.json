@@ -45,6 +45,9 @@
       "@ffprobe-installer/linux-x64",
       "esbuild",
       "ffmpeg-static"
-    ]
+    ],
+    "patchedDependencies": {
+      "expo-video@55.0.21": "patches/expo-video@55.0.21.patch"
+    }
   }
 }

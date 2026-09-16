@@ -1,0 +1,22 @@
+diff --git a/android/src/main/java/expo/modules/video/player/DefaultLoadControl.java b/android/src/main/java/expo/modules/video/player/DefaultLoadControl.java
+index 9ac55d6a8a24c53c5f1a8e1c2aaba06639464bad..af7048dad4a7bf8ca152795d5deb1f68e1a78d9f 100644
+--- a/android/src/main/java/expo/modules/video/player/DefaultLoadControl.java
++++ b/android/src/main/java/expo/modules/video/player/DefaultLoadControl.java
+@@ -388,11 +388,16 @@ public class DefaultLoadControl implements LoadControl {
+     }
+   }
+ 
+-  @Override
++  // Media3 1.8 calls this overload; 1.9 passes a PlayerId instead.
+   public Allocator getAllocator() {
+     return allocator;
+   }
+ 
++  // Keep both signatures because CameraX can upgrade Media3 at app runtime.
++  public Allocator getAllocator(PlayerId playerId) {
++    return allocator;
++  }
++
+   @Override
+   public long getBackBufferDurationUs(PlayerId playerId) {
+     return backBufferDurationUs;
