@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "@bnewapp/dance-core": "workspace:*",
+    "@bnewapp/dance-flow": "workspace:*",
     "@bnewapp/mobile-kit": "workspace:*",
     "@bnewapp/studio-core": "workspace:*",
     "@bnewapp/types": "workspace:*",

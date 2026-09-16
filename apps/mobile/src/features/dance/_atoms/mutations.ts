@@ -1,14 +1,8 @@
+import { deleteRecordedDancePost } from "@bnewapp/dance-flow/api";
 import { queryAuthAtom, requireAuth } from "@bnewapp/mobile-kit";
 import type { DancePostsPage } from "@bnewapp/types";
 import type { InfiniteData } from "@tanstack/react-query";
 import { atomWithMutation, queryClientAtom } from "jotai-tanstack-query";
-import {
-  createDancePost,
-  deleteRecordedDancePost,
-  discardUploadingDancePost,
-  markDancePostUploaded,
-  uploadDanceVideo,
-} from "../api";
 import { dancePostDetailQueryKey, dancePostsQueryKey } from "./queries";
 
 export const deleteDancePostMutationAtom = atomWithMutation<void, string, Error>((get) => {
@@ -36,58 +30,6 @@ export const deleteDancePostMutationAtom = atomWithMutation<void, string, Error>
       // No invalidation: the cached pages already reflect the deletion, and refetching
       // would replace every signed media URL and recreate grid players during the back
       // transition.
-    },
-  };
-});
-
-interface SubmitDanceRecordingInput {
-  danceMoveId: string;
-  /** Local `file://` path of the captured clip. */
-  path: string;
-  videoLength: number;
-  /**
-   * Music playhead at the first recorded frame. Omitted when the player never started;
-   * the server then falls back to the computed timeline offset.
-   */
-  audioOffsetMs?: number | undefined;
-}
-
-/**
- * Create the post, push the clip to its signed upload URL, then queue the scan.
- * Resolves to the post id the score query polls. The three calls are one
- * mutation because a post whose video never lands must not be queued.
- */
-export const submitDanceRecordingMutationAtom = atomWithMutation<
-  string,
-  SubmitDanceRecordingInput,
-  Error
->((get) => {
-  const auth = get(queryAuthAtom);
-  return {
-    mutationKey: ["dance-submit-recording", auth?.userId ?? null],
-    mutationFn: async ({ danceMoveId, path, videoLength, audioOffsetMs }) => {
-      const { accessToken } = requireAuth(auth);
-      let postId: string | null = null;
-      try {
-        const created = await createDancePost(accessToken, {
-          danceMoveId,
-          videoLength,
-          ...(audioOffsetMs === undefined ? {} : { audioOffsetMs }),
-        });
-        postId = created.postId;
-        await uploadDanceVideo(created.upload.signedUrl, path);
-        await markDancePostUploaded(accessToken, postId);
-        return postId;
-      } catch (error) {
-        if (postId !== null) {
-          try {
-            await discardUploadingDancePost(accessToken, postId);
-          } catch {
-            // A post already queued by a response lost in transit is retained by the server.
-          }
-        }
-        throw error;
-      }
     },
   };
 });

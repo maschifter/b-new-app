@@ -1,12 +1,12 @@
 import { renderWithProviders } from "@/test-utils/render-with-providers";
+import { getDancePosts } from "@bnewapp/dance-flow/api";
 import type { DancePostsPage } from "@bnewapp/types";
 import { act, fireEvent, screen } from "@testing-library/react-native";
 import type { ReactElement } from "react";
 import { Text } from "react-native";
-import { getDancePosts } from "../../api";
 import { DancePostGrid } from "../dance-post-grid";
 
-jest.mock("../../api", () => ({ getDancePosts: jest.fn() }));
+jest.mock("@bnewapp/dance-flow/api", () => ({ getDancePosts: jest.fn() }));
 jest.mock("expo-video", () => ({
   VideoView: "VideoView",
   useVideoPlayer: (_url: string, setup: (player: { muted: boolean }) => void) => {

@@ -8,12 +8,14 @@ These rules apply to `packages/*`. Also follow the root `AGENTS.md`.
 - `dance-core`: pure, deterministic dance domain rules — film steps, countdown and timing, scoring, and scan-status coercion.
 - `types`: shared wire contracts plus generated Supabase database types. It must not own business behavior.
 - `mobile-kit`: React Native package. Shared RN primitives, HTTP transport, the auth/query seam, MMKV and jotai helpers, the Tailwind token preset, and the jest harness both apps run on.
+- `dance-flow`: React Native package. The record → upload → score flow: its transport, injected config, recorder adapter, score polling, flow atoms and the two screens that host them. It owns the flow, not the dance product surface — a catalog list, a post history or a feed belongs to the app that renders it.
 
 ## Boundaries
 
 - Never import from `apps/*`.
 - Keep shared domain packages free of React, React Native, Expo, Fastify, Supabase clients, storage, and environment access.
 - **React Native exception.** `mobile-kit` is deliberately platform-coupled: it exists so `apps/mobile` and a second Expo app share one implementation of the primitives and flow they both render, which a platform-neutral package cannot hold. The exception is limited to packages whose stated purpose names it. Every other package stays platform-neutral.
+- **`dance-flow` is the second RN exception, and it carries one known leak.** `danceMoveDetailAtomFamily` lives in the package because the record screen reads it, and `apps/mobile`'s staying `learn-dance-screen` reads it too; the staying catalog and post-history atoms likewise reach the package for their `./api` functions. That is a deliberate trade for a smaller split, not a clean boundary. Do not widen it: a new product atom with no in-package consumer belongs in the app.
 - Expose consumers through the package's declared `exports` entries. A package may have several, one per concern; reaching past them into a private file is still a deep import.
 - Keep imports acyclic. A lower-level package must not depend on an application-facing package merely to reuse a type.
 - Prefer one focused package over a broad `core` package when a new domain becomes substantial.
@@ -39,7 +41,7 @@ declare a `build` script.
 - Build an edited package before typechecking downstream consumers when its emitted
   declarations are required.
 
-**Source-only React Native packages** (`mobile-kit`) point every `exports` condition
+**Source-only React Native packages** (`mobile-kit`, `dance-flow`) point every `exports` condition
 (`react-native`, `types`, `default`) at TypeScript source and ship **no `build` script**.
 Metro consumes the source through the `react-native` condition, and declarations for `.tsx`
 buy nothing.
@@ -78,4 +80,7 @@ corepack pnpm --filter @bnewapp/studio-core build
 
 corepack pnpm --filter @bnewapp/mobile-kit test
 corepack pnpm --filter @bnewapp/mobile-kit typecheck
+
+corepack pnpm --filter @bnewapp/dance-flow test
+corepack pnpm --filter @bnewapp/dance-flow typecheck
 ```

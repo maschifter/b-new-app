@@ -49,7 +49,8 @@ export interface RecordedDanceClip {
 
 interface RecordDanceScreenProps {
   moveId: string;
-  onBack?: () => void;
+  /** The explicit `| undefined` is load-bearing under `exactOptionalPropertyTypes`. */
+  onBack?: (() => void) | undefined;
   onRecordingComplete: (clip: RecordedDanceClip) => void;
 }
 

@@ -3,10 +3,10 @@ import type { DanceMove } from "@bnewapp/types";
 import { act, fireEventAsync, screen, waitFor } from "@testing-library/react-native";
 import { Dimensions } from "react-native";
 
-import { getDanceMove } from "../../api";
+import { getDanceMove } from "@bnewapp/dance-flow/api";
 import { LearnDanceScreen } from "../learn-dance-screen";
 
-jest.mock("../../api", () => ({ getDanceMove: jest.fn() }));
+jest.mock("@bnewapp/dance-flow/api", () => ({ getDanceMove: jest.fn() }));
 const mockUseIsFocused = jest.fn(() => true);
 jest.mock("@react-navigation/native", () => ({ useIsFocused: () => mockUseIsFocused() }));
 const videoPlayers: Array<{ url: string; play: jest.Mock; pause: jest.Mock }> = [];

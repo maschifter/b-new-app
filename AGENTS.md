@@ -9,6 +9,8 @@ BNewApp is a pnpm/Turborepo monorepo for a dance product:
 - `apps/admin`: react-admin back office over the server API
 - `packages/studio-core`: pure studio domain rules shared by mobile and server
 - `packages/dance-core`: pure dance domain rules shared by mobile and server
+- `packages/mobile-kit`: React Native package — shared RN primitives, transport, the auth/query seam and the jest harness
+- `packages/dance-flow`: React Native package — the app-agnostic record → upload → score flow
 - `packages/types`: shared API and generated database types
 - `supabase`: schema configuration and forward-only SQL migrations
 
@@ -30,6 +32,7 @@ Dependencies flow inward:
 ```text
 apps/mobile ─┐
 apps/server  ├──> packages/types, packages/studio-core, packages/dance-core
+             └──> (mobile only) packages/mobile-kit, packages/dance-flow
 apps/admin  ─┘
 
 supabase migrations ──> generated database types ──> apps/packages

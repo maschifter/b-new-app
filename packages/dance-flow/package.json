@@ -1,0 +1,73 @@
+{
+  "name": "@bnewapp/dance-flow",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./record-screen": {
+      "react-native": "./src/ui/record-dance-screen.tsx",
+      "types": "./src/ui/record-dance-screen.tsx",
+      "default": "./src/ui/record-dance-screen.tsx"
+    },
+    "./result-screen": {
+      "react-native": "./src/ui/dance-result-screen.tsx",
+      "types": "./src/ui/dance-result-screen.tsx",
+      "default": "./src/ui/dance-result-screen.tsx"
+    },
+    "./atoms": {
+      "react-native": "./src/_atoms/index.ts",
+      "types": "./src/_atoms/index.ts",
+      "default": "./src/_atoms/index.ts"
+    },
+    "./api": {
+      "react-native": "./src/api.ts",
+      "types": "./src/api.ts",
+      "default": "./src/api.ts"
+    },
+    "./config": {
+      "react-native": "./src/config.ts",
+      "types": "./src/config.ts",
+      "default": "./src/config.ts"
+    },
+    "./dev": {
+      "react-native": "./src/dev.ts",
+      "types": "./src/dev.ts",
+      "default": "./src/dev.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@bnewapp/dance-core": "workspace:*",
+    "@bnewapp/mobile-kit": "workspace:*",
+    "@bnewapp/types": "workspace:*"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "*",
+    "expo": "*",
+    "expo-audio": "*",
+    "expo-blur": "*",
+    "expo-file-system": "*",
+    "expo-video": "*",
+    "jotai": "*",
+    "jotai-family": "*",
+    "jotai-tanstack-query": "*",
+    "nativewind": "*",
+    "react": "*",
+    "react-native": "*",
+    "react-native-mmkv": "*",
+    "react-native-reanimated": "*",
+    "react-native-safe-area-context": "*",
+    "react-native-vision-camera": "*",
+    "react-native-worklets": "*"
+  },
+  "devDependencies": {
+    "@testing-library/react-native": "13.3.3",
+    "@types/jest": "^29.5.14",
+    "babel-preset-expo": "~55.0.24",
+    "jest": "~29.7.0",
+    "jest-expo": "~55.0.20",
+    "react-test-renderer": "19.2.0"
+  }
+}

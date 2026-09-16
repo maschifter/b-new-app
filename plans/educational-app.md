@@ -392,7 +392,7 @@ see, so an unowned device check silently converts them into unverified assumptio
 | R0 — Decisions | ✅ Done | Recorded in "Decisions locked in" above |
 | R1 — `packages/mobile-kit` | ✅ Done | Extract RN primitives + transport + theme preset + test harness behind re-export shims; widen the tailwind glob; settle the RN-package mechanics. See "R1 outcome" below |
 | R2 — De-app-ify the dance feature | ✅ Done | Inject the API base URL and MMKV namespace instead of importing app-local config. See "R2 outcome" below |
-| R3 — `packages/dance-flow` | ☐ | Extract the record/result flow by export; `apps/mobile` consumes it |
+| R3 — `packages/dance-flow` | ✅ Done | Extract the record/result flow by export; `apps/mobile` consumes it. See "R3 outcome" below |
 | R5a — Anonymous identity | ☐ | Signup-trigger migration + the invariant it falsifies + enable anonymous sign-ins. Database-only, parallelizable with R1–R3, required before P0 signs in |
 | P0 — Init `apps/edu` | ☐ | Scaffolding only, no feature code |
 | C1 — Delete the R1 shims | ☐ | Rewrite the ~88 `@/` import sites in `apps/mobile` to `@bnewapp/mobile-kit` and delete every shim **except `lib/api/client`, which graduates rather than disappears** — see R1's *"Consequence for the shim"* note. Unblocked once `apps/edu` exists (P0). The largest single diff in the programme, and **not optional**: leaving the shims permanently means both apps reach shared code through `apps/mobile`'s `@/` paths, which is the boundary violation this refactor exists to remove |
@@ -817,6 +817,61 @@ has exactly one consumer — `apps/mobile`, through its own `features/dance/inde
 green tests and a working device run demonstrate no regression, not that the package is genuinely
 app-agnostic. R2's acceptance (no `@/` import left in the moving set) is the only real evidence of
 that until a second app consumes it. Do not read R3 green as the boundary being proven.
+
+#### R3 outcome
+
+`packages/dance-flow` holds the flow: `api.ts`, `config.ts`, `dev.ts`, `score-polling.ts`,
+`recording-adapter.ts`, `src/_atoms/*` and `src/ui/{record-dance-screen,dance-result-screen,
+camera-permission-overlay,submission-feedback,submission-state}`, with all nine suites from the
+table beside them. `apps/mobile` keeps the catalog and post-history half of the `_atoms/` split and
+re-exports the two screens through `features/dance/index.ts`, so no route file changed.
+
+- **No root `.` entry; six per-concern subpaths** — `./record-screen`, `./result-screen`, `./atoms`,
+  `./api`, `./config`, `./dev`. R1's "no god barrel" rule decides the screen split too:
+  `react-native-vision-camera` is the record screen's dependency alone, so a consumer that only
+  renders a result — including a test — must not be made to declare and mock the camera. A bare
+  `@bnewapp/dance-flow` import resolves to nothing, deliberately.
+- **`src/_atoms/` keeps its app-feature name inside the package.** The underscore means nothing
+  there, but every relative import in the moving set and its suites (`../../api`, `../ui`,
+  `../../recording-adapter`) survives the move untouched, which is what let nine suites land with
+  zero edits.
+- **The `api.ts` coupling is resolved by exporting it, not by splitting it.** `api.ts` moves whole,
+  and the staying catalog and post-history atoms import their five functions from
+  `@bnewapp/dance-flow/api`. Splitting the file would have split `__tests__/api.test.ts` with it,
+  which the phase's own table forbids. The cost is an import-path rewrite in five staying suites
+  that mock `"../../api"` — path only, no assertion — and it is the same known leak as
+  `danceMoveDetailAtomFamily`, now recorded in `packages/AGENTS.md`.
+- **`dev.ts` needed no shim.** `features/dance/dev.ts` is gone; `dev-menu.tsx` imports
+  `@bnewapp/dance-flow/dev` directly — one import site, and the file's whole purpose (keeping the
+  camera and network stack out of the root module graph) survives because `./dev` reaches only the
+  persisted toggles.
+- **One `exactOptionalPropertyTypes` casualty, the same class R1 hit.** `RecordDanceScreenProps`
+  declared `onBack?: () => void` and passed it explicitly to the inner component; it now reads
+  `onBack?: (() => void) | undefined`, the idiom `CreateDancePostBody` already uses.
+- **New coverage owned by R3, and one substitution.** `submitDanceRecordingMutationAtom` gained six
+  tests (create → upload → mark, the omitted audio offset, `discardUploadingDancePost` rollback on
+  both failure points, a failing rollback that must not mask the original error, and the signed-out
+  path) and moved into the package with the atom. The plan also asked for `danceMovesInfiniteAtom`
+  coverage *because R3 would rewrite it*; the catalog-trio decision removed that rewrite, so the new
+  `_atoms/__tests__/catalog-queries.test.ts` in `apps/mobile` guards what R3 actually does to those
+  atoms instead — that they still filter by genre, page by server cursor and flatten in order now
+  that their transport comes from the package.
+- **NativeWind verified by bundle for the new package, not assumed from R1.** In a real Metro export,
+  `h-48`, `top-56`, `text-8xl` and `text-violet-300` — classes present only in
+  `packages/dance-flow/src/ui/record-dance-screen.tsx` — appear in the injected style registry
+  (`{height:168}`, `{top:196}`, `{fontSize:84}`, `{color:"#c4b5fd"}`), and the compiled screen's JSX
+  resolves to nativewind's runtime (the module exporting `createInteropElement`). Content glob and
+  babel transform both reach `packages/dance-flow`.
+
+**Acceptance:** all nine moving suites pass from the package with no assertion edits
+(9 suites / 61 tests); `apps/mobile` is green (19 suites / 112 tests) with
+`ui/__tests__/choose-dance-moves-screen.test.tsx` untouched apart from its api mock path;
+`corepack pnpm typecheck` and `biome check` are clean across the workspace.
+
+**Outstanding from R3:** the end-to-end device run (record → upload → score), still owed together
+with R1's Android confirmation. Nothing in this phase changed the flow's behavior, and the bundle
+check above covers the styling failure a device run was meant to catch, so this is confirmation
+rather than discovery — but it is not closed.
 
 ### R5a — Anonymous identity, the part the scaffold needs
 

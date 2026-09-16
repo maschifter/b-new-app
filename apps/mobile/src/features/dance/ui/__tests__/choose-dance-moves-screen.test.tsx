@@ -2,10 +2,10 @@ import { renderWithProviders } from "@/test-utils/render-with-providers";
 import type { DanceGenre, DanceMove, DanceMovesPage } from "@bnewapp/types";
 import { act, fireEventAsync, screen, waitFor } from "@testing-library/react-native";
 
-import { getDanceGenres, getDanceMoves } from "../../api";
+import { getDanceGenres, getDanceMoves } from "@bnewapp/dance-flow/api";
 import { ChooseDanceMovesScreen } from "../choose-dance-moves-screen";
 
-jest.mock("../../api", () => ({
+jest.mock("@bnewapp/dance-flow/api", () => ({
   getDanceGenres: jest.fn(),
   getDanceMove: jest.fn(),
   getDanceMoves: jest.fn(),

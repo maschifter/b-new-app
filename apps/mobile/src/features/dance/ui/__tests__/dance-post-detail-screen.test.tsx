@@ -1,12 +1,15 @@
 import { createTestQueryClient, renderWithProviders } from "@/test-utils/render-with-providers";
+import { deleteRecordedDancePost, getDancePost } from "@bnewapp/dance-flow/api";
 import type { DancePostDetail } from "@bnewapp/types";
 import { InfiniteQueryObserver } from "@tanstack/react-query";
 import { act, fireEventAsync, screen, waitFor } from "@testing-library/react-native";
 import { dancePostDetailQueryKey, dancePostsQueryKey } from "../../_atoms/queries";
-import { deleteRecordedDancePost, getDancePost } from "../../api";
 import { DancePostDetailScreen } from "../dance-post-detail-screen";
 
-jest.mock("../../api", () => ({ getDancePost: jest.fn(), deleteRecordedDancePost: jest.fn() }));
+jest.mock("@bnewapp/dance-flow/api", () => ({
+  getDancePost: jest.fn(),
+  deleteRecordedDancePost: jest.fn(),
+}));
 jest.mock("@react-navigation/native", () => ({ useIsFocused: () => true }));
 jest.mock("expo-video", () => ({
   VideoView: "VideoView",
