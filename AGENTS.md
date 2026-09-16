@@ -16,6 +16,10 @@ BNewApp is a pnpm/Turborepo monorepo for a dance product:
 
 Read the nearest scoped `AGENTS.md` before changing files in a subdirectory.
 
+Scoped guides: `apps/mobile/AGENTS.md`, `apps/server/AGENTS.md`, `apps/admin/AGENTS.md`,
+`packages/AGENTS.md`, and `supabase/AGENTS.md`. Follow all applicable ancestor guides;
+the nearest guide refines the rules for its subtree.
+
 ## Package Manager Safety
 
 - Read the root `package.json#packageManager` before any package command.
@@ -74,6 +78,10 @@ corepack pnpm lint
 ```
 
 For a single workspace, prefer `corepack pnpm --filter <package-name> <script>`.
+Direct workspace commands bypass Turbo's dependency builds. When a check needs compiled
+workspace dependencies, run `corepack pnpm exec turbo run typecheck --filter=<package-name>`
+(or `test`) to include the prerequisite builds declared in `turbo.json`.
+The root lint script runs Biome; workspaces do not declare individual lint scripts.
 
 ## Test and Review Expectations
 

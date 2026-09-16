@@ -9,6 +9,11 @@ These rules apply to `apps/mobile`. Also follow the root `AGENTS.md`.
 - Put feature code in `src/features/<feature>/`; put truly shared primitives in `src/components/` and infrastructure in `src/lib/`.
 - Native folders are generated and gitignored. Prefer `app.config.ts`, Expo config plugins, or package configuration; do not rely on hand edits that `prebuild --clean` will erase.
 - Use `@/*` for mobile-local imports and public `@bnewapp/*` package exports for workspace code.
+- Reuse `@bnewapp/mobile-kit` for shared transport, auth/query state, primitives, media hooks,
+  theme tokens, and test infrastructure. App-local wrappers may re-export these public APIs.
+- The recording and result screens and their flow state belong to `@bnewapp/dance-flow`.
+  Keep catalog, learning, post history, and feed UI in the app's dance feature. Configure the
+  flow in `src/lib/bootstrap/dance-flow.ts`, loaded by the root layout before flow use.
 
 ## Feature Structure
 
@@ -88,9 +93,11 @@ src/features/<feature>/
 - Use NativeWind `className` for static component styling. Keep React Native `style` only for values
   that are computed at runtime, animated styles, or third-party components that do not support
   NativeWind interop.
-- Define reusable design tokens in `tailwind.config.js`; prefer semantic token classes over repeating
+- Define shared design tokens in `packages/mobile-kit/theme/` and consume its Tailwind preset
+  from `tailwind.config.js`; keep app-specific extensions in the app config. Prefer semantic token classes over repeating
   raw color values. When conditional classes are needed, keep complete class names visible to the
   NativeWind content scanner.
+- Keep shared package source paths in Tailwind's `content` globs so package-owned classes are generated.
 - Provide accessibility roles, labels, states, and reasonable touch targets for interactive controls.
 - Respect safe areas and keyboard behavior; do not hardcode device-specific offsets.
 - Keep render paths pure. Memoize only when measurement or stable identity requirements justify it.
@@ -101,8 +108,10 @@ src/features/<feature>/
 ## Auth, API, and Persistence
 
 - Access auth through `src/lib/auth`; do not create feature-local Supabase clients.
-- Keep the shared API transport and URL/auth mechanics in `src/lib/api/client.ts`; put
-  feature-specific endpoint functions in `src/features/<feature>/api.ts`.
+- Keep reusable API transport and URL/auth helpers in `@bnewapp/mobile-kit`; the app's
+  `src/lib/api/client.ts` resolves its base URL and re-exports transport helpers. Put
+  app-owned endpoint functions in `src/features/<feature>/api.ts` and shared flow endpoints
+  in `@bnewapp/dance-flow/api`.
 - Authenticated query atoms read the `{ userId, accessToken }` projection owned by `src/lib/auth`.
   Include `userId` in every user-scoped query key. On sign-out or user replacement, disable and
   cancel the previous user's queries and remove their cache entries before enabling the next user.
@@ -121,4 +130,7 @@ corepack pnpm --filter @bnewapp/mobile test
 corepack pnpm lint
 ```
 
-For visible behavior changes, launch the app on an available simulator/emulator and verify the affected flow with Argent when available. Follow the configured Argent skills for discovery, interaction, and UI-flow testing.
+Reuse the Jest config and provider harness exported by `@bnewapp/mobile-kit`; preserve the
+app's module mappings and root MMKV mock re-export when changing test setup.
+
+For visible behavior changes, launch the app on an available device or simulator/emulator and verify the affected flow with Argent when available. Follow configured Argent skills when present. Report the device and flow checked, or the reason device verification could not run.

@@ -15,7 +15,10 @@ These rules apply to `apps/server`. Also follow the root `AGENTS.md`.
 ## API Contracts
 
 - Validate params, query strings, and bodies with Zod at the route boundary.
-- Return successful payloads as `ApiSuccess<T>` (`{ data: T }`) using types exported by `@bnewapp/types`.
+- Return mobile API payloads as `ApiSuccess<T>` (`{ data: T }`) using types exported by `@bnewapp/types`.
+- Admin endpoints under `/api/admin` use the react-admin simple-rest contract: raw records
+  or arrays, with `Content-Range` for lists. Preserve the header's CORS exposure and use
+  the existing parsing and range helpers in `src/lib/`.
 - Add shared request/response types before updating both client and server consumers.
 - Keep error responses compatible with `ApiError`; use Fastify HTTP errors for expected client failures.
 - Do not expose database errors, stack traces, secrets, or internal 5xx details. The global handler masks server failures.
@@ -24,8 +27,12 @@ These rules apply to `apps/server`. Also follow the root `AGENTS.md`.
 ## Authentication and Data Access
 
 - Add `preHandler: app.authenticate` to every protected route.
+- Admin routes use the scoped `app.requireAdmin` pre-handler, which also authenticates.
+  Preserve that guard for nested admin modules; a valid user token alone is insufficient.
 - Derive the authenticated user from `request.user.sub`; never accept an owner/user id from the client when it should be implied by the token.
 - Use the singleton `app.supabase` service client registered by the plugin.
+- The service client bypasses RLS; enforce user ownership or admin authorization in server
+  queries and handlers even when database policies exist.
 - Select only required columns and map snake_case database rows to camelCase API models at the boundary.
 - Check both Supabase `error` and required `data`. Map absence and conflict to intentional 4xx errors where appropriate.
 - Re-validate or reconcile domain invariants server-side even if the mobile client already validates them.
@@ -33,6 +40,8 @@ These rules apply to `apps/server`. Also follow the root `AGENTS.md`.
 ## Configuration and Operations
 
 - Declare and validate environment variables in `src/config.ts` with Zod.
+- Dance worker constants live in `src/modules/dance/config.ts`; keep shared limits there
+  and worker startup tied to `buildApp`. Workers are disabled during app construction in tests.
 - Default safely: production-like environments must not silently allow all CORS origins or missing credentials.
 - Keep logging structured and avoid tokens, secrets, or sensitive personal data.
 - Do not perform network calls or create clients at module import time when app construction can own the lifecycle.

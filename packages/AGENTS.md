@@ -7,15 +7,23 @@ These rules apply to `packages/*`. Also follow the root `AGENTS.md`.
 - `studio-core`: pure, deterministic studio domain types, compatibility rules, migration, coercion, reconciliation, catalog, and templates.
 - `dance-core`: pure, deterministic dance domain rules — film steps, countdown and timing, scoring, and scan-status coercion.
 - `types`: shared wire contracts plus generated Supabase database types. It must not own business behavior.
-- `mobile-kit`: React Native package. Shared RN primitives, HTTP transport, the auth/query seam, MMKV and jotai helpers, the Tailwind token preset, and the jest harness both apps run on.
+- `mobile-kit`: React Native package. Shared RN primitives, HTTP transport, the auth/query seam, MMKV and Jotai helpers, the Tailwind token preset, and the Jest harness for consuming apps and RN packages.
 - `dance-flow`: React Native package. The record → upload → score flow: its transport, injected config, recorder adapter, score polling, flow atoms and the two screens that host them. It owns the flow, not the dance product surface — a catalog list, a post history or a feed belongs to the app that renders it.
 
 ## Boundaries
 
 - Never import from `apps/*`.
 - Keep shared domain packages free of React, React Native, Expo, Fastify, Supabase clients, storage, and environment access.
-- **React Native exception.** `mobile-kit` is deliberately platform-coupled: it exists so `apps/mobile` and a second Expo app share one implementation of the primitives and flow they both render, which a platform-neutral package cannot hold. The exception is limited to packages whose stated purpose names it. Every other package stays platform-neutral.
-- **`dance-flow` is the second RN exception, and it carries one known leak.** `danceMoveDetailAtomFamily` lives in the package because the record screen reads it, and `apps/mobile`'s staying `learn-dance-screen` reads it too; the staying catalog and post-history atoms likewise reach the package for their `./api` functions. That is a deliberate trade for a smaller split, not a clean boundary. Do not widen it: a new product atom with no in-package consumer belongs in the app.
+- **React Native exception.** `mobile-kit` and `dance-flow` are deliberately platform-coupled
+  so `apps/mobile` and a second Expo app share one implementation of the primitives and flow
+  they both render. The exception is limited to a package whose stated purpose above names
+  it; every other package stays platform-neutral and takes app configuration by injection
+  instead of importing app modules.
+- **`dance-flow` carries one known leak — a deliberate trade for a smaller split, not a clean
+  boundary.** `danceMoveDetailAtomFamily` lives in the package because its record screen reads
+  it, and the app's staying `learn-dance-screen` reads it too; the app's catalog and
+  post-history atoms likewise reach the package for its `./api` functions. Do not widen it: a
+  new product atom with no in-package consumer belongs in the app.
 - Expose consumers through the package's declared `exports` entries. A package may have several, one per concern; reaching past them into a private file is still a deep import.
 - Keep imports acyclic. A lower-level package must not depend on an application-facing package merely to reuse a type.
 - Prefer one focused package over a broad `core` package when a new domain becomes substantial.
@@ -41,10 +49,10 @@ declare a `build` script.
 - Build an edited package before typechecking downstream consumers when its emitted
   declarations are required.
 
-**Source-only React Native packages** (`mobile-kit`, `dance-flow`) point every `exports` condition
-(`react-native`, `types`, `default`) at TypeScript source and ship **no `build` script**.
-Metro consumes the source through the `react-native` condition, and declarations for `.tsx`
-buy nothing.
+**Source-only React Native packages** (`mobile-kit`, `dance-flow`) point runtime TypeScript
+exports (`react-native`, `types`, `default`) at source and ship **no `build` script**.
+Metro consumes that source through the `react-native` condition. Theme and Jest configuration
+subpaths instead export JavaScript for configuration tools.
 
 - Still declare `typecheck` and `test`. Turbo only fans a task out to packages that declare
   it, so a missing script silently drops the package from `corepack pnpm typecheck`, leaving
@@ -54,8 +62,8 @@ buy nothing.
 - Give each concern its own `exports` entry instead of one barrel. Metro does not tree-shake,
   so a barrel makes every consumer load, bundle and declare every native dependency the
   package has; two modules with disjoint native dependencies get separate entries.
-- An `exports` map is a closed door: a subpath that is not listed is not importable, and the
-  failure is a resolution error at Metro or Tailwind startup, not at typecheck.
+- Keep every public subpath in `exports`; verify resolution in the consuming tool as well
+  as TypeScript, since Metro, Tailwind, and Jest use different resolution conditions.
 - Entries a config file reaches through CJS `require` (the theme tokens, the Tailwind preset,
   the jest harness) must resolve to plain `.js`, outside the source-only TypeScript entries.
 - Testing an RN package needs its own `babel.config.js` — babel-jest resolves the config from

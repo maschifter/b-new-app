@@ -7,44 +7,62 @@ conventions — read them before writing code.
 
 ## 1. Project overview
 
-A dance product built as a **pnpm + Turborepo** monorepo. The flagship feature is
-the **Studio**: a spot-based room the user decorates with catalog items, persisted
-locally and synced to the cloud.
+A dance product built as a **pnpm + Turborepo** monorepo. Two flagship features:
+
+- **Studio** — a spot-based room the user decorates with catalog items, persisted
+  locally and synced to the cloud.
+- **Dance** — a record → upload → score flow: the user films a move, server workers
+  process the media and a scan worker returns a score.
 
 Key technologies:
 
 - **Mobile** (`apps/mobile`): Expo SDK 55 + Expo Router, React 19.2 / React Native 0.83,
-  Jotai + react-native-mmkv for state, `@tanstack/react-query` for server data,
-  Supabase Auth, expo-image for art.
-- **Server** (`apps/server`): Fastify 5, `@fastify/jwt`, Zod for input validation,
-  Supabase secret-key client for DB access.
-- **Domain** (`packages/studio-core`): pure, RN-free TypeScript rules.
-- **Contracts** (`packages/types`): shared DTOs + generated Supabase types.
+  Jotai + `jotai-tanstack-query` + react-native-mmkv for state, Supabase Auth,
+  NativeWind for styling, expo-image / expo-video / vision-camera for media.
+- **Server** (`apps/server`): Fastify 5, `@fastify/jwt` over the Supabase JWKS, Zod for
+  input validation, Supabase secret-key client for DB and Storage, background media and
+  scan workers.
+- **Admin** (`apps/admin`): react-admin 5 + MUI over `/api/admin` (simple-rest protocol).
 - **Package manager**: pnpm `10.13.1` (pinned in `package.json#packageManager`),
-  Node `>=20` (`.nvmrc` = 20).
+  Node `>=20.19.4` (`.nvmrc` = 20).
 
 ## 2. Monorepo structure & layering rules
 
 ```
 apps/
-  mobile/    @bnewapp/mobile   Expo app (all UI, local state, sync)
-  server/    @bnewapp/server   Fastify API (auth, persistence)
+  mobile/    @bnewapp/mobile   Expo app (all product UI, local state, sync)
+  server/    @bnewapp/server   Fastify API (auth, persistence, media + scan workers)
   admin/     @bnewapp/admin    react-admin back office over the server API
 packages/
-  studio-core/ @bnewapp/studio-core  Pure domain: snapshot/template/catalog + coerce→migrate→reconcile
-  dance-core/  @bnewapp/dance-core   Pure domain: dance post/scan status coercion + scoring shapes
-  types/       @bnewapp/types         Shared DTOs (ApiSuccess, StudioRoom, …) + database.generated.ts
+  studio-core/ @bnewapp/studio-core  Pure domain: snapshot/template/catalog, coerce→migrate→reconcile, shop pricing
+  dance-core/  @bnewapp/dance-core   Pure domain: record-flow steps, timing, scoring, scan-status coercion
+  types/       @bnewapp/types        Shared DTOs (ApiSuccess, StudioRoom, …) + database.generated.ts
+  mobile-kit/  @bnewapp/mobile-kit   RN package: transport, auth/query seam, MMKV + jotai helpers, UI primitives, theme, jest harness
+  dance-flow/  @bnewapp/dance-flow   RN package: the app-agnostic record → upload → score flow (atoms, api, two screens)
+supabase/                            config.toml + forward-only SQL migrations
+plans/                               Design/implementation plans (status header when present)
 ```
 
 Dependencies flow **inward** — enforce these boundaries:
 
-- `apps/mobile` and `apps/server` may import `packages/*`; **mobile never imports
-  server and server never imports mobile**.
-- **Pure, platform-free domain logic belongs in `packages/studio-core`** (no React,
-  RN, Expo, MMKV, or fetch imports there — it must stay runnable in Node and the
-  browser). Both apps consume it.
+- `apps/*` may import `packages/*`; **packages never import from apps**, and
+  **mobile never imports server**.
+- **Pure, platform-free domain logic belongs in `studio-core` / `dance-core`** (no React,
+  RN, Expo, MMKV, Fastify, Supabase, or fetch imports there — they must stay runnable in
+  Node and the browser). Both apps consume them.
+- **`mobile-kit` and `dance-flow` are the two intentional React Native packages**, so a
+  second Expo app can share the same primitives and flow. The exception is limited to a
+  package whose stated purpose names it; every other package stays platform-neutral and
+  takes app configuration by injection. See `packages/AGENTS.md`.
 - **Shared request/response shapes belong in `packages/types`** — never redefine a
   DTO inside an app when it crosses the wire.
+- Import a package through its declared `exports` entries. Reaching past them into a
+  private file is a deep import, and a subpath that is not listed is not importable at all.
+
+`studio-core`, `dance-core` and `types` are **compiled** (they emit `dist` and declare
+`build`). `mobile-kit` and `dance-flow` are **source-only**: their runtime exports point at
+TypeScript and they ship no `build` script, but they still declare `typecheck` and `test`
+so Turbo does not silently skip them.
 
 ## 3. Essential commands
 
@@ -55,14 +73,23 @@ corepack pnpm --version      # must match package.json#packageManager
 corepack pnpm dev            # run everything in dev (turbo dev)
 corepack pnpm typecheck      # turbo typecheck across the workspace
 corepack pnpm test           # turbo test across the workspace
-corepack pnpm lint           # biome lint
+corepack pnpm lint           # biome lint (root only; workspaces have no lint script)
 corepack pnpm format         # biome check --write
 
 corepack pnpm server:dev     # Fastify only (@bnewapp/server)
+corepack pnpm admin          # react-admin dev server (@bnewapp/admin)
 corepack pnpm mobile         # Expo Metro (@bnewapp/mobile)
+corepack pnpm mobile:fresh   # Expo Metro with a cleared cache
 corepack pnpm mobile:ios     # build & run iOS
 corepack pnpm mobile:android # build & run Android
 ```
+
+Prefer the narrowest check first: `corepack pnpm --filter <package-name> <script>`. That
+bypasses Turbo's dependency builds, so when the check needs compiled workspace deps run
+`corepack pnpm exec turbo run typecheck --filter=<package-name>` instead.
+
+Always use `corepack pnpm`, never bare `pnpm`; the pinned version is the repository
+contract, and a lockfile regenerated by another pnpm is a defect.
 
 ### Database workflow
 
@@ -75,34 +102,44 @@ corepack pnpm db:types      # Regenerate packages/types/src/database.generated.t
 Use migrations as the source of truth for schema changes. Obtain explicit approval before
 running `db:push` or linked-project type generation. After each approved `db:push`, run
 `db:types` and commit the generated types. Review each migration before pushing it.
+Local Storage buckets are declared in `supabase/config.toml`; never infer a missing bucket
+from the absence of a migration.
+Read `supabase/AGENTS.md` before touching schema or RLS.
 
 ## 4. API layer
 
 Plain REST via Fastify modules — **no RPC framework, no DI container**. Keep modules
 simple.
 
-- **One module per domain**: `apps/server/src/modules/<domain>/routes.ts`, mounted in
-  `apps/server/src/app.ts`.
+- **One module per domain**: `apps/server/src/modules/<domain>/routes.ts`, registered in
+  `apps/server/src/app.ts` **under a prefix** (`studioRoutes` mounts at `/api/studio`).
+  Route paths inside a module are relative to that prefix — declare `/room`, not
+  `/api/studio/room`.
 - **Auth**: guard protected routes with the `app.authenticate` preHandler (defined in
-  `apps/server/src/plugins/auth.ts`). It runs `request.jwtVerify()`; inside the handler
-  the caller's id is `request.user.sub`.
+  `apps/server/src/plugins/auth.ts`). It runs `request.jwtVerify()` against the Supabase
+  JWKS; inside the handler the caller's id is `request.user.sub`. Never accept an owner id
+  from the client when the token implies it.
 - **DB access**: use `app.supabase` (a secret-key `SupabaseClient<Database>` decorated
   by `apps/server/src/plugins/supabase.ts`). It bypasses RLS, so every query must enforce
   the endpoint's access model explicitly. Owner-only endpoints scope by the authenticated
   user (`.eq("owner_id", request.user.sub)`); intentional cross-user reads must define and
   test their visibility rules rather than relying on RLS.
-- **Input validation**: parse `request.body` / query with a **Zod** schema and throw
-  `app.httpErrors.badRequest(...)` on failure. Do not trust client input.
+- **Catalog**: the studio catalog is admin-managed and lives in the database. Read it
+  through `app.catalogService` (`apps/server/src/plugins/catalog.ts`), not the static
+  `CATALOG` seed, and map `CatalogUnavailableError` to a 503.
+- **Input validation**: parse `request.body` / params / query with a **Zod** schema and
+  throw `app.httpErrors.badRequest(...)` on failure. Do not trust client input.
 - **Responses**: return the `ApiSuccess<T>` shape `{ data: T }` (defined in
-  `@bnewapp/types`). Errors go through `app.httpErrors.*` (`@fastify/sensible`).
+  `@bnewapp/types`). Errors go through `app.httpErrors.*` (`@fastify/sensible`) and the
+  handler in `apps/server/src/lib/errors.ts`; never leak Supabase errors or stack traces.
 
-Shape to follow (from `apps/server/src/modules/studio/routes.ts`):
+Shape to follow (from `apps/server/src/modules/studio/routes.ts`, mounted at `/api/studio`):
 
 ```ts
 app.get(
-  "/api/studio/room",
+  "/room",
   { preHandler: app.authenticate },
-  async (request): Promise<ApiSuccess<StudioRoom | null>> => {
+  async (request): Promise<ApiSuccess<StudioRoomWithVisitorCount | null>> => {
     const { data: row, error } = await app.supabase
       .from("studio_rooms")
       .select(ROOM_COLUMNS)
@@ -110,46 +147,69 @@ app.get(
       .maybeSingle();
     if (error) throw app.httpErrors.internalServerError("Could not load the studio room");
     if (!row) return { data: null };
+
+    let catalog: CatalogItem[];
+    try {
+      catalog = (await app.catalogService.getAuthoritative()).items;
+    } catch (error) {
+      if (error instanceof CatalogUnavailableError) {
+        throw app.httpErrors.serviceUnavailable("Studio catalog is temporarily unavailable");
+      }
+      throw error;
+    }
     // Domain rules live in studio-core, never inline in the route:
-    const migrated = migrate(
-      coerceSnapshot({ version: row.version, templateId: row.template_id, map: row.map }),
+    const snapshot = hydrateSnapshot(
+      { version: row.version, templateId: row.template_id, map: row.map },
+      catalog,
     );
-    const template = templateById(migrated.templateId) ?? ROOM_TEMPLATE;
-    const snapshot = reconcile(migrated, template, CATALOG);
-    return { data: { id: row.id, ownerId: row.owner_id, snapshot, updatedAt: row.updated_at } };
+    const visitorCount = await countRoomVisitors(app, row.id);
+    return {
+      data: { id: row.id, ownerId: row.owner_id, snapshot, updatedAt: row.updated_at, visitorCount },
+    };
   },
 );
 ```
 
+`hydrateSnapshot` is the **read** path (coerce → migrate → reconcile, falling back to the
+default template for a retired id). A **write** must not use it: validate the body, then
+`migrate` + `templateById` and reject an unknown template, so a save never silently
+retargets the room.
+
 ## 5. Adding a new endpoint (end-to-end workflow)
 
-1. **Migration** — `corepack pnpm db:new <name>`, write SQL, review it.
+1. **Migration** — `corepack pnpm db:new <name>`, write the SQL, review it and its RLS.
 2. **Apply & regenerate after explicit approval** — `corepack pnpm db:push` then
    `corepack pnpm db:types`, commit `database.generated.ts`.
 3. **DTO** — add/extend the request & response types in `packages/types/src/index.ts`.
    Reuse existing DTOs rather than duplicating (`SaveStudioRoomBody = DecorationSnapshot`).
 4. **Server route** — add a handler in the domain's `routes.ts`: `app.authenticate`
-   preHandler, Zod validation, domain logic delegated to `studio-core`, `ApiSuccess<T>`
-   response.
+   preHandler, Zod validation, domain logic delegated to `studio-core` / `dance-core`,
+   `ApiSuccess<T>` response. Register the module in `app.ts` under its prefix.
 5. **Mobile API fn** — add a typed fetch fn in the feature's `api.ts` (via
    `apps/mobile/src/lib/api/client.ts` conventions).
 6. **Atom / query** — wire it into the feature's `_atoms/` (see §6).
 
+For a server change follow `.agents/skills/bnewapp-server-feature/SKILL.md`; for a schema
+change, `.agents/skills/bnewapp-database-change/SKILL.md`.
+
 ## 6. Mobile state management — atomic split rules (go-forward standard)
 
-New features use a **feature folder with a narrow public entry point**. Add only the
+Features live in `apps/mobile/src/features/` (`auth`, `catalog`, `crew`, `dance`,
+`dev-menu`, `explore`, `shop`, `studio`). Each exposes a **narrow public entry point** —
+`dev-menu` is the exception, a debug surface with no `index.ts`. Add only the
 state files and folders the feature actually needs; the full atomic split is a menu, not
 required ceremony for every feature:
 
 ```
 apps/mobile/src/features/<feature>/
-  index.ts         # narrow public exports consumed outside the feature
+  index.ts        # narrow public exports consumed outside the feature
   _atoms/
     queries.ts    # server reads: jotai-tanstack-query atoms
     mutations.ts  # server writes: mutation atoms
     ui.ts         # client-only UI state + derived atoms
     effects.ts    # atomEffect / sync glue
   ui/             # screen + presentational components
+  data/           # static catalog/config or data adapters
   api.ts          # typed fetch fns for this feature
 ```
 
@@ -159,31 +219,33 @@ Rules:
   deep-import its `_atoms/`, `ui/`, or `api.ts` internals.
 - **One concern per atom.** Components subscribe only to the atoms they need
   (`useAtomValue` / `useSetAtom`), not a giant hook.
-- **Server state** = react-query atoms via `jotai-tanstack-query`
-  (`atomWithQuery` / `atomWithInfiniteQuery`).
+- **Server state** = react-query atoms via `jotai-tanstack-query` (`atomWithQuery` /
+  `atomWithInfiniteQuery`, or their `atomWithSuspense*` variants where the component is
+  guaranteed to mount after its required inputs exist).
 - Keep query results in the query atom cache; do not copy them into a second plain Jotai atom.
-- Query atoms and React Query hooks must use the same `QueryClient`. Keep the root
-  `QueryClientProvider` and hydrate that exact stable client into
-  `jotai-tanstack-query`'s `queryClientAtom`; never let the two APIs create separate caches.
+- Query atoms and React Query hooks must use the same `QueryClient`. `QueryProvider`
+  (`@bnewapp/mobile-kit`) owns the root `QueryClientProvider` and hydrates that exact stable
+  client into `jotai-tanstack-query`'s `queryClientAtom`; never let the two APIs create
+  separate caches.
 - Authenticated query atoms read `{ userId, accessToken }` through `readQueryAuth` /
-  `requireAuth` (`apps/mobile/src/lib/jotai/authed-query.ts`), which wrap the query-auth atom
-  owned by `apps/mobile/src/lib/auth/`. `AuthSessionProvider` keeps that single projection synchronized
-  with the Supabase session; feature atoms must not call React auth hooks or create another auth
-  source. Include `userId` in every user-scoped query key so cache identity does not depend on
-  cleanup timing. When an authenticated session ends or changes user, disable those queries,
-  cancel in-flight requests, and remove the previous user's query entries before enabling the
-  next identity. A same-user token refresh updates the token without changing the key or cache.
-- **Client state** = plain Jotai atoms (`atom`, `atomFamily`).
+  `requireAuth` (`@/lib/jotai/authed-query`), which wrap the query-auth atom owned by
+  `@bnewapp/mobile-kit`. `AuthSessionProvider` (`@/lib/auth/session-provider`) keeps that
+  single projection synchronized with the Supabase session; feature atoms must not call
+  React auth hooks or create another auth source. Include `userId` in every user-scoped
+  query key so cache identity does not depend on cleanup timing. When an authenticated
+  session ends or changes user, disable those queries, cancel in-flight requests, and remove
+  the previous user's query entries before enabling the next identity. A same-user token
+  refresh updates the token without changing the key or cache.
+- **Client state** = plain Jotai atoms (`atom`, `atomFamily` from `jotai-family`).
 - **HTTP** = a feature-local `api.ts` calling `apiUrl` / `authHeaders` / `jsonHeaders` /
-  `unwrapApiSuccess` from `apps/mobile/src/lib/api/client.ts`; no feature builds its own
-  envelope reader. Pass `unwrapApiSuccess` a `parse` validator when a wrong payload shape
-  would be expensive rather than merely broken — a wallet balance, an entitlement, anything
-  the user is charged for — and `serverError: true` when the endpoint's failures are
-  actionable and the server's own message should reach the user. Plain reads trust the
-  declared type.
-- **Local persistence** = `createAtomWithMMKV` (`apps/mobile/src/lib/jotai/atom-with-mmkv.ts`),
-  keyed by `ownerId`, under a **versioned namespace** (`<feature>:v1:`), with an
-  `MMKV` instance scoped per feature (`new MMKV({ id: "<feature>" })`).
+  `unwrapApiSuccess` from `@/lib/api/client`; no feature builds its own envelope reader.
+  Pass `unwrapApiSuccess` a `parse` validator when a wrong payload shape would be expensive
+  rather than merely broken — a wallet balance, an entitlement, anything the user is charged
+  for — and `serverError: true` when the endpoint's failures are actionable and the server's
+  own message should reach the user. Plain reads trust the declared type.
+- **Local persistence** = `createAtomWithMMKV` (`@/lib/jotai/atom-with-mmkv`), keyed by
+  `ownerId`, under a **versioned namespace** (`<feature>:v1:`), with an `MMKV` instance
+  scoped per feature (`new MMKV({ id: "<feature>" })`).
 - **Lists / feeds** = `atomWithInfiniteQuery` + **cursor pagination**, plus a derived
   atom that `flatMap`s the pages into a flat item list for the screen. Use the
   server cursor as the next `pageParam`; never derive pagination state from returned item counts.
@@ -191,13 +253,27 @@ Rules:
   the newly received page until it yields items or reaches a null cursor; do not use the total
   flattened-list length as the continuation condition.
 
+### Where the shared mobile seam lives
+
+The transport, auth projection, query provider, MMKV/jotai helpers, UI primitives, media
+hooks, theme tokens and jest harness live in **`@bnewapp/mobile-kit`**.
+`apps/mobile/src/lib/*` keeps thin re-export shims (`@/lib/api/client`,
+`@/lib/jotai/authed-query`, `@/lib/jotai/atom-with-mmkv`, `@/lib/auth/query-auth-atom`, …)
+so feature code keeps importing `@/lib/...`. Change the implementation in `mobile-kit`, not
+in a feature, and never add a second copy of a primitive it already owns.
+
+**`@bnewapp/dance-flow`** owns the record and result screens plus the flow state behind
+them. The app's `dance` feature keeps catalog, learning, post history and feed UI. The app
+injects the flow's base URL and MMKV store id once at startup through `configureDanceFlow`
+(`apps/mobile/src/lib/bootstrap/dance-flow.ts`, imported for side effect by the root layout).
+
 > **Legacy shape — do not copy for new features.** The **studio** feature predates
 > this convention. It lives in `apps/mobile/src/features/studio/state/`
 > (`atoms.ts`, `studio-provider.tsx`, `studio-sync.tsx`) using MMKV-backed
 > `atomFamily`s keyed by `ownerId` plus an imperative sync effect. It does **not**
 > use the `_atoms/` split or `jotai-tanstack-query`. Read it to learn the
 > MMKV/keyed-atom and coerce→migrate→reconcile patterns, but structure new work per
-> the atomic split above. **Explore is the first feature on the new standard.**
+> the atomic split above. `explore`, `shop`, `dance` and `catalog` follow the current standard.
 
 MMKV atom helper, keyed & versioned (the persistence pattern to reuse):
 
@@ -210,7 +286,7 @@ const snapshotAtom = atomFamily((ownerId: string) =>
 );
 ```
 
-## 7. List screen composition
+## 7. Screen & list composition
 
 Before changing anything under `apps/mobile`, read `apps/mobile/AGENTS.md`. For mobile
 feature implementation or refactoring, also load the `bnewapp-mobile-feature` skill from
@@ -221,14 +297,19 @@ Key UI rules:
 
 - Expo Router files are route composition only. Feature screens and components belong under
   `src/features/<feature>/ui`; move code to `src/components` only when it is a truly shared,
-  domain-neutral primitive with multiple actual feature consumers.
-- Use selective Suspense for the initial read of query-backed screen content. Pair it with the
-  shared mobile query error boundary and an accessible retry action. Keep auth/parameter guards
-  above the boundary so suspense query atoms remain unconditionally enabled where mounted.
+  domain-neutral primitive with multiple actual feature consumers — and to
+  `@bnewapp/mobile-kit/ui` only when a second app needs it too.
+- Use selective Suspense for the initial read of query-backed screen content. Pair it with
+  `MobileQueryErrorBoundary` (`@bnewapp/mobile-kit/ui`) and an accessible retry action. Keep
+  auth/parameter guards above the boundary so suspense query atoms stay unconditionally
+  enabled where mounted.
 - Keep explicit loading UI for pull-to-refresh, pagination, background refetches, mutations, and
   form submissions. Suspense does not replace those states.
 - Use NativeWind `className` for static component styling. Keep React Native `style` for values
   computed at runtime, animated styles, or third-party components without NativeWind interop.
+  Shared design tokens come from `packages/mobile-kit/theme/`, applied through its Tailwind
+  preset in `apps/mobile/tailwind.config.js`; that config also globs `packages/*/src` so
+  package-owned classes are generated.
 
 Compose feeds as **screen → list → item card**:
 
@@ -243,10 +324,13 @@ Compose feeds as **screen → list → item card**:
 
 ## 8. Navigation
 
-expo-router **file-based** routing under `apps/mobile/src/app/`. Tabs live in
-`app/(tabs)/` (`_layout.tsx` defines them). Detail routes take params via path
-segments — e.g. a room detail is `app/room/[ownerId].tsx`, opened with
-`router.push("/room/" + ownerId)` and read via `useLocalSearchParams()`.
+expo-router **file-based** routing under `apps/mobile/src/app/`. Tabs live in `app/(tabs)/`
+(`crew`, `studio`, `inventory`, `explore`; `_layout.tsx` defines them). Detail routes take
+params via path segments — a room detail is `app/room/[ownerId].tsx`, opened with
+`router.push("/room/" + ownerId)` and read via `useLocalSearchParams()`; the dance flow is
+`app/dance/[moveId].tsx` → `record.tsx` → `result.tsx`, with `app/dance/post/[postId].tsx`
+for a published post. Validate uuid params with `@/lib/router/uuid-param`.
+
 Authenticated routes outside the protected `(tabs)` group must also be declared inside the
 `session !== null` `Stack.Protected` block in the root `app/_layout.tsx`; filesystem discovery
 alone makes an undeclared route eligible but does not apply that auth guard.
@@ -254,31 +338,43 @@ alone makes an undeclared route eligible but does not apply that auth guard.
 The read-only room renderer is `StudioStage`
 (`apps/mobile/src/features/studio/ui/studio-stage.tsx`): props are `template` + `map`
 + `mode` (`"edit" | "preview" | "visit"`). Derive `template` from a snapshot with
-`templateById(snapshot.templateId) ?? ROOM_TEMPLATE` (from `@bnewapp/studio-core`) and
-pass `snapshot.map`. In `preview`/`visit` mode selection is ignored, so any room can be
+`templateOrDefault(snapshot.templateId)` (from `@bnewapp/studio-core`) and pass
+`snapshot.map`. In `preview`/`visit` mode selection is ignored, so any room can be
 rendered read-only.
 
 ## 9. Code style
 
 - **English only** for code, comments, commit messages, and PR descriptions.
-- **No narrative comments.** Comment *why*, not *what*; let names carry meaning.
+- **No narrative comments.** Comment *why*, not *what*; let names carry meaning. Never
+  describe the history of a fix.
 - **Biome** is the formatter + linter: 2-space indent, line width 100, organized
   imports. `noExplicitAny` is an **error** — no `any`.
 - **TypeScript strict** (`tsconfig.base.json`): `strict`, `noUncheckedIndexedAccess`,
-  `exactOptionalPropertyTypes`. Type inputs and outputs precisely.
+  `exactOptionalPropertyTypes`. Type inputs and outputs precisely; no unchecked casts or
+  non-null assertions to silence an error.
+- Never hand-edit generated files, including `packages/types/src/database.generated.ts`.
 - Match the surrounding file's naming and idiom; no broad refactors or new
   dependencies without discussion.
 
 ## Testing
 
-- **Mobile** (`apps/mobile`): `jest-expo` (`jest.config.js`); tests live in
-  `__tests__/` next to the code, with a `moduleNameMapper` aliasing
-  `@bnewapp/studio-core` to its `src/`. Use React Native Testing Library for
-  components.
+- **Mobile** (`apps/mobile`): `jest-expo` via the shared harness
+  (`@bnewapp/mobile-kit/testing/jest/config`, spread beside `preset: "jest-expo"` in
+  `jest.config.js`). Tests live in `__tests__/` next to the code; `@bnewapp/studio-core`
+  is mapped to its `src/` so no dist build is needed. Use React Native Testing Library, and
+  `renderWithProviders` from `@bnewapp/mobile-kit/testing` for provider-dependent trees.
 - **Server** (`apps/server`): **Vitest** — tests in `apps/server/tests/*.test.ts`. For protected
   routes, cover authentication, invalid boundary input, success/not-found behavior, and
   Supabase failures according to risk.
-- **studio-core** (`packages/studio-core`): **Vitest** — tests in `src/__tests__/`.
+- **studio-core / dance-core** (`packages/*`): **Vitest** — tests in `src/__tests__/`.
+- **Admin** (`apps/admin`): **Vitest** — tests colocated as `*.test.ts(x)`. Needs
+  `apps/admin/.env.local`; see `apps/admin/AGENTS.md`.
+- **mobile-kit / dance-flow**: **jest**, each with its own `babel.config.js`, `jest-expo` and
+  `babel-preset-expo` devDependencies, because babel-jest resolves that config from the
+  file's own package root. A package without a `test` script is silently dropped by Turbo.
 
-Keep `packages/studio-core` green when touching shared domain logic; both apps depend
-on it.
+`corepack pnpm test` therefore drives two runners under one task name: Vitest in the server,
+admin and domain packages, jest in mobile and the two RN packages.
+
+Keep `packages/studio-core` and `packages/dance-core` green when touching shared domain
+logic; both apps depend on them.
