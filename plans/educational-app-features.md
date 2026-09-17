@@ -1,8 +1,24 @@
 # Stepz (`apps/edu`) — Feed, Scan Flow & Local Profile Plan
 
-Status: **planned, not started.** Written 2026-09-16 against `4bc91cc`, the commit that
-closed C1 in `plans/educational-app.md`. Every file and line reference below was checked
-against the working tree on that day.
+Status: **superseded in part — kept for §3 and §8.** Written 2026-09-16 against `4bc91cc`,
+the commit that closed C1 in `plans/educational-app.md`; file and line references below were
+checked against the working tree on that day and have not been rechecked since.
+
+**Read this file for two things only:** §3, where the source documents and the built system
+disagree, and §8, its decision register — six questions, of which **five are still open**;
+question 2 has since been settled by the collection plan below. Nothing else here is scheduled
+work.
+
+- **D1 is superseded.** The local collection model now has its own stand-alone plan,
+  `plans/educational-app-collection.md`, which settles §8's question 2 (a fallback score does
+  create a learned move, with `isExternalScore` stored so the call stays reversible) and
+  replaces §4.3's stored shape — records live under **two keys, each holding one record map**,
+  because one atomic write beats the key-per-move layout described in §4.3, which would need an
+  enumeration path of its own outside `persistedEduAtom` (it wraps `atomWithStorage` over a
+  single MMKV key and exposes no prefix scan). Build from the collection plan, not from D1.
+- **Every other phase (S1–S3, F1–F4) is unscheduled**, and its acceptance criteria were written
+  before the decisions in §8 were answered. Each gets a fresh plan when it is next; treat the
+  phases here as scope notes, not as an execution order to start from.
 
 This is the follow-up the codebase plan deferred. `plans/educational-app.md` ended at
 "`apps/edu` builds, runs and shows a placeholder"; it explicitly left "the feed, the scan
@@ -188,12 +204,12 @@ with no reference video, which are unreachable from the feed, so progress could 
 reach 100% and the denominator would move whenever an admin saved a draft. State the
 predicate in the endpoint's test, not only in its implementation.
 
-### 3.6 The level filter's options are not backed by a constraint
+### 3.6 The level filter's options are not backed by an upper bound
 
 Documents 01 and 03 assume levels 1, 2, 3. `dance_moves.level` is
-`integer not null default 1` with **no check constraint**
-(`supabase/migrations/20260825192507_create_dance_moves.sql`). Hardcoding three buttons
-silently hides any move at level 4+.
+`integer not null default 1` constrained only by `dance_moves_level_check check (level >= 1)`
+(`supabase/migrations/20260825192507_create_dance_moves.sql:83`) — a floor, with **no upper
+bound and no enumeration**. Hardcoding three buttons silently hides any move at level 4+.
 
 **Decision: make the option list data-driven.** The catalog-summary endpoint (S1) returns
 per-level counts, and the filter renders one option per level the catalog actually has, in
@@ -556,13 +572,14 @@ deliberately not fixed here" in `plans/educational-app.md`.
 
 ## 8. Open decisions
 
-Six need the product owner. The rest are settled above and listed only so nobody reopens
-them by accident.
+Six were raised; **five still need the product owner.** Question 2 was settled by
+`plans/educational-app-collection.md` and is kept here struck through so nobody reopens it.
+The rest are settled above and listed only so nobody reopens them by accident.
 
 | # | Question | Blocks | Recommendation |
 |---|---|---|---|
 | 1 | Is the silhouette a visual guide or a position gate? (§3.1) | F2's scope; a gate is a separate project | **Guide** in v1 |
-| 2 | Does a fallback (non-external) score create a learned move and enter Average Score? (§3.1) | D1's rules | **Yes**, but store `isExternalScore` so it stays reversible |
+| ~~2~~ | ~~Does a fallback (non-external) score create a learned move and enter Average Score? (§3.1)~~ | — | **Settled:** yes, and `isExternalScore` is stored so the call stays reversible (collection plan §2) |
 | 3 | Likes: build against the brief, local-only, or drop? (§3.2) | F4 only | **Drop from v1** |
 | 4 | Final privacy wording for the upload (§3.3) | F1's pre-scan copy | Rewrite required either way; the suggested text in 02 §7 is factually wrong here |
 | 5 | Which video field the feed plays (§3.8) | F1 | `mainVideoUrl ?? presentationVideoUrl ?? proDancerVideoUrl ?? filmYourselfVideoUrl` |

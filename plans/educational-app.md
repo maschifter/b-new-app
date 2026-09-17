@@ -402,8 +402,20 @@ see, so an unowned device check silently converts them into unverified assumptio
 **Where the phases stop.** P0's acceptance — `apps/edu` builds, runs and shows a placeholder, with
 the workspace green — is the end of this plan. The feed, the scan flow and the local profile, plus
 the server catalog endpoints (`level` filter, batch move lookup, catalog totals, feed ordering) and
-the temporary-clip retention and abuse work they need, are feature work. They now have their own
-plan: `plans/educational-app-features.md`. Do not start them from here.
+the temporary-clip retention and abuse work they need, are feature work. Do not start them from
+here. The only piece of that work currently planned is the local collection model, in
+`plans/educational-app-collection.md`, which stands alone and needs nothing from this plan; the
+rest gets a plan when it is next.
+
+**Before that plan can be written, three questions need the product owner:** the silhouette's
+scope, the upload's privacy copy, and which video field the feed plays. Two more sit beside them
+and gate less — likes block only an unscheduled phase, and the feed's default order blocks
+nothing in v1. All five are recorded, with the conflict each one resolves and a recommendation,
+in §8 of `plans/educational-app-features.md` — a superseded plan kept for exactly that register
+and for §3, its account of where the source documents contradict the built system (the
+silhouette, likes against the brief, and the upload privacy copy, which is factually wrong for
+this implementation). Ask them early; they have the longest lead time in the programme. Its
+remaining phases are scope notes, not an execution order.
 
 ### Bail-out condition (decide before R1 starts)
 
