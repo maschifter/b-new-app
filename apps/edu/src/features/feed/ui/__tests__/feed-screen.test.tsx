@@ -5,6 +5,7 @@ import { act, fireEventAsync, screen, waitFor } from "@testing-library/react-nat
 import { Dimensions } from "react-native";
 import { State } from "react-native-gesture-handler";
 import { fireGestureHandler, getByGestureTestId } from "react-native-gesture-handler/jest-utils";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import {
   activeMoveIndexAtom,
   playbackRateAtom,
@@ -491,4 +492,23 @@ it("rebuilds the pager at the top, not on the position the last one left", async
   expect(await screen.findByLabelText("Dance this Move, Move a")).toBeOnTheScreen();
   expect(store.get(activeMoveIndexAtom)).toBe(0);
   expect(store.get(playbackRateAtom)).toBe(1);
+});
+
+it("holds the call to action above the system bar the feed draws under", async () => {
+  await renderWithProviders(
+    <SafeAreaProvider
+      initialMetrics={{
+        frame: { x: 0, y: 0, width: 360, height: 800 },
+        insets: { top: 44, right: 0, bottom: 48, left: 0 },
+      }}
+    >
+      <FeedScreen onOpenProfile={onOpenProfile} />
+    </SafeAreaProvider>,
+    { auth: { userId: "dancer", accessToken: "token" } },
+  );
+  await screen.findByLabelText("Dance this Move, Move a");
+
+  // The gap alone leaves the button under a three-button navigation bar, which is
+  // where the title and the label were on a device.
+  expect(screen.getByTestId("feed-actions")).toHaveStyle({ paddingBottom: 48 + 16 });
 });

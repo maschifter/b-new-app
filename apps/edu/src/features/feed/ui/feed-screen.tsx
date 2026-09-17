@@ -17,7 +17,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { feedGenresAtom, feedMovesAtom, feedMovesInfiniteAtom } from "../_atoms/queries";
 import {
   activeMoveIndexAtom,
@@ -164,6 +164,7 @@ function FilterButton({
 
 function FeedPager({ onOpenProfile }: FeedScreenProps) {
   const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const moves = useAtomValue(feedMovesAtom);
   const query = useAtomValue(feedMovesInfiniteAtom);
   const activeIndex = useAtomValue(activeMoveIndexAtom);
@@ -293,11 +294,12 @@ function FeedPager({ onOpenProfile }: FeedScreenProps) {
           height: Math.round(height * 0.32),
         }}
       />
-      <SafeAreaView
-        edges={["top", "left", "right", "bottom"]}
-        pointerEvents="box-none"
-        style={StyleSheet.absoluteFill}
-      >
+      {/* Not a `SafeAreaView`: every child below is absolutely positioned, and an
+          absolute child is laid out against the border box, so the padding a
+          `SafeAreaView` adds for an inset never reaches it. The device's system bars
+          overlay this screen, so each child carries the inset it needs itself. The
+          app is portrait-locked, which leaves only the bottom one to carry. */}
+      <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
         <View pointerEvents="box-none" className="absolute right-3 top-16 items-end gap-3">
           <ActionButton icon="person-circle-outline" label="Open profile" onPress={onOpenProfile} />
           {activeMove && hasProTip(activeMove) ? (
@@ -308,14 +310,23 @@ function FeedPager({ onOpenProfile }: FeedScreenProps) {
             />
           ) : null}
         </View>
-        <View pointerEvents="box-none" className="absolute right-3" style={{ bottom: 150 }}>
+        <View
+          pointerEvents="box-none"
+          className="absolute right-3"
+          style={{ bottom: insets.bottom + 150 }}
+        >
           <TempoBar
             height={Math.round(height * 0.36)}
             pagerGesture={pagerGesture}
             onDragChange={setTempoDragging}
           />
         </View>
-        <View pointerEvents="box-none" className="absolute inset-x-0 bottom-0 gap-3 px-5 pb-4">
+        <View
+          testID="feed-actions"
+          pointerEvents="box-none"
+          className="absolute inset-x-0 bottom-0 gap-3 px-5"
+          style={{ paddingBottom: insets.bottom + 16 }}
+        >
           {query.isFetchingNextPage ? (
             <ActivityIndicator testID="feed-pagination-spinner" color={COLORS.neon} />
           ) : null}
@@ -336,7 +347,7 @@ function FeedPager({ onOpenProfile }: FeedScreenProps) {
             <Text className="font-bold text-base text-foreground">Dance this Move</Text>
           </BouncablePress>
         </View>
-      </SafeAreaView>
+      </View>
       {proTipMove ? (
         <ProTipOverlay move={proTipMove} onClose={() => setProTipMoveId(null)} />
       ) : null}
