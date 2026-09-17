@@ -206,8 +206,10 @@ business.
   filter belongs (that shared package, or a Stepz-local feature `api.ts` per `CLAUDE.md` §6) is
   F1's decision to take, not a detail to settle by reflex. `apps/mobile` passes no `level`
   today and is unaffected either way.
-- **`GET /api/dance/moves/by-ids`** — the batch lookup for locally-stored move ids. Same layer,
-  different concern, its own plan (S2 in `plans/educational-app-features.md`).
+- **`GET /api/dance/moves/by-ids`** — the batch lookup for locally-stored move ids. **Cut on
+  2026-09-17**, one day after this phase, for the same reason as the summary: the profile reads
+  the snapshot `LearnedMove` already holds. See the S2 bullet in
+  `plans/educational-app-features.md`.
 - **Shuffled feed order.** Still deterministic; still open decision 6 in that plan's §8.
 - **The retention backstop and the per-owner post rate limit** (S3). Unrelated to reads.
 - **An index on `level`.** A real lever with a named trigger; no evidence behind it today.

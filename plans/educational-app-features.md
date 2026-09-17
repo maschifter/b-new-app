@@ -24,7 +24,16 @@ work.
   profile therefore counts only what is on the device. That reverses §3.6 and moots §3.5; both
   now carry a note, and §5's S1 entry below is stale on the summary. Build from the
   level-filter plan, not from S1.
-- **Every other phase (S2–S3, F1–F4) is unscheduled**, and its acceptance criteria were written
+- **S2 is cut.** `GET /api/dance/moves/by-ids` existed only to refresh the move snapshot
+  `LearnedMove` already caches, and §3.4 had settled that the profile "renders from local data
+  alone and never depends on a fetch" — so it fixed no failure. The snapshot does not rot on its
+  own either: move media lives in the **public** `dance-media` bucket
+  (`supabase/config.toml:21-22`) and is served through `getPublicUrl`
+  (`apps/server/src/modules/admin/dance-media-service.ts:127`), so its URLs never expire. The
+  only drift is an admin editing a published move's title or artwork, and **the product owner
+  accepted that staleness on 2026-09-17** rather than carry an endpoint for it. Adding it later
+  is additive: one endpoint plus one call when the profile opens.
+- **Every other phase (S3, F1–F4) is unscheduled**, and its acceptance criteria were written
   before the decisions in §8 were answered. Each gets a fresh plan when it is next; treat the
   phases here as scope notes, not as an execution order to start from.
 
@@ -105,7 +114,7 @@ lands in the package with its own test — never as a Stepz-shaped special case.
 | Save My Video / Replace Video | 02 §4–5 | **No** |
 | Learned move, saved score, Average Score | 02 §6, 03 §2 | **No** |
 | ~~Catalog totals (`catalogMoveCount`, per style)~~ | 03 §2 | **Cut 2026-09-17** — not a gap; the profile has no denominator |
-| Move lookup for locally-stored ids | 03 §2 | **No.** `GET /moves/:id` is one-at-a-time and 404s for an unpublished move |
+| ~~Move lookup for locally-stored ids~~ | 03 §2 | **Cut 2026-09-17** — not a gap; the snapshot in `LearnedMove` is what the profile reads |
 | Download / Share a personal video | 03 §3 | **No.** `expo-media-library` and `expo-sharing` are not dependencies anywhere in the repo |
 | Temporary cloud upload deleted after scoring | brief, `apps/edu/AGENTS.md` | Endpoint yes, caller no |
 
@@ -197,9 +206,11 @@ unpublished would render as an error card, and the offline requirement in docume
 ("show cached learned moves and local videos") has the same shape.
 
 **Decision: cache a minimal move snapshot locally at learn time** — `title`,
-`thumbnailUrl`, `genreIds`, `level` — inside the `LearnedMove` record, and refresh it from
-the batch endpoint when the network allows. The profile then renders from local data alone
-and never depends on a fetch. This is the same coerce-against-current-configuration
+`thumbnailUrl`, `genreIds`, `level` — inside the `LearnedMove` record. The profile then renders
+from local data alone and never depends on a fetch. **The snapshot is never refreshed** (S2 is
+cut): it is written once at learn time and read forever, so an admin who later edits a published
+move's title or artwork leaves the learned card showing what the user actually learned. That is
+accepted, not overlooked. This is the same coerce-against-current-configuration
 discipline `studio-core` uses for rooms, applied to a much smaller shape.
 
 ### 3.5 `catalogMoveCount` must use the feed's eligibility predicate
@@ -390,7 +401,7 @@ not back inside the result screen; this is the kind of thing only a real build s
 
 ## 5. Phases
 
-Execution order: **D1 and S1 first** (nothing else compiles without them), then S2, then
+Execution order: **D1 and S1 first** (nothing else compiles without them), then
 F1 → F2 → F3, with S3 any time after F2 and F4 unscheduled pending §3.2. One commit per
 phase. Every phase ends with `corepack pnpm typecheck`, `test` and `lint` green; every
 phase with visible behavior ends with a device run.
@@ -399,10 +410,9 @@ phase with visible behavior ends with a device run.
 |---|---|---|
 | D1 — Local collection model | — | `collection.ts` (pure) + `_atoms` + MMKV records + coercion. No UI |
 | S1 — Level filter | — | `level` filter on `GET /api/dance/moves`. ~~`GET /api/dance/catalog-summary`~~ **cut** — see `plans/educational-app-level-filter.md` |
-| S2 — Batch move lookup | — | `GET /api/dance/moves/by-ids` for locally-stored ids |
 | F1 — Feed | S1 | Vertical pager, filters, tempo bar, Pro Tip, CTA, permission entry |
 | F2 — Scan seam | D1, F1 | Stepz result screen, score confirmation, video decision, upload cleanup |
-| F3 — Profile & collection | D1, S2, F2 | Overview, style rows, move detail, video actions, Scan Again |
+| F3 — Profile & collection | D1, F2 | Overview, style rows, move detail, video actions, Scan Again |
 | S3 — Retention backstop | F2 | Sweep terminal anonymous scan posts + their storage objects |
 | F4 — Likes | §3.2 answer | **Unscheduled.** Only if the owner overrides the brief |
 
@@ -442,16 +452,11 @@ build from there.**
 that the eligibility predicate still applies alongside the filter. Auth is already covered by
 the existing catalog-reads case. No migration, no `db:push`.
 
-### S2 — Batch move lookup
+### ~~S2 — Batch move lookup~~ *(cut)*
 
-`GET /api/dance/moves/by-ids?ids=<uuid,uuid,…>`, capped at 50 (matching
-`DanceMovesQuery`'s limit ceiling), returning `DanceMove[]` for the eligible subset.
-Unknown or unpublished ids are simply **absent** — not an error, not a null — because that
-is the normal case once a move leaves the catalog (§3.4).
-
-**Acceptance:** auth; over-cap rejected; a malformed id rejected; a mix of known,
-unpublished and unknown ids returns only the eligible ones; no test depends on response
-order.
+**Cut on 2026-09-17.** `GET /api/dance/moves/by-ids` would have refreshed the move snapshot
+`LearnedMove` already holds. Do not build it; see the S2 bullet at the top of this file for the
+reasoning and for what was accepted in exchange.
 
 ### F1 — Feed
 
@@ -512,7 +517,7 @@ score. Device run required.
    section only when a personal recording exists.
 4. Personal-video actions: Play, Download, Share, Delete (confirmed). Download and Share
    need new dependencies — see the risk in §6.
-5. Move data comes from the local snapshot first (§3.4), refreshed through S2.
+5. Move data comes from the local snapshot alone (§3.4). There is no refresh path.
 
 **Acceptance:** 03 §9's checklist, plus: the profile renders fully with the network off; a
 learned move whose catalog row was unpublished still renders from its snapshot; returning
