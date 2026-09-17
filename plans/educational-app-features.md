@@ -559,6 +559,11 @@ score. Device run required.
 
 ### F3 — Profile & collection
 
+**Superseded by `plans/educational-app-profile.md`; build from there.** That plan splits this
+phase in two — F3a, the browse surface, which needs nothing new, and F3b, Download and Share,
+which is gated on the two native dependencies in the risk table below. It also records the two
+capabilities the owner cut: no catalog denominators and no analytics.
+
 1. Overview: Average Score ring (numeric percentage always rendered, `--` at zero) and
    `learnedMoveCount` side by side, ~50/50 — "45 moves learned", **no denominator** (§3.5).
 2. Style sections in the agreed order, each a horizontal row inside the vertical page,
