@@ -5,9 +5,9 @@ the commit that closed C1 in `plans/educational-app.md`; file and line reference
 checked against the working tree on that day and have not been rechecked since.
 
 **Read this file for two things only:** §3, where the source documents and the built system
-disagree, and §8, its decision register — six questions, of which **five are still open**;
-question 2 has since been settled by the collection plan below. Nothing else here is scheduled
-work.
+disagree, and §8, its decision register — six questions, of which **four are still open**;
+question 2 was settled by the collection plan and question 5 by a precedent already shipped in
+`apps/mobile`. Nothing else here is scheduled work.
 
 - **D1 is superseded.** The local collection model now has its own stand-alone plan,
   `plans/educational-app-collection.md`, which settles §8's question 2 (a fallback score does
@@ -253,7 +253,7 @@ it duplicates and drops items across pages.
 ordering + the seed carried in the cursor) and is listed as an open decision, not smuggled
 into the feed phase.
 
-### 3.8 The feed's video field is undecided, and only one field is guaranteed
+### 3.8 The feed's video field — reuse the chain the main app already ships
 
 Document 01 says "a full-screen vertical video of a dancer" without naming a field. On
 `DanceMove`, `mainVideoUrl`, `presentationVideoUrl`, `proDancerVideoUrl` and
@@ -261,9 +261,31 @@ Document 01 says "a full-screen vertical video of a dancer" without naming a fie
 only because eligibility guarantees it (`service.ts:56`). Any fallback chain must
 therefore terminate at `filmYourselfVideoUrl` or the feed can render a blank card.
 
-**Recommendation:** `mainVideoUrl ?? presentationVideoUrl ?? proDancerVideoUrl ??
-filmYourselfVideoUrl`. Which field is *editorially* right is content's call. **Owner
-decision (§8)**, but the terminating element is not negotiable.
+**Decision (2026-09-17): use `apps/mobile`'s existing chain verbatim.** This was written up as
+an open question, which was an error — the repo had already answered it. `DanceMoveCard`
+(`apps/mobile/src/features/dance/ui/dance-move-card.tsx:24-28`) resolves:
+
+```ts
+move.mainVideoUrl ?? move.proDancerVideoUrl ?? move.presentationVideoUrl ?? move.filmYourselfVideoUrl
+```
+
+Note the middle two are the reverse of what this section used to recommend, for no stated
+reason. The shipped order wins. That card already terminates correctly and already does the job
+Stepz's feed will do — preview a move, play the focused one through `useFocusedPlayback`, the
+same hook F1 step 1 uses. Two apps reading one catalog should not render the same move
+differently without a content reason; if the order is editorially wrong it is wrong in both
+places, and fixing it is one content decision, not a per-app choice.
+
+**The poster image needs the same chain, plus a branch the video chain does not.** The same
+component resolves `move.thumbnailUrl ?? move.proDancerImageUrl ?? move.dancerTipImageUrl`
+(`:29`). Unlike the video chain, **this one can still be `null`** — all three fields are
+nullable and none is guaranteed by eligibility — so the card needs a third branch for a move
+with neither a video nor an image. `DanceMoveCard` has it; Stepz's card needs it too.
+
+**For F1:** a second consumer makes this genuinely shared rather than a premature abstraction.
+Prefer one `resolvePreviewMedia(move)` in `packages/dance-core` — pure, DTO-only, no React — to
+a second copy of both chains. Not a blocker: a copy that matches is still better than a
+mismatch.
 
 ### 3.9 `userId` in the documents' data model
 
@@ -592,8 +614,9 @@ deliberately not fixed here" in `plans/educational-app.md`.
 
 ## 8. Open decisions
 
-Six were raised; **five still need the product owner.** Question 2 was settled by
-`plans/educational-app-collection.md` and is kept here struck through so nobody reopens it.
+Six were raised; **four still need the product owner.** Question 2 was settled by
+`plans/educational-app-collection.md`, and question 5 by the precedent already shipped in
+`apps/mobile`; both are kept here struck through so nobody reopens them.
 The rest are settled above and listed only so nobody reopens them by accident.
 
 | # | Question | Blocks | Recommendation |
@@ -602,7 +625,7 @@ The rest are settled above and listed only so nobody reopens them by accident.
 | ~~2~~ | ~~Does a fallback (non-external) score create a learned move and enter Average Score? (§3.1)~~ | — | **Settled:** yes, and `isExternalScore` is stored so the call stays reversible (collection plan §2) |
 | 3 | Likes: build against the brief, local-only, or drop? (§3.2) | F4 only | **Drop from v1** |
 | 4 | Final privacy wording for the upload (§3.3) | F1's pre-scan copy | Rewrite required either way; the suggested text in 02 §7 is factually wrong here |
-| 5 | Which video field the feed plays (§3.8) | F1 | `mainVideoUrl ?? presentationVideoUrl ?? proDancerVideoUrl ?? filmYourselfVideoUrl` |
+| ~~5~~ | ~~Which video field the feed plays? (§3.8)~~ | — | **Settled 2026-09-17:** reuse `apps/mobile`'s shipped chain verbatim, image fallback included (§3.8) |
 | 6 | Shuffled default feed order? (§3.7) | Nothing in v1 | Deterministic in v1; seeded shuffle later if wanted |
 
 Carried over from the documents, still unanswered there and **not** blocking:
