@@ -402,8 +402,8 @@ see, so an unowned device check silently converts them into unverified assumptio
 **Where the phases stop.** P0's acceptance — `apps/edu` builds, runs and shows a placeholder, with
 the workspace green — is the end of this plan. The feed, the scan flow and the local profile, plus
 the server catalog endpoints (`level` filter, batch move lookup, catalog totals, feed ordering) and
-the temporary-clip retention and abuse work they need, are feature work. Do not start them from
-here; plan them separately once P0 lands.
+the temporary-clip retention and abuse work they need, are feature work. They now have their own
+plan: `plans/educational-app-features.md`. Do not start them from here.
 
 ### Bail-out condition (decide before R1 starts)
 
