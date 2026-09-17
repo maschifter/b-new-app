@@ -102,11 +102,11 @@ it("keeps the learned move when its personal recording is deleted", () => {
   learn(store, "a", 70);
   store.set(savePersonalRecordingAtom, {
     moveId: "a",
-    fileUri: "file:///documents/a.mp4",
+    fileName: "a.mp4",
     durationS: 8,
   });
 
-  expect(store.get(personalRecordingsAtom).a?.fileUri).toBe("file:///documents/a.mp4");
+  expect(store.get(personalRecordingsAtom).a?.fileName).toBe("a.mp4");
 
   store.set(deletePersonalRecordingAtom, "a");
 

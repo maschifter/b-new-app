@@ -57,15 +57,22 @@ function coerceLearnedMove(key: string, value: unknown): LearnedMove | null {
   };
 }
 
+/** A name the recordings directory can resolve on its own: no separators, no traversal. */
+export function isRecordingFileName(value: unknown): value is string {
+  if (typeof value !== "string" || value.length === 0) return false;
+  if (value.includes("/") || value.includes("\\")) return false;
+  return value !== "." && value !== "..";
+}
+
 function coercePersonalRecording(key: string, value: unknown): PersonalRecording | null {
   if (!isRecordObject(value)) return null;
-  const { moveId, fileUri, createdAt, durationS } = value;
+  const { moveId, fileName, createdAt, durationS } = value;
   if (typeof moveId !== "string" || moveId !== key) return null;
-  if (typeof fileUri !== "string" || fileUri.length === 0) return null;
+  if (!isRecordingFileName(fileName)) return null;
   const created = coerceTimestamp(createdAt);
   if (created === null) return null;
   if (typeof durationS !== "number" || !Number.isFinite(durationS) || durationS <= 0) return null;
-  return { moveId, fileUri, createdAt: created, durationS };
+  return { moveId, fileName, createdAt: created, durationS };
 }
 
 function coerceMap<T>(

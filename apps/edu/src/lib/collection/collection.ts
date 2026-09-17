@@ -1,4 +1,4 @@
-import { coerceSnapshot, isValidScore } from "./coerce";
+import { coerceSnapshot, isRecordingFileName, isValidScore } from "./coerce";
 import type { LearnedMove, LearnedMoveSnapshot, PersonalRecording } from "./types";
 
 /**
@@ -82,7 +82,7 @@ export function savePersonalRecording(
   recording: PersonalRecording,
 ): Record<string, PersonalRecording> {
   if (recording.moveId.length === 0) return recordings;
-  if (recording.fileUri.length === 0) return recordings;
+  if (!isRecordingFileName(recording.fileName)) return recordings;
   if (!Number.isFinite(recording.durationS) || recording.durationS <= 0) return recordings;
   return { ...recordings, [recording.moveId]: recording };
 }

@@ -1,4 +1,5 @@
 import { Directory, File, Paths } from "expo-file-system";
+import { SIMULATED_DANCE_RECORDING_DIRECTORY } from "./simulation-path";
 
 export interface DanceRecorder {
   readonly isRecording: boolean;
@@ -40,7 +41,7 @@ export function preloadSimulatedDanceVideo(sourceUrl: string): Promise<string> {
 }
 
 async function downloadSimulationVideo(sourceUrl: string): Promise<string> {
-  const destination = new Directory(Paths.cache, "dance-recording-simulation");
+  const destination = new Directory(Paths.cache, SIMULATED_DANCE_RECORDING_DIRECTORY);
   destination.create({ idempotent: true });
   // The cache directory outlives the JS session that populated the in-memory map,
   // so a download into an existing name would throw on the next app launch.

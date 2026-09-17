@@ -59,19 +59,19 @@ export const saveConfirmedScoreAtom = atom(
 
 export interface SavePersonalRecordingInput {
   moveId: string;
-  fileUri: string;
+  fileName: string;
   durationS: number;
 }
 
 export const savePersonalRecordingAtom = atom(
   null,
-  (get, set, { moveId, fileUri, durationS }: SavePersonalRecordingInput) => {
+  (get, set, { moveId, fileName, durationS }: SavePersonalRecordingInput) => {
     const recordings = get(personalRecordingsAtom);
     set(
       personalRecordingsStorageAtom,
       savePersonalRecording(recordings, {
         moveId,
-        fileUri,
+        fileName,
         durationS,
         createdAt: new Date().toISOString(),
       }),

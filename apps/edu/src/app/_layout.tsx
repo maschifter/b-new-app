@@ -1,5 +1,6 @@
 import "@/global.css";
 import "@/lib/bootstrap/dance-flow";
+import { usePersonalRecordingReconciliation } from "@/features/scan/reconciliation";
 import { AnonymousSessionProvider, useAnonymousSession } from "@/lib/auth/session-provider";
 import { COLORS } from "@/lib/theme/colors";
 import { QueryProvider } from "@bnewapp/mobile-kit";
@@ -46,15 +47,27 @@ function RootNavigator() {
   // Every route needs the anonymous identity, and nothing renders until it exists,
   // so no Stack.Protected group is required here.
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="move/[moveId]/scan" />
-      <Stack.Screen name="move/[moveId]/result" options={{ gestureEnabled: false }} />
-      <Stack.Screen name="profile/index" />
-      <Stack.Screen name="profile/[moveId]" />
-      <Stack.Screen name="profile/style/[styleId]" />
-    </Stack>
+    <>
+      <PersonalRecordingReconciliation />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="move/[moveId]/scan" />
+        <Stack.Screen name="move/[moveId]/result" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="profile/index" />
+        <Stack.Screen name="profile/[moveId]" />
+        <Stack.Screen name="profile/style/[styleId]" />
+      </Stack>
+    </>
   );
+}
+
+/**
+ * Personal recordings are reconciled once per launch, below the session gate: a pointer
+ * whose file is gone is dropped, and a file no pointer references is deleted.
+ */
+function PersonalRecordingReconciliation() {
+  usePersonalRecordingReconciliation();
+  return null;
 }
 
 function SessionUnavailable() {

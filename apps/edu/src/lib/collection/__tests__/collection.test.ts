@@ -132,17 +132,23 @@ describe("learnedCountByGenre", () => {
 describe("personal recordings", () => {
   const recording: PersonalRecording = {
     moveId: "a",
-    fileUri: "file:///documents/a.mp4",
+    fileName: "a.mp4",
     createdAt: LEARNED_AT,
     durationS: 8,
   };
 
   it("keeps exactly one recording per move", () => {
     const once = savePersonalRecording({}, recording);
-    const twice = savePersonalRecording(once, { ...recording, fileUri: "file:///documents/b.mp4" });
+    const twice = savePersonalRecording(once, { ...recording, fileName: "b.mp4" });
 
     expect(Object.keys(twice)).toEqual(["a"]);
-    expect(twice.a?.fileUri).toBe("file:///documents/b.mp4");
+    expect(twice.a?.fileName).toBe("b.mp4");
+  });
+
+  it("rejects a file name that is a path", () => {
+    const stored = savePersonalRecording({}, { ...recording, fileName: "file:///documents/a.mp4" });
+
+    expect(stored).toEqual({});
   });
 
   it("deleting a recording leaves the learned move and its saved score intact", () => {

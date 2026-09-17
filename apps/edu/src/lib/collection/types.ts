@@ -32,8 +32,12 @@ export interface LearnedMove {
 
 export interface PersonalRecording {
   moveId: string;
-  /** Permanent app-document path, never a cache path. */
-  fileUri: string;
+  /**
+   * A bare file name inside the app-document recordings directory, never a path: the
+   * container directory is reassigned on reinstall and on restore from backup, so an
+   * absolute path stored today resolves to nothing tomorrow.
+   */
+  fileName: string;
   createdAt: string;
   durationS: number;
 }

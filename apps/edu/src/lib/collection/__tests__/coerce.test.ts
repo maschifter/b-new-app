@@ -77,7 +77,7 @@ describe("coerceLearnedMoves", () => {
 describe("coercePersonalRecordings", () => {
   const stored = {
     moveId: "a",
-    fileUri: "file:///documents/a.mp4",
+    fileName: "a.mp4",
     createdAt: LEARNED_AT,
     durationS: 8,
   };
@@ -86,12 +86,22 @@ describe("coercePersonalRecordings", () => {
     const coerced = coercePersonalRecordings({
       a: stored,
       b: { ...stored, moveId: "b", durationS: 0 },
-      c: { ...stored, moveId: "c", fileUri: "" },
+      c: { ...stored, moveId: "c", fileName: "" },
       d: { ...stored, moveId: "d", createdAt: "not a date" },
+      e: { ...stored, moveId: "e", fileName: "file:///document/personal-recordings/e.mp4" },
+      f: { ...stored, moveId: "f", fileName: "../e.mp4" },
     });
 
     expect(Object.keys(coerced)).toEqual(["a"]);
     expect(coerced.a).toEqual(stored);
+  });
+
+  it("drops a record that stores a path instead of a file name", () => {
+    const coerced = coercePersonalRecordings({
+      a: { ...stored, fileName: "file:///var/containers/old/personal-recordings/a.mp4" },
+    });
+
+    expect(coerced).toEqual({});
   });
 
   it("yields an empty map for a non-object", () => {

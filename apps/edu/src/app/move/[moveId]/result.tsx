@@ -1,4 +1,4 @@
-import { DanceResultScreen } from "@/features/scan";
+import { ScanResultScreen } from "@/features/scan";
 import { isUuidParam } from "@/lib/router/uuid-param";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 
@@ -37,13 +37,18 @@ export default function ScanResultRoute() {
     return <Redirect href="/" />;
   }
   return (
-    <DanceResultScreen
+    <ScanResultScreen
       moveId={moveId}
       clipPath={clipPath}
       clipDuration={duration}
       {...(audioOffsetMs === undefined ? {} : { clipAudioOffsetMs: audioOffsetMs })}
-      onRecordAgain={() => router.replace(`/move/${moveId}/scan`)}
-      onDone={() => router.dismissTo("/")}
+      onBack={() => router.replace(`/move/${moveId}/scan`)}
+      // The profile is pushed from the feed, never onto the scan stack, so Back from it
+      // reaches the feed as document 03 section 2 requires.
+      onFinished={() => {
+        router.dismissTo("/");
+        router.push("/profile");
+      }}
     />
   );
 }

@@ -13,6 +13,16 @@
       "types": "./src/ui/dance-result-screen.tsx",
       "default": "./src/ui/dance-result-screen.tsx"
     },
+    "./score-polling": {
+      "react-native": "./src/score-polling.ts",
+      "types": "./src/score-polling.ts",
+      "default": "./src/score-polling.ts"
+    },
+    "./submission-state": {
+      "react-native": "./src/ui/submission-state.ts",
+      "types": "./src/ui/submission-state.ts",
+      "default": "./src/ui/submission-state.ts"
+    },
     "./atoms": {
       "react-native": "./src/_atoms/index.ts",
       "types": "./src/_atoms/index.ts",

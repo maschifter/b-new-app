@@ -1,10 +1,26 @@
 # Stepz — F2: The Scan Seam
 
-Status: **not started.** Written 2026-09-17 against `c61d55b`; every file and line reference
-below was checked against the working tree as it stood then. Revised the same day after a
-readiness review against that commit — §2.4, §3.1, §4.1, §5.1, §7 and §8. The review found no
-false reference and no gap in scope; every revision closes an instruction the plan left to the
-implementer's judgement.
+Status: **implemented 2026-09-17; §7's device checklist is still open.** Written the same day
+against `c61d55b`; every file and line reference below was checked against the working tree as it
+stood then. Revised after a readiness review against that commit — §2.4, §3.1, §4.1, §5.1, §7
+and §8. The review found no false reference and no gap in scope; every revision closes an
+instruction the plan left to the implementer's judgement.
+
+Every automated box in §7 is written and green, and §8's commands pass. Three things the
+implementation had to decide that the plan did not:
+
+- **`@bnewapp/dance-flow` gained a second `exports` entry beyond §4.1's.** `deriveSubmissionState`
+  takes `isScorePollingSlow`, and §4.1 has Stepz restating the slow-score string, so
+  `./score-polling` is exported alongside `./submission-state`. Both are new keys over existing
+  dependency-free modules; no file moved and no `apps/mobile` call site changed.
+- **§5.4's hook is reached through `@/features/scan/reconciliation`, not `index.ts`.** That index
+  re-exports `RecordDanceScreen`, so the root layout importing the hook from it pulls the camera
+  and audio stack into the root module graph — the exact trap `@bnewapp/dance-flow/dev` exists to
+  avoid. The feature therefore has two public entries, on that package's own precedent.
+- **§4.3's save failure splits in two.** A missing move clears itself the moment the query yields
+  a snapshot, so its retry is a refetch; a failed write must wait for an explicit re-attempt or
+  the effect loops. Collapsing both into one flag raced: the snapshot could arrive after the
+  retry reset the state, and the save was then never re-attempted.
 
 **This file is the whole plan and it stands alone.** Requirement source is
 `02-scan-score-and-save.md` in `D:\works\magnus\b-new-app\docs\educational`, read through the
@@ -441,16 +457,24 @@ save(moveId, clipPath, durationS):
   2. copy clipPath -> personal-recordings/<moveId>-<epochMs>.mp4   # a fresh name every time,
                                                                    # so a copy never collides
   3. validate: the new file exists and size > 0                    # "ready to play"
-  4. savePersonalRecordingAtom({ moveId, fileUri, durationS })     # one MMKV key write
-  5. delete the PREVIOUS file, if there was one                    # only now
-  6. delete the temporary clip                                     # §2.4's guard applies
+  4. savePersonalRecordingAtom({ moveId, fileName, durationS })    # one MMKV key write
+  5. read the pointer back; on disagreement delete the new copy    # §2.1's read-back
+     and throw
+  6. delete the PREVIOUS file, if there was one                    # only now
+  7. delete the temporary clip                                     # §2.4's guard applies
 ```
 
-Step 2 into a unique name is what makes steps 4 and 5 orderable at all: a copy onto the old path
+Step 2 into a unique name is what makes steps 4 and 6 orderable at all: a copy onto the old path
 would destroy the previous video before the pointer moved, which is precisely what 02 §5 forbids.
-A throw anywhere in 1–3 leaves the pointer and the old file untouched, which is the `Retry` /
-`Keep Existing Video` state. A crash between 4 and 5 leaks one file, which §5.4's reconciliation
-collects on the next launch.
+A throw anywhere in 1–3, and a write step 5 finds the store rejected, leave the pointer and the
+old file untouched, which is the `Retry` / `Keep Existing Video` state. A crash between 4 and 6
+leaks one file, which §5.4's reconciliation collects on the next launch.
+
+**The pointer stores the file name alone, never an absolute path.** The container directory is
+reassigned on reinstall and on restore from backup, so a stored absolute path resolves to nothing
+on the first launch afterwards — and §5.4 would then read that as "every file is an orphan" and
+delete the whole directory. The name is resolved against `Paths.document` at read time, so the
+same reconciliation sees an intact collection.
 
 The document directory is used, never the cache directory: `Paths.cache` is reclaimable by the OS
 (`node_modules/expo-file-system/build/FileSystem.d.ts:6-8`) and a personal video that disappears
@@ -462,7 +486,8 @@ A `usePersonalRecordingReconciliation()` hook, mounted once in the root layout b
 gate and run in an effect after first paint — not at module load, because these calls are
 synchronous and the directory read would sit on the first frame.
 
-1. Drop every `PersonalRecording` whose `fileUri` no longer exists (`deletePersonalRecordingAtom`).
+1. Drop every `PersonalRecording` whose `fileName` no longer resolves to a file
+   (`deletePersonalRecordingAtom`).
 2. Delete every file in `personal-recordings/` that no pointer references.
 
 Both directions, or the device leaks in one of them (`features.md` §4.4). This belongs to F2, not

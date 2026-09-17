@@ -22,7 +22,10 @@ jest.mock("@/lib/auth/session-provider", () => ({
   useAnonymousSession: jest.fn(),
 }));
 
+// Only the provider is stubbed: the layout also mounts the personal-recording
+// reconciliation, which reaches the package's MMKV helper through the collection.
 jest.mock("@bnewapp/mobile-kit", () => ({
+  ...jest.requireActual("@bnewapp/mobile-kit"),
   QueryProvider: ({ children }: { children: ReactNode }) => children,
 }));
 
