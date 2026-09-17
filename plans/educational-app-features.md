@@ -39,7 +39,12 @@ questions 2, 4 and 5 are settled and struck through. Nothing else here is schedu
   (`PlaybackRateBar` is a horizontal row of discrete buttons, private to `apps/mobile`), and the
   camera pre-prompt document 01 specifies already ships in `@bnewapp/dance-flow` with different
   strings and two missing actions. Build from the feed plan, not from F1.
-- **Every other phase (S3, F2–F4) is unscheduled**, and its acceptance criteria were written
+- **F2 is superseded.** The scan seam now has its own stand-alone plan,
+  `plans/educational-app-scan.md`. It keeps F2's five steps and settles what they left implicit:
+  the retriable failure on the result screen is the move fetch, not the score write (the write is
+  a synchronous MMKV `set`), and document 02's `scanSessionId` is this system's `postId`. Build
+  from the scan plan, not from F2.
+- **Every other phase (S3, F3–F4) is unscheduled**, and its acceptance criteria were written
   before the decisions in §8 were answered. Each gets a fresh plan when it is next; treat the
   phases here as scope notes, not as an execution order to start from.
 
@@ -533,7 +538,8 @@ required — the gesture conflict in (3) and the layout rules cannot be judged i
 
 ### F2 — Scan seam
 
-Stepz's own result surface (§4.2), then the two video screens.
+**Superseded by `plans/educational-app-scan.md`; build from there.** Stepz's own result surface
+(§4.2), then the two video screens.
 
 1. Result: "**xx / 100**", Back (returns to the scan view, saved score untouched),
    **Continue and Save your Score** (disabled while saving; repeated taps must not double
