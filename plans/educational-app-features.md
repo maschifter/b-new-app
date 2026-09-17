@@ -32,7 +32,14 @@ questions 2, 4 and 5 are settled and struck through. Nothing else here is schedu
   only drift is an admin editing a published move's title or artwork, and **the product owner
   accepted that staleness on 2026-09-17** rather than carry an endpoint for it. Adding it later
   is additive: one endpoint plus one call when the profile opens.
-- **Every other phase (S3, F1–F4) is unscheduled**, and its acceptance criteria were written
+- **F1 is superseded.** The feed now has its own stand-alone plan,
+  `plans/educational-app-feed.md`. It keeps F1's six steps and reorders nothing of substance,
+  but it settles two things F1 asserted without checking the code: document 01's "use the
+  existing tempo component" names a component that does not exist in the shape it describes
+  (`PlaybackRateBar` is a horizontal row of discrete buttons, private to `apps/mobile`), and the
+  camera pre-prompt document 01 specifies already ships in `@bnewapp/dance-flow` with different
+  strings and two missing actions. Build from the feed plan, not from F1.
+- **Every other phase (S3, F2–F4) is unscheduled**, and its acceptance criteria were written
   before the decisions in §8 were answered. Each gets a fresh plan when it is next; treat the
   phases here as scope notes, not as an execution order to start from.
 
@@ -497,7 +504,8 @@ reasoning and for what was accepted in exchange.
 
 ### F1 — Feed
 
-The largest UI phase. Build it in this order, because each step de-risks the next:
+**Superseded by `plans/educational-app-feed.md`; build from there.** The largest UI phase.
+Build it in this order, because each step de-risks the next:
 
 1. Vertical pager over `atomWithInfiniteQuery` + the existing moves cursor, one
    full-screen item per move, `pagingEnabled`, playback bound to the focused item through
