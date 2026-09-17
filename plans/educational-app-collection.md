@@ -1,7 +1,10 @@
 # Stepz — Local Collection Model
 
-Status: **planned, not started.** Written 2026-09-17 against `fcb37de`; every file and line
-reference below was checked against the working tree.
+Status: **built 2026-09-17.** The model lives in `apps/edu/src/lib/collection/` (`types.ts`,
+`collection.ts`, `coerce.ts`, `atoms.ts`, `index.ts`) with the three test suites of §4, and every
+acceptance box below is ticked. Nothing consumes it yet — the scan and profile features are still
+placeholders, as §6 intends. Written 2026-09-17 against `fcb37de`; every file and line reference
+below was checked against the working tree as it stood then.
 
 **This file is the whole plan and it stands alone.** Every rule, stored shape, function
 signature, decision and acceptance test needed to build and review this work is written out
@@ -309,42 +312,42 @@ in `apps/edu/src/lib/jotai/__tests__/atom-with-mmkv.test.ts`.
 
 **Pure rules**
 
-- [ ] Saved scores of 20 and 100 give exactly `60` — §1's arithmetic verbatim.
-- [ ] `averageScore` is `null` for an empty collection, and is **not** rounded: saved scores
+- [x] Saved scores of 20 and 100 give exactly `60` — §1's arithmetic verbatim.
+- [x] `averageScore` is `null` for an empty collection, and is **not** rounded: saved scores
       of 20 and 91 give exactly `55.5`, never `56`; 20, 90 and 92 give `202 / 3`, never `67`.
       Rounding is the screen's job, so an integer-only example cannot prove this rule.
-- [ ] `recordFirstScan` called twice for the same `moveId` produces one record, with the
+- [x] `recordFirstScan` called twice for the same `moveId` produces one record, with the
       original `learnedAt` and the original score.
-- [ ] An unconfirmed repeat scan changes nothing — only `saveConfirmedScore` moves a score.
-- [ ] `saveConfirmedScore` replaces a higher score with a lower one, bumps `updatedAt`, and
+- [x] An unconfirmed repeat scan changes nothing — only `saveConfirmedScore` moves a score.
+- [x] `saveConfirmedScore` replaces a higher score with a lower one, bumps `updatedAt`, and
       leaves `learnedAt` and `move` untouched.
-- [ ] `saveConfirmedScore` on an unknown `moveId` returns the map unchanged.
-- [ ] `recordFirstScan` returns the map unchanged for a score outside 0..100 **and** for a
+- [x] `saveConfirmedScore` on an unknown `moveId` returns the map unchanged.
+- [x] `recordFirstScan` returns the map unchanged for a score outside 0..100 **and** for a
       non-integer score such as `55.5` — no partial record is created.
-- [ ] `recordFirstScan` returns the map unchanged for a snapshot §3.3 would reject — an empty
+- [x] `recordFirstScan` returns the map unchanged for a snapshot §3.3 would reject — an empty
       `videoUrl`, a `level` of 0 — so the writer never creates a record the reader drops.
-- [ ] `saveConfirmedScore` with a score outside 0..100, or a non-integer score, leaves the
+- [x] `saveConfirmedScore` with a score outside 0..100, or a non-integer score, leaves the
       existing `savedScore`, `isExternalScore` and `updatedAt` untouched.
-- [ ] A fallback score (`isExternalScore: false`) creates a learned move and enters
+- [x] A fallback score (`isExternalScore: false`) creates a learned move and enters
       `averageScore`, and the flag round-trips through storage.
-- [ ] `learnedCountByGenre` counts a move that belongs to two genres under **both**.
-- [ ] `deletePersonalRecording` leaves the learned move and its saved score intact.
-- [ ] `savePersonalRecording` twice for one move leaves exactly one recording.
+- [x] `learnedCountByGenre` counts a move that belongs to two genres under **both**.
+- [x] `deletePersonalRecording` leaves the learned move and its saved score intact.
+- [x] `savePersonalRecording` twice for one move leaves exactly one recording.
 
 **Coercion**
 
-- [ ] A corrupt record is dropped and the rest of the collection survives.
-- [ ] A record whose `moveId` disagrees with its key is dropped.
-- [ ] A non-object, an array and `null` each yield `{}`.
-- [ ] A record with no `isExternalScore` coerces to `true`.
-- [ ] A `level` of 0, a `savedScore` of 101 and a missing `videoUrl` are each rejected.
+- [x] A corrupt record is dropped and the rest of the collection survives.
+- [x] A record whose `moveId` disagrees with its key is dropped.
+- [x] A non-object, an array and `null` each yield `{}`.
+- [x] A record with no `isExternalScore` coerces to `true`.
+- [x] A `level` of 0, a `savedScore` of 101 and a missing `videoUrl` are each rejected.
 
 **Atoms**
 
-- [ ] A write survives a fresh atom read — the value round-trips through MMKV.
-- [ ] `averageScoreAtom` updates after `recordFirstScanAtom` and after
+- [x] A write survives a fresh atom read — the value round-trips through MMKV.
+- [x] `averageScoreAtom` updates after `recordFirstScanAtom` and after
       `saveConfirmedScoreAtom`.
-- [ ] Corrupt JSON already in the store does not throw on read; it yields the coerced subset.
+- [x] Corrupt JSON already in the store does not throw on read; it yields the coerced subset.
 
 ---
 
