@@ -22,6 +22,10 @@ Key technologies:
 - **Server** (`apps/server`): Fastify 5, `@fastify/jwt` over the Supabase JWKS, Zod for
   input validation, Supabase secret-key client for DB and Storage, background media and
   scan workers.
+- **Edu** (`apps/edu`): **Stepz**, the second Expo app — a feed-first, account-free product
+  on the same SDK 55 / Jotai / TanStack Query stack, built from the shared packages. Its own
+  rules live in `apps/edu/AGENTS.md`: anonymous Supabase identity, local-only profile data,
+  its own palette.
 - **Admin** (`apps/admin`): react-admin 5 + MUI over `/api/admin` (simple-rest protocol).
 - **Package manager**: pnpm `10.13.1` (pinned in `package.json#packageManager`),
   Node `>=20.19.4` (`.nvmrc` = 20).
@@ -31,6 +35,7 @@ Key technologies:
 ```
 apps/
   mobile/    @bnewapp/mobile   Expo app (all product UI, local state, sync)
+  edu/       @bnewapp/edu      Second Expo app (Stepz: feed → scan → score, anonymous, local profile)
   server/    @bnewapp/server   Fastify API (auth, persistence, media + scan workers)
   admin/     @bnewapp/admin    react-admin back office over the server API
 packages/
@@ -82,7 +87,15 @@ corepack pnpm mobile         # Expo Metro (@bnewapp/mobile)
 corepack pnpm mobile:fresh   # Expo Metro with a cleared cache
 corepack pnpm mobile:ios     # build & run iOS
 corepack pnpm mobile:android # build & run Android
+corepack pnpm edu            # Expo Metro (@bnewapp/edu)
+corepack pnpm edu:fresh      # Expo Metro with a cleared cache
+corepack pnpm edu:ios        # build & run iOS
+corepack pnpm edu:android    # build & run Android
 ```
+
+Each Expo app also has `:ios:device` / `:android:device` and `:prebuild[:staging|:production]`
+variants; `package.json#scripts` is the full list. Two Metro servers cannot share port 8081 —
+start one app at a time, or pass `--port` to the second.
 
 Prefer the narrowest check first: `corepack pnpm --filter <package-name> <script>`. That
 bypasses Turbo's dependency builds, so when the check needs compiled workspace deps run
@@ -367,6 +380,8 @@ rendered read-only.
   `jest.config.js`). Tests live in `__tests__/` next to the code; `@bnewapp/studio-core`
   is mapped to its `src/` so no dist build is needed. Use React Native Testing Library, and
   `renderWithProviders` from `@bnewapp/mobile-kit/testing` for provider-dependent trees.
+- **Edu** (`apps/edu`): the same harness and conventions, plus its own gesture-handler setup
+  file and `__mocks__/`. Tests live in `__tests__/` next to the code.
 - **Server** (`apps/server`): **Vitest** — tests in `apps/server/tests/*.test.ts`. For protected
   routes, cover authentication, invalid boundary input, success/not-found behavior, and
   Supabase failures according to risk.
@@ -378,7 +393,7 @@ rendered read-only.
   file's own package root. A package without a `test` script is silently dropped by Turbo.
 
 `corepack pnpm test` therefore drives two runners under one task name: Vitest in the server,
-admin and domain packages, jest in mobile and the two RN packages.
+admin and domain packages, jest in the two Expo apps and the two RN packages.
 
 Keep `packages/studio-core` and `packages/dance-core` green when touching shared domain
 logic; both apps depend on them.
