@@ -7,6 +7,8 @@ import type { DanceMove } from "@bnewapp/types";
 import type { QueryClient } from "@tanstack/react-query";
 import { act, fireEventAsync, screen, waitFor } from "@testing-library/react-native";
 import type { createStore } from "jotai";
+import type { ComponentProps } from "react";
+import { Linking } from "react-native";
 import { Camera, useVideoOutput } from "react-native-vision-camera";
 
 import { simulatedDanceRecordingEnabledAtom, useBackDanceCameraAtom } from "../../_atoms/ui";
@@ -79,6 +81,7 @@ const mountedScreens: Array<{ unmountAsync: () => Promise<void> }> = [];
 
 const MOVE_ID = "00000000-0000-4000-8000-000000000001";
 const mockRecordingComplete = jest.fn();
+const mockBack = jest.fn();
 
 // A deliberately fast tempo: the countdown is `(60 / bpm) * 4` seconds, so this
 // keeps the recording flow under a frame instead of the ~2s a real move takes.
@@ -113,7 +116,11 @@ function move(overrides: Partial<DanceMove> = {}): DanceMove {
   };
 }
 
-async function mount(danceMove: DanceMove = move(), configure?: (store: JotaiStore) => void) {
+async function mount(
+  danceMove: DanceMove = move(),
+  configure?: (store: JotaiStore) => void,
+  screenProps: Partial<ComponentProps<typeof RecordDanceScreen>> = {},
+) {
   mockedGetDanceMove.mockResolvedValue(danceMove);
   mockedGetDanceMoves.mockResolvedValue({ items: [], nextCursor: null });
   const { store, queryClient } = createTestStore({
@@ -124,7 +131,11 @@ async function mount(danceMove: DanceMove = move(), configure?: (store: JotaiSto
   configure?.(store);
 
   const result = await renderWithProviders(
-    <RecordDanceScreen moveId={MOVE_ID} onRecordingComplete={mockRecordingComplete} />,
+    <RecordDanceScreen
+      moveId={MOVE_ID}
+      onRecordingComplete={mockRecordingComplete}
+      {...screenProps}
+    />,
     { store },
   );
   mountedScreens.push(result);
@@ -182,6 +193,8 @@ async function recordAClip() {
 
 beforeEach(() => {
   mockCameraPermission.hasPermission = false;
+  mockCameraPermission.canRequestPermission = true;
+  mockBack.mockReset();
   mockRequestPermission.mockClear();
   mockCreateRecorder.mockReset();
   mockUseVideoOutput.mockClear();
@@ -209,6 +222,53 @@ it("uses the mocked camera permission flow and configures capture without audio"
   await fireEventAsync.press(screen.getByLabelText("Allow camera access"));
   expect(mockRequestPermission).toHaveBeenCalledTimes(1);
   expect(mockUseVideoOutput).toHaveBeenCalledWith(expect.objectContaining({ enableAudio: false }));
+});
+
+it("renders the host app's pre-prompt copy in place of the shipped defaults", async () => {
+  await mount(move(), undefined, {
+    onBack: mockBack,
+    cameraPermissionCopy: {
+      title: "Allow camera access",
+      body: "The camera is used to scan your movement and calculate your score.",
+      allowLabel: "Allow Camera",
+      dismissLabel: "Not now",
+    },
+  });
+
+  expect(await screen.findByText("Allow camera access")).toBeOnTheScreen();
+  expect(
+    screen.getByText("The camera is used to scan your movement and calculate your score."),
+  ).toBeOnTheScreen();
+  expect(screen.getByText("Allow Camera")).toBeOnTheScreen();
+  expect(screen.queryByText("Camera access is needed")).not.toBeOnTheScreen();
+});
+
+it("hides the secondary escape when the host screen passed no way back", async () => {
+  await mount();
+
+  expect(await screen.findByText("Camera access is needed")).toBeOnTheScreen();
+  expect(screen.queryByLabelText("Not now")).toBeNull();
+});
+
+it("dismisses through onBack when the host screen passed one", async () => {
+  await mount(move(), undefined, { onBack: mockBack });
+
+  await fireEventAsync.press(await screen.findByLabelText("Not now"));
+  expect(mockBack).toHaveBeenCalledTimes(1);
+});
+
+it("turns the denied state into a way out instead of a dead end", async () => {
+  mockCameraPermission.canRequestPermission = false;
+  const openSettings = jest.spyOn(Linking, "openSettings").mockResolvedValue(undefined);
+
+  await mount(move(), undefined, { onBack: mockBack });
+
+  await fireEventAsync.press(await screen.findByLabelText("Open Settings"));
+  expect(openSettings).toHaveBeenCalledTimes(1);
+
+  await fireEventAsync.press(screen.getByLabelText("Cancel"));
+  expect(mockBack).toHaveBeenCalledTimes(1);
+  openSettings.mockRestore();
 });
 
 it("keeps choreography audio playing while the camera session is active", async () => {

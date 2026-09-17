@@ -1,3 +1,4 @@
+import { resolvePreviewMedia } from "@bnewapp/dance-core";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
 import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import type { DanceMove } from "@bnewapp/types";
@@ -21,12 +22,7 @@ function levelLabel(level: number): string {
 }
 
 export function DanceMoveCard({ move, selected, width, height, onPress }: DanceMoveCardProps) {
-  const previewVideoUrl =
-    move.mainVideoUrl ??
-    move.proDancerVideoUrl ??
-    move.presentationVideoUrl ??
-    move.filmYourselfVideoUrl;
-  const previewImageUrl = move.thumbnailUrl ?? move.proDancerImageUrl ?? move.dancerTipImageUrl;
+  const { videoUrl: previewVideoUrl, imageUrl: previewImageUrl } = resolvePreviewMedia(move);
   return (
     <BouncablePress
       accessibilityRole="button"

@@ -31,7 +31,9 @@ import {
   createSimulatedDanceRecorder,
   preloadSimulatedDanceVideo,
 } from "../recording-adapter";
-import { CameraPermissionOverlay } from "./camera-permission-overlay";
+import { type CameraPermissionCopy, CameraPermissionOverlay } from "./camera-permission-overlay";
+
+export type { CameraPermissionCopy } from "./camera-permission-overlay";
 
 const DEFAULT_RECORDING_LENGTH_SECONDS = 60;
 const VIDEO_BIT_RATE = 1_500_000;
@@ -51,10 +53,20 @@ interface RecordDanceScreenProps {
   moveId: string;
   /** The explicit `| undefined` is load-bearing under `exactOptionalPropertyTypes`. */
   onBack?: (() => void) | undefined;
+  /**
+   * Pre-prompt wording for the app that mandates its own. Each field falls back to
+   * the string this package ships, so an app that omits this prop is unaffected.
+   */
+  cameraPermissionCopy?: CameraPermissionCopy | undefined;
   onRecordingComplete: (clip: RecordedDanceClip) => void;
 }
 
-export function RecordDanceScreen({ moveId, onBack, onRecordingComplete }: RecordDanceScreenProps) {
+export function RecordDanceScreen({
+  moveId,
+  onBack,
+  cameraPermissionCopy,
+  onRecordingComplete,
+}: RecordDanceScreenProps) {
   return (
     <SafeAreaView className="flex-1 bg-black" edges={["top", "left", "right", "bottom"]}>
       <MobileQueryErrorBoundary title="Couldn't load this dance" retryLabel="Retry loading dance">
@@ -62,6 +74,7 @@ export function RecordDanceScreen({ moveId, onBack, onRecordingComplete }: Recor
           <RecordDanceContent
             moveId={moveId}
             onBack={onBack}
+            cameraPermissionCopy={cameraPermissionCopy}
             onRecordingComplete={onRecordingComplete}
           />
         </Suspense>
@@ -70,7 +83,12 @@ export function RecordDanceScreen({ moveId, onBack, onRecordingComplete }: Recor
   );
 }
 
-function RecordDanceContent({ moveId, onBack, onRecordingComplete }: RecordDanceScreenProps) {
+function RecordDanceContent({
+  moveId,
+  onBack,
+  cameraPermissionCopy,
+  onRecordingComplete,
+}: RecordDanceScreenProps) {
   const move = useAtomValue(danceMoveDetailAtomFamily(moveId)).data;
   const [step, setStep] = useState(FilmStep.READY);
   const [referenceOnTop, setReferenceOnTop] = useState(true);
@@ -373,8 +391,10 @@ function RecordDanceContent({ moveId, onBack, onRecordingComplete }: RecordDance
           />
         ) : (
           <CameraPermissionOverlay
+            {...cameraPermissionCopy}
             canRequestPermission={canRequestPermission}
             onRequest={requestPermission}
+            onDismiss={onBack}
           />
         )}
         {referenceOnTop ? (

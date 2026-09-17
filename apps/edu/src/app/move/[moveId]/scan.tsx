@@ -10,6 +10,14 @@ export default function ScanRoute() {
     <RecordDanceScreen
       moveId={moveId}
       onBack={() => router.back()}
+      // Document 01 section 3's mandated pre-prompt wording. The package keeps its
+      // own strings for every other consumer.
+      cameraPermissionCopy={{
+        title: "Allow camera access",
+        body: "The camera is used to scan your movement and calculate your score.",
+        allowLabel: "Allow Camera",
+        dismissLabel: "Not now",
+      }}
       onRecordingComplete={({ path, duration, audioOffsetMs }) =>
         router.replace({
           pathname: "/move/[moveId]/result",

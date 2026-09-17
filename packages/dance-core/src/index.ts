@@ -24,6 +24,8 @@ export {
   mergeAudioOffsetMs,
 } from "./timing.ts";
 export { coerceScanStatus, isDancePostStatus, shouldFinishScorePolling } from "./status.ts";
+export type { PreviewMedia, PreviewMediaSource } from "./preview-media.ts";
+export { resolvePreviewMedia } from "./preview-media.ts";
 export type { CountdownPhase } from "./record-flow.ts";
 export {
   FilmStep,

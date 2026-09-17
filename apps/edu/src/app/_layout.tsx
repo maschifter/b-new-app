@@ -7,18 +7,24 @@ import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ActivityIndicator, Text, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export default function RootLayout() {
+  // The feed's tempo bar is this monorepo's first gesture consumer, and nothing in
+  // expo-router or react-navigation mounts this root for us: without it a pan never
+  // activates on Android.
   return (
-    <SafeAreaProvider>
-      <QueryProvider>
-        <AnonymousSessionProvider>
-          <RootNavigator />
-          <StatusBar style="light" />
-        </AnonymousSessionProvider>
-      </QueryProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <QueryProvider>
+          <AnonymousSessionProvider>
+            <RootNavigator />
+            <StatusBar style="light" />
+          </AnonymousSessionProvider>
+        </QueryProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 

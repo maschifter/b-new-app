@@ -24,6 +24,7 @@ import {
   createDancePost,
   deleteRecordedDancePost,
   discardUploadingDancePost,
+  getDanceMoves,
   getDancePost,
   getDancePosts,
   getDanceScoreStatus,
@@ -221,4 +222,35 @@ it("uploads when the platform cannot report a file size", async () => {
   await uploadDanceVideo("https://storage.example.test/upload", "file:///cache/attempt.mp4");
 
   expect(mockExpoFetch).toHaveBeenCalledTimes(1);
+});
+
+describe("getDanceMoves", () => {
+  it("omits both filters when the feed is on All Levels and All Styles", async () => {
+    fetchMock.mockResolvedValueOnce(success({ items: [], nextCursor: null }));
+
+    await getDanceMoves("token", { limit: 20 });
+
+    const [url] = fetchMock.mock.calls[0] as [string];
+    expect(url).toBe("http://api.test/api/dance/moves?limit=20");
+  });
+
+  it("sends both filters when a level and a style are active", async () => {
+    fetchMock.mockResolvedValueOnce(success({ items: [], nextCursor: null }));
+
+    await getDanceMoves("token", { genreId: "hip-hop", level: 2, limit: 20 });
+
+    const [url] = fetchMock.mock.calls[0] as [string];
+    expect(new URL(url).searchParams.get("genre_id")).toBe("hip-hop");
+    expect(new URL(url).searchParams.get("level")).toBe("2");
+  });
+
+  it("treats a null level as All Levels rather than as the string null", async () => {
+    fetchMock.mockResolvedValueOnce(success({ items: [], nextCursor: null }));
+
+    await getDanceMoves("token", { genreId: null, level: null });
+
+    const [url] = fetchMock.mock.calls[0] as [string];
+    expect(new URL(url).searchParams.has("level")).toBe(false);
+    expect(new URL(url).searchParams.has("genre_id")).toBe(false);
+  });
 });

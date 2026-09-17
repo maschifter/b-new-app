@@ -2,6 +2,7 @@ import RootLayout from "@/app/_layout";
 import { useAnonymousSession } from "@/lib/auth/session-provider";
 import { render, screen } from "@testing-library/react-native";
 import type { ReactNode } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 // A Stack mock that prints each screen name, so we can assert which routes the
 // real layout exposes once the anonymous identity exists.
@@ -66,4 +67,13 @@ it("exposes the full route set once the session is ready", () => {
   ]) {
     expect(screen.getByText(name)).toBeTruthy();
   }
+});
+
+// The tempo bar in the feed is this repository's first gesture consumer and nothing
+// in the navigation stack mounts this root on our behalf.
+it("mounts the gesture-handler root above every screen", () => {
+  mockedUseSession.mockReturnValue({ status: "ready", session: { user: { id: "anon" } }, retry });
+  render(<RootLayout />);
+
+  expect(screen.UNSAFE_getByType(GestureHandlerRootView)).toBeTruthy();
 });

@@ -1,10 +1,18 @@
 # Stepz — F1: The Feed
 
-Status: **planned, not started.** Written 2026-09-17 against `615c0c7` and revised the same day
+Status: **implemented, device pass outstanding.** Written 2026-09-17 against `615c0c7` and revised the same day
 after a review pass over the working tree. Every file and line reference below was checked;
 §1.2, §2.3, §3, §4.1, §4.2, §4.5, §5, §7 and §8 carry that pass's corrections. A second pass
 the same day added §1.1's icon note, §2.2's `onBack` guard, §4.1's audio decision, §4.2 and §7's
 catalog-order check, §4.3's profile seam, and §5's arbitration spike.
+
+**Built on 2026-09-17.** Everything in §2 to §6 is in the tree and §8's commands are
+green: 51 tests in `@bnewapp/edu`, 68 in `@bnewapp/dance-flow`, 37 in `@bnewapp/dance-core`,
+112 in `@bnewapp/mobile`, both typechecks and lint. **§7's device checklist has not been run**,
+so §5's arbitration is still the candidate mechanism: `.blocksExternalGesture(pagerRef)` is
+what shipped, with the pager's `scrollEnabled` also tied to the drag, and neither has been
+watched on hardware. Record the device, the OS and which mechanism held before calling F1
+done.
 
 **This file is the whole plan and it stands alone.** Requirement source is
 `01-feed-and-dance-entry.md` in `D:\works\magnus\b-new-app\docs\educational`, read through the

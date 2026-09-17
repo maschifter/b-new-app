@@ -18,6 +18,7 @@ import { danceApiUrl } from "./config";
 
 interface GetDanceMovesParams {
   genreId?: string | null;
+  level?: number | null;
   cursor?: DanceMovesCursor | null;
   limit?: number;
 }
@@ -31,10 +32,12 @@ export async function getDanceGenres(accessToken: string): Promise<DanceGenre[]>
 
 export async function getDanceMoves(
   accessToken: string,
-  { genreId, cursor, limit = 20 }: GetDanceMovesParams = {},
+  { genreId, level, cursor, limit = 20 }: GetDanceMovesParams = {},
 ): Promise<DanceMovesPage> {
   const params = new URLSearchParams({ limit: String(limit) });
   if (genreId) params.set("genre_id", genreId);
+  // `null` and `undefined` both mean "every level"; the server omits the filter.
+  if (level !== undefined && level !== null) params.set("level", String(level));
   if (cursor) params.set("cursor", JSON.stringify(cursor));
   const response = await fetch(`${danceApiUrl()}/api/dance/moves?${params.toString()}`, {
     headers: authHeaders(accessToken),
