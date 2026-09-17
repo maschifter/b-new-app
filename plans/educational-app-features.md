@@ -16,7 +16,15 @@ work.
   because one atomic write beats the key-per-move layout described in §4.3, which would need an
   enumeration path of its own outside `persistedEduAtom` (it wraps `atomWithStorage` over a
   single MMKV key and exposes no prefix scan). Build from the collection plan, not from D1.
-- **Every other phase (S1–S3, F1–F4) is unscheduled**, and its acceptance criteria were written
+- **S1 is superseded, and half of it is cut.** What remains has its own stand-alone plan,
+  `plans/educational-app-level-filter.md`. S1's first deliverable — the `level` filter on
+  `GET /api/dance/moves` — survives unchanged. Its second, `GET /api/dance/catalog-summary`,
+  was **cut by the product owner on 2026-09-17**: the brief allows exactly two server
+  connections (moves + scan), and a catalog-wide denominator is not what this app teaches. The
+  profile therefore counts only what is on the device. That reverses §3.6 and moots §3.5; both
+  now carry a note, and §5's S1 entry below is stale on the summary. Build from the
+  level-filter plan, not from S1.
+- **Every other phase (S2–S3, F1–F4) is unscheduled**, and its acceptance criteria were written
   before the decisions in §8 were answered. Each gets a fresh plan when it is next; treat the
   phases here as scope notes, not as an execution order to start from.
 
@@ -96,7 +104,7 @@ lands in the package with its own test — never as a Stepz-shaped special case.
 | "xx / 100" result + **Continue and Save your Score** | 02 §2 | **No.** The shared `DanceResultScreen` shows "Your result" / "Record again" / "Done" |
 | Save My Video / Replace Video | 02 §4–5 | **No** |
 | Learned move, saved score, Average Score | 02 §6, 03 §2 | **No** |
-| Catalog totals (`catalogMoveCount`, per style) | 03 §2 | **No** endpoint |
+| ~~Catalog totals (`catalogMoveCount`, per style)~~ | 03 §2 | **Cut 2026-09-17** — not a gap; the profile has no denominator |
 | Move lookup for locally-stored ids | 03 §2 | **No.** `GET /moves/:id` is one-at-a-time and 404s for an unpublished move |
 | Download / Share a personal video | 03 §3 | **No.** `expo-media-library` and `expo-sharing` are not dependencies anywhere in the repo |
 | Temporary cloud upload deleted after scoring | brief, `apps/edu/AGENTS.md` | Endpoint yes, caller no |
@@ -196,6 +204,11 @@ discipline `studio-core` uses for rooms, applied to a much smaller shape.
 
 ### 3.5 `catalogMoveCount` must use the feed's eligibility predicate
 
+> **Moot since 2026-09-17.** `catalogMoveCount` is cut — the profile shows learned counts
+> only, with no denominator, so nothing computes this number. Kept because the predicate
+> argument still governs any future catalog-wide count. See
+> `plans/educational-app-level-filter.md` §0.
+
 Document 03 wants "45 of 800 moves learned" and per-style "learned / total". The counts
 must be computed with **exactly** the predicate `listMoves` uses —
 `.eq("status", "published").not("film_yourself_video_url", "is", null)`
@@ -211,10 +224,12 @@ Documents 01 and 03 assume levels 1, 2, 3. `dance_moves.level` is
 (`supabase/migrations/20260825192507_create_dance_moves.sql:83`) — a floor, with **no upper
 bound and no enumeration**. Hardcoding three buttons silently hides any move at level 4+.
 
-**Decision: make the option list data-driven.** The catalog-summary endpoint (S1) returns
-per-level counts, and the filter renders one option per level the catalog actually has, in
-ascending order, plus "All Levels". This costs nothing extra — the endpoint already has to
-group — and removes a whole class of invisible content loss.
+**Decision (2026-09-17): hardcode the option list to levels 1, 2, 3, plus "All Levels".**
+An earlier decision here made the list data-driven off a catalog-summary endpoint; that endpoint
+is cut, so there is no enumeration to read. The risk above is real but bounded — a move at level
+4+ stays reachable through "All Levels" and the style filter, so this costs discovery, not
+content. `plans/educational-app-level-filter.md` §3 records the constant's home and the trigger
+for revisiting it.
 
 ### 3.7 "Mixed order" is not free
 
@@ -383,7 +398,7 @@ phase with visible behavior ends with a device run.
 | Phase | Depends on | Summary |
 |---|---|---|
 | D1 — Local collection model | — | `collection.ts` (pure) + `_atoms` + MMKV records + coercion. No UI |
-| S1 — Catalog reach | — | `level` filter on `GET /api/dance/moves`; `GET /api/dance/catalog-summary` |
+| S1 — Level filter | — | `level` filter on `GET /api/dance/moves`. ~~`GET /api/dance/catalog-summary`~~ **cut** — see `plans/educational-app-level-filter.md` |
 | S2 — Batch move lookup | — | `GET /api/dance/moves/by-ids` for locally-stored ids |
 | F1 — Feed | S1 | Vertical pager, filters, tempo bar, Pro Tip, CTA, permission entry |
 | F2 — Scan seam | D1, F1 | Stepz result screen, score confirmation, video decision, upload cleanup |
@@ -409,23 +424,23 @@ give 60% — plus: an unconfirmed repeat scan changes nothing; a confirmed one r
 when lower; a corrupt record is dropped without taking the collection with it; repeated
 saves are idempotent.
 
-### S1 — Catalog reach
+### S1 — Level filter
 
-Two server changes, no migration.
+One server change, no migration. **Superseded by `plans/educational-app-level-filter.md`;
+build from there.**
 
 1. **`level` filter.** Add `level: z.coerce.number().int().positive().optional()` to
    `DanceMovesQuery` (`apps/server/src/modules/dance/schemas.ts`), pass it through
    `listMoves`, apply `.eq("level", level)`. It must compose with `genre_id` and with the
    existing cursor — that combination needs its own test, because a filter that silently
    drops the cursor produces an infinite feed.
-2. **`GET /api/dance/catalog-summary`** → `{ totalMoves, byGenre: [{ genreId, count }],
-   byLevel: [{ level, count }] }`, every count under the eligibility predicate of §3.5.
-   This single endpoint answers both document 03's denominators and the data-driven level
-   options of §3.6.
+2. ~~**`GET /api/dance/catalog-summary`**~~ — **cut on 2026-09-17.** The brief allows two
+   server connections (moves + scan) and the profile counts only what is on the device. Do
+   not build it; see `plans/educational-app-level-filter.md` §0 for the full reasoning.
 
-**Acceptance:** Vitest covering auth, an invalid `level`, `level` + `genre_id` + cursor
-together, and — as a named test — that `totalMoves` counts only published moves with a
-non-null `film_yourself_video_url`. No migration, no `db:push`.
+**Acceptance:** Vitest covering an invalid `level`, `level` + `genre_id` + cursor together, and
+that the eligibility predicate still applies alongside the filter. Auth is already covered by
+the existing catalog-reads case. No migration, no `db:push`.
 
 ### S2 — Batch move lookup
 
@@ -445,7 +460,7 @@ The largest UI phase. Build it in this order, because each step de-risks the nex
 1. Vertical pager over `atomWithInfiniteQuery` + the existing moves cursor, one
    full-screen item per move, `pagingEnabled`, playback bound to the focused item through
    `useFocusedPlayback` (`@bnewapp/mobile-kit/media/use-focused-playback`).
-2. Filters: two buttons → bottom sheets. Level options from S1's `byLevel` (§3.6), style
+2. Filters: two buttons → bottom sheets. Level options from the hardcoded constant (§3.6), style
    options from `GET /api/dance/genres` in the agreed order (Hip Hop, Afro, Commercial,
    Party, Breaking, Ballet, Shuffle, K-pop). Both filters in one query key; a change resets
    the list to the top, visibly (01 §2: a reload must be clear to the user). No matches →
@@ -489,9 +504,9 @@ score. Device run required.
 ### F3 — Profile & collection
 
 1. Overview: Average Score ring (numeric percentage always rendered, `--` at zero) and
-   `learnedMoveCount / catalogMoveCount` side by side, ~50/50.
+   `learnedMoveCount` side by side, ~50/50 — "45 moves learned", **no denominator** (§3.5).
 2. Style sections in the agreed order, each a horizontal row inside the vertical page,
-   with learned/total counts from S1, ~3.5 cards visible, **See More** per style.
+   with learned counts from the local collection, ~3.5 cards visible, **See More** per style.
    Non-interactive empty placeholders, visually distinct from loading skeletons.
 3. Move detail: official video, move name, saved score, **Scan Again**, and a **My Video**
    section only when a personal recording exists.
