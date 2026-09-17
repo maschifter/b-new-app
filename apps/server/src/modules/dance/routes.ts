@@ -53,6 +53,7 @@ export async function danceRoutes(app: FastifyInstance, options: DanceRouteOptio
       const page = await dance.listMoves({
         limit: query.data.limit,
         ...(query.data.genre_id === undefined ? {} : { genreId: query.data.genre_id }),
+        ...(query.data.level === undefined ? {} : { level: query.data.level }),
         ...(cursor === undefined ? {} : { cursor }),
       });
       return { data: page };

@@ -234,6 +234,57 @@ describe("dance consumer routes", () => {
     expect(query.or).toHaveBeenCalledWith(expect.stringContaining("sort_order.gt.4"));
   });
 
+  it("applies the level filter alongside the eligibility predicate", async () => {
+    const query = queryBuilder({ data: [], error: null });
+    const { app, handlers } = registerDance({ from: vi.fn().mockReturnValue(query) });
+    await danceRoutes(app as never);
+
+    await handlers["GET /moves"]?.({ query: { level: "2", limit: "10" } });
+
+    expect(query.eq).toHaveBeenCalledWith("level", 2);
+    expect(query.eq).toHaveBeenCalledWith("status", "published");
+    expect(query.not).toHaveBeenCalledWith("film_yourself_video_url", "is", null);
+  });
+
+  it("applies level, genre and keyset cursor filters together", async () => {
+    const query = queryBuilder({ data: [], error: null });
+    const { app, handlers } = registerDance({ from: vi.fn().mockReturnValue(query) });
+    await danceRoutes(app as never);
+
+    const cursor = encodeDanceMovesCursor({ sortOrder: 4, createdAt: CREATED_AT, id: MOVE_ID });
+    await handlers["GET /moves"]?.({
+      query: { genre_id: GENRE_ID, level: "3", cursor, limit: "10" },
+    });
+
+    expect(query.eq).toHaveBeenCalledWith("level", 3);
+    expect(query.eq).toHaveBeenCalledWith("matching_genres.genre_id", GENRE_ID);
+    expect(query.or).toHaveBeenCalledWith(expect.stringContaining("sort_order.gt.4"));
+  });
+
+  it("sends no level filter when the query omits it", async () => {
+    const query = queryBuilder({ data: [], error: null });
+    const { app, handlers } = registerDance({ from: vi.fn().mockReturnValue(query) });
+    await danceRoutes(app as never);
+
+    await handlers["GET /moves"]?.({ query: { limit: "10" } });
+
+    expect(query.eq).not.toHaveBeenCalledWith("level", expect.anything());
+  });
+
+  it("rejects a level the database could never satisfy before querying Supabase", async () => {
+    const from = vi.fn();
+    const { app, handlers } = registerDance({ from });
+    await danceRoutes(app as never);
+
+    for (const level of ["0", "-1", "abc"]) {
+      await expect(handlers["GET /moves"]?.({ query: { level } })).rejects.toMatchObject({
+        statusCode: 400,
+        message: "Invalid dance moves query",
+      });
+    }
+    expect(from).not.toHaveBeenCalled();
+  });
+
   it("returns a cursor from the final item when another page exists", async () => {
     const query = queryBuilder({ data: [moveRow, { ...moveRow, id: GENRE_ID }], error: null });
     const service = createDanceService(

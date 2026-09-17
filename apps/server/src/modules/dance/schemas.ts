@@ -31,6 +31,7 @@ export const CreateDancePostRequest = z.object({
 
 export const DanceMovesQuery = z.object({
   genre_id: z.string().uuid().optional(),
+  level: z.coerce.number().int().positive().optional(),
   cursor: z.string().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });

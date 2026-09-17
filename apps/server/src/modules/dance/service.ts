@@ -242,6 +242,7 @@ export function createDanceService(
 
     async listMoves(options: {
       genreId?: string;
+      level?: number;
       cursor?: DanceMovesCursor;
       limit: number;
     }): Promise<DanceMovesPage> {
@@ -257,6 +258,7 @@ export function createDanceService(
         .limit(options.limit + 1);
 
       if (options.genreId) query = query.eq("matching_genres.genre_id", options.genreId);
+      if (options.level !== undefined) query = query.eq("level", options.level);
       if (options.cursor) query = query.or(cursorFilter(options.cursor));
 
       const { data, error } = await query;
