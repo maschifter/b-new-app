@@ -3,6 +3,7 @@ import "@/lib/bootstrap/dance-flow";
 import type { DevMenu as DevMenuComponent } from "@/features/dev-menu/dev-menu";
 import { usePersonalRecordingReconciliation } from "@/features/scan/reconciliation";
 import { AnonymousSessionProvider, useAnonymousSession } from "@/lib/auth/session-provider";
+import { useGenresCache } from "@/lib/catalog";
 import { COLORS } from "@/lib/theme/colors";
 import { QueryProvider } from "@bnewapp/mobile-kit";
 import { BouncablePress } from "@bnewapp/mobile-kit/ui";
@@ -59,6 +60,7 @@ function RootNavigator() {
   return (
     <>
       <PersonalRecordingReconciliation />
+      <GenresCacheWriter />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="move/[moveId]/scan" />
@@ -77,6 +79,16 @@ function RootNavigator() {
  */
 function PersonalRecordingReconciliation() {
   usePersonalRecordingReconciliation();
+  return null;
+}
+
+/**
+ * The style names are the one value on the profile that is not local, and this is the
+ * app's only writer of their disk cache. It is mounted here rather than by the profile
+ * so a session that only ever opened the feed still leaves the names behind.
+ */
+function GenresCacheWriter() {
+  useGenresCache();
   return null;
 }
 

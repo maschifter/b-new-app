@@ -8,6 +8,10 @@ import { Directory, File, Paths } from "expo-file-system";
  * The document directory is used and never the cache directory: the cache is
  * reclaimable by the OS, and a personal video that disappears is a broken promise
  * rather than a cache miss.
+ *
+ * A public entry of this feature, for the same reason `reconciliation.ts` is one: the
+ * profile plays and deletes these files, and reaching them through `index.ts` would pull
+ * the camera stack into a screen that never records.
  */
 
 const DIRECTORY_NAME = "personal-recordings";
@@ -110,6 +114,15 @@ export function savePersonalRecordingFile({
   }
   deleteTemporaryClip(clipPath);
   return fileName;
+}
+
+/**
+ * The pointer is dropped first, so this only ever collects the file the caller has
+ * already orphaned. `deleteFileIfPresent` swallows a file failure by design: the pointer
+ * is gone either way, and the next launch's reconciliation collects what is left.
+ */
+export function deletePersonalRecordingFile(fileName: string): void {
+  deleteFileIfPresent(personalRecordingUri(fileName));
 }
 
 export interface ReconcilePersonalRecordingsInput {

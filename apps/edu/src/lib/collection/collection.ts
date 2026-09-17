@@ -67,8 +67,46 @@ export function averageScore(moves: Record<string, LearnedMove>): number | null 
   return total / learned.length;
 }
 
+/**
+ * 0..100 integer for a progress ring's fill, or `null` at zero learned moves.
+ * Rounded once, here, so a ring and its label can never disagree.
+ */
+export function averageScorePercent(moves: Record<string, LearnedMove>): number | null {
+  const average = averageScore(moves);
+  return average === null ? null : Math.round(average);
+}
+
 export function learnedCount(moves: Record<string, LearnedMove>): number {
   return Object.keys(moves).length;
+}
+
+/**
+ * Most recently learned first. The `moveId` tie-break keeps the order stable when two
+ * saves share a millisecond, which `Array.prototype.sort` alone does not guarantee
+ * across engines.
+ */
+function byLearnedAtDescending(left: LearnedMove, right: LearnedMove): number {
+  const difference = Date.parse(right.learnedAt) - Date.parse(left.learnedAt);
+  if (difference !== 0) return difference;
+  return left.moveId < right.moveId ? -1 : left.moveId > right.moveId ? 1 : 0;
+}
+
+/** Every learned move, most recently learned first. */
+export function learnedMovesSorted(moves: Record<string, LearnedMove>): LearnedMove[] {
+  return Object.values(moves).sort(byLearnedAtDescending);
+}
+
+/**
+ * The learned moves in one genre, same ordering rule. `genreIds` is a list, so a move
+ * carrying two genres belongs to both sections.
+ */
+export function learnedMovesByGenre(
+  moves: Record<string, LearnedMove>,
+  genreId: string,
+): LearnedMove[] {
+  return Object.values(moves)
+    .filter((move) => move.move.genreIds.includes(genreId))
+    .sort(byLearnedAtDescending);
 }
 
 /** The numerator only; the catalog totals are a server aggregate this app does not hold. */

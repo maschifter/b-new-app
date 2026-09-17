@@ -1,9 +1,21 @@
 # Stepz — F3: Profile & Collection
 
-Status: **planned, not started.** Written 2026-09-17 against `efba755`; every file and line
+Status: **F3a implemented 2026-09-17; §7's device checklist is partly open. F3b is not started
+and stays blocked on §10 question 1.** Written 2026-09-17 against `efba755`; every file and line
 reference below was checked against the working tree as it stood then. F3 is the last product
 phase of the Stepz programme — D1, S1, F1 and F2 are shipped, S3 (the retention backstop) is
 still open and is *not* part of this plan.
+
+What F3a shipped: §4.2's three helpers and their two derived atoms, §4.1's move of the genres to
+`apps/edu/src/lib/catalog/` with its MMKV cache and the root layout's single writer, and §4.3's
+screens minus `_atoms/ui.ts` — the delete confirmation and its retry flag are local component
+state in `personal-video-section.tsx`, the way the scan result screen holds the same concern, so
+the feature needs no atoms file. On the device (Android, the one that closed P0): the overview,
+the ring at 59%, the section headers from the live catalog, the empty slots and the vertical
+scroll through the horizontal rows were verified, and one defect was found and fixed — the last
+style row sat under the system navigation bar, so all three screens now carry `insets.bottom`.
+The card, See More and detail screens were **not** exercised on the device: the only learned move
+on it belongs to no genre, so no section had a card to open.
 
 Revised 2026-09-17 after a pre-build review. It found three places where the first draft
 contradicted itself — the deletion order against 03 §6's Retry, a suspense atom behind a screen

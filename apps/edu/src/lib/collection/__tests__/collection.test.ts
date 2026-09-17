@@ -1,8 +1,11 @@
 import {
   averageScore,
+  averageScorePercent,
   deletePersonalRecording,
   learnedCount,
   learnedCountByGenre,
+  learnedMovesByGenre,
+  learnedMovesSorted,
   recordFirstScan,
   saveConfirmedScore,
   savePersonalRecording,
@@ -55,6 +58,71 @@ describe("averageScore", () => {
   it("is not rounded", () => {
     expect(averageScore(learn(learn({}, "a", 20), "b", 91))).toBe(55.5);
     expect(averageScore(learn(learn(learn({}, "a", 20), "b", 90), "c", 92))).toBe(202 / 3);
+  });
+});
+
+describe("averageScorePercent", () => {
+  it("rounds the mean to a whole percentage", () => {
+    expect(averageScorePercent(learn(learn({}, "a", 20), "b", 91))).toBe(56);
+    expect(averageScorePercent(learn(learn(learn({}, "a", 20), "b", 90), "c", 92))).toBe(67);
+  });
+
+  it("is null for an empty collection, so the ring renders `--` rather than 0%", () => {
+    expect(averageScorePercent({})).toBeNull();
+  });
+
+  it("stays inside the ring's 0..100 range at both ends", () => {
+    expect(averageScorePercent(learn({}, "a", 0))).toBe(0);
+    expect(averageScorePercent(learn({}, "a", 100))).toBe(100);
+  });
+});
+
+describe("learnedMovesSorted", () => {
+  it("puts the most recently learned move first", () => {
+    const moves = learn(learn({}, "a", 40), "b", 60, { now: LATER });
+
+    expect(learnedMovesSorted(moves).map((move) => move.moveId)).toEqual(["b", "a"]);
+  });
+
+  it("breaks a shared timestamp on moveId, so the order does not depend on insertion", () => {
+    const first = learn(learn({}, "b", 40), "a", 60);
+    const second = learn(learn({}, "a", 60), "b", 40);
+
+    expect(learnedMovesSorted(first).map((move) => move.moveId)).toEqual(["a", "b"]);
+    expect(learnedMovesSorted(second).map((move) => move.moveId)).toEqual(["a", "b"]);
+  });
+});
+
+describe("learnedMovesByGenre", () => {
+  it("lists a genre's moves most recently learned first", () => {
+    const moves = learn(
+      learn({}, "a", 40, { snapshot: snapshot({ genreIds: ["hiphop"] }) }),
+      "b",
+      60,
+      { snapshot: snapshot({ genreIds: ["hiphop"] }), now: LATER },
+    );
+
+    expect(learnedMovesByGenre(moves, "hiphop").map((move) => move.moveId)).toEqual(["b", "a"]);
+  });
+
+  it("returns a move that belongs to two genres from both, and the learned count counts it once", () => {
+    const moves = learn(
+      learn({}, "a", 70, { snapshot: snapshot({ genreIds: ["hiphop", "afro"] }) }),
+      "b",
+      50,
+      { snapshot: snapshot({ genreIds: ["afro"] }) },
+    );
+
+    expect(learnedMovesByGenre(moves, "hiphop")).toHaveLength(1);
+    expect(learnedMovesByGenre(moves, "afro")).toHaveLength(2);
+    expect(learnedCount(moves)).toBe(2);
+  });
+
+  it("leaves a move whose genres match no section out of every section", () => {
+    const moves = learn({}, "a", 70, { snapshot: snapshot({ genreIds: [] }) });
+
+    expect(learnedMovesByGenre(moves, "hiphop")).toEqual([]);
+    expect(learnedCount(moves)).toBe(1);
   });
 });
 

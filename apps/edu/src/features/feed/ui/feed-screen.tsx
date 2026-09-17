@@ -1,3 +1,4 @@
+import { genresAtom } from "@/lib/catalog";
 import { COLORS } from "@/lib/theme/colors";
 import { BouncablePress, DanceSkeleton, MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
 import type { DanceGenre, DanceMove } from "@bnewapp/types";
@@ -18,7 +19,7 @@ import {
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { feedGenresAtom, feedMovesAtom, feedMovesInfiniteAtom } from "../_atoms/queries";
+import { feedMovesAtom, feedMovesInfiniteAtom } from "../_atoms/queries";
 import {
   activeMoveIndexAtom,
   playbackRateAtom,
@@ -54,7 +55,7 @@ export function FeedScreen({ onOpenProfile }: FeedScreenProps) {
 }
 
 function FeedContent({ onOpenProfile }: FeedScreenProps) {
-  const genres = useAtomValue(feedGenresAtom).data;
+  const genres = useAtomValue(genresAtom).data;
   const proTipMoveId = useAtomValue(proTipMoveIdAtom);
 
   // The filters sit outside the moves boundary on purpose: both are in that query's

@@ -1,20 +1,12 @@
-import { getDanceGenres, getDanceMoves } from "@bnewapp/dance-flow/api";
+import { getDanceMoves } from "@bnewapp/dance-flow/api";
 import { readQueryAuth, requireAuth } from "@bnewapp/mobile-kit";
-import type { DanceGenre, DanceMove, DanceMovesCursor, DanceMovesPage } from "@bnewapp/types";
+import type { DanceMove, DanceMovesCursor, DanceMovesPage } from "@bnewapp/types";
 import type { InfiniteData } from "@tanstack/react-query";
 import { atom } from "jotai";
-import { atomWithSuspenseInfiniteQuery, atomWithSuspenseQuery } from "jotai-tanstack-query";
+import { atomWithSuspenseInfiniteQuery } from "jotai-tanstack-query";
 import { selectedGenreIdAtom, selectedLevelAtom } from "./ui";
 
 const FEED_MOVES_PAGE_LIMIT = 20;
-
-export const feedGenresAtom = atomWithSuspenseQuery<DanceGenre[]>((get) => {
-  const auth = readQueryAuth(get);
-  return {
-    queryKey: ["feed-genres", auth?.userId ?? null],
-    queryFn: async () => getDanceGenres(requireAuth(auth).accessToken),
-  };
-});
 
 /**
  * Both filters live in the key, so changing one is a new cache entry rather than a

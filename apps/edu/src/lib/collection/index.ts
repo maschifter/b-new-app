@@ -2,9 +2,12 @@ export type { LearnedMove, LearnedMoveSnapshot, PersonalRecording } from "./type
 export type { RecordFirstScanInput } from "./collection";
 export {
   averageScore,
+  averageScorePercent,
   deletePersonalRecording,
   learnedCount,
   learnedCountByGenre,
+  learnedMovesByGenre,
+  learnedMovesSorted,
   recordFirstScan,
   savePersonalRecording,
   saveConfirmedScore,
@@ -12,10 +15,12 @@ export {
 export type { SaveConfirmedScoreInput, SavePersonalRecordingInput } from "./atoms";
 export {
   averageScoreAtom,
+  averageScorePercentAtom,
   deletePersonalRecordingAtom,
   learnedCountAtom,
   learnedCountByGenreAtomFamily,
   learnedMovesAtom,
+  learnedMovesByGenreAtomFamily,
   personalRecordingsAtom,
   recordFirstScanAtom,
   savePersonalRecordingAtom,

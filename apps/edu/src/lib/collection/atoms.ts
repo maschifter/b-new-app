@@ -5,9 +5,11 @@ import { coerceLearnedMoves, coercePersonalRecordings } from "./coerce";
 import {
   type RecordFirstScanInput,
   averageScore,
+  averageScorePercent,
   deletePersonalRecording,
   learnedCount,
   learnedCountByGenre,
+  learnedMovesByGenre,
   recordFirstScan,
   saveConfirmedScore,
   savePersonalRecording,
@@ -31,8 +33,19 @@ export const averageScoreAtom = atom((get) => averageScore(get(learnedMovesAtom)
 
 export const learnedCountAtom = atom((get) => learnedCount(get(learnedMovesAtom)));
 
+export const averageScorePercentAtom = atom((get) => averageScorePercent(get(learnedMovesAtom)));
+
 export const learnedCountByGenreAtomFamily = atomFamily((genreId: string) =>
   atom((get) => learnedCountByGenre(get(learnedMovesAtom), genreId)),
+);
+
+/**
+ * One sorted list per genre, so a section that re-renders for its neighbour does not
+ * re-sort. The profile reads its section count off this list rather than counting the
+ * same predicate twice.
+ */
+export const learnedMovesByGenreAtomFamily = atomFamily((genreId: string) =>
+  atom((get) => learnedMovesByGenre(get(learnedMovesAtom), genreId)),
 );
 
 export const recordFirstScanAtom = atom(null, (get, set, input: RecordFirstScanInput) => {

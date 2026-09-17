@@ -25,6 +25,11 @@ jest.mock("@/lib/bootstrap/dance-flow", () => {
   return {};
 });
 
+// The layout mounts the genre cache's single writer. Stubbed rather than exercised: the
+// write-through has its own test, and the real hook would open a catalog query against a
+// client this test's stubbed QueryProvider never owns.
+jest.mock("@/lib/catalog", () => ({ useGenresCache: () => undefined }));
+
 jest.mock("@/lib/auth/session-provider", () => ({
   AnonymousSessionProvider: ({ children }: { children: ReactNode }) => children,
   useAnonymousSession: jest.fn(),
