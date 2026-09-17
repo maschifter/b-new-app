@@ -18,11 +18,14 @@ TanStack Query conventions and applies here too.
   (`src/lib/jotai/atom-with-mmkv.ts`): store id `edu`, namespace `edu:v1:`, **keyed by
   content id (`moveId`, style id) and never by an owner id** — the anonymous session
   can be lost and replaced, and local data must survive that.
-- **Two video concepts must stay apart**, in code and in user-facing copy:
+- **Two video concepts must stay apart** in code, and no copy may blur them:
   - *Temporary scan upload* — required, goes to Supabase Storage so the scan worker can
     score it, deleted once the score is terminal.
   - *Personal recording* — optional, device-only, never uploaded.
-  Do not let one code path serve both.
+  Do not let one code path serve both. **v1 ships no upload disclosure** — an owner decision
+  recorded in `plans/educational-app-features.md` §3.3 — so the rule on copy is a negative
+  one: no string may state or imply that a recorded clip stays on the device. Saying nothing
+  about the upload is the decision; claiming the opposite is not covered by it.
 - **No analytics.** Do not add an event pipeline to this app.
 - The catalog (`dance_moves`, `dance_genres`, `music_tracks`) is shared with
   `apps/mobile` and managed by the existing admin panel. This app reads it; it does not

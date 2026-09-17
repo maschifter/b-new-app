@@ -5,9 +5,8 @@ the commit that closed C1 in `plans/educational-app.md`; file and line reference
 checked against the working tree on that day and have not been rechecked since.
 
 **Read this file for two things only:** §3, where the source documents and the built system
-disagree, and §8, its decision register — six questions, of which **four are still open**;
-question 2 was settled by the collection plan and question 5 by a precedent already shipped in
-`apps/mobile`. Nothing else here is scheduled work.
+disagree, and §8, its decision register — six questions, of which **three are still open**;
+questions 2, 4 and 5 are settled and struck through. Nothing else here is scheduled work.
 
 - **D1 is superseded.** The local collection model now has its own stand-alone plan,
   `plans/educational-app-collection.md`, which settles §8's question 2 (a fallback score does
@@ -191,11 +190,27 @@ not separate them, and this bites the *user-facing copy*, not just the code:
 
 Document 02 §7 proposes: *"A temporary recording stays on this device until you choose
 whether to save it."* **That sentence is false for this implementation** — the clip is
-uploaded before any score exists. Document 02 §7 also says, correctly, that the privacy
-text must describe actual behavior. So the copy must be rewritten, for example: *"Your
-dance is uploaded so it can be scored, then deleted from our servers. A copy stays on this
-device until you choose whether to keep it."* **The final wording is an owner decision
-(§8)** because it is a legal-facing string, but the rewrite is not optional.
+uploaded before any score exists.
+
+**Decision (2026-09-17): v1 ships no upload disclosure.** The owner's call: the record flow
+runs as it does, the clip is deleted once the score is terminal, and the app does not tell the
+user it was uploaded. This overrides document 02 §7's own instruction that the privacy text
+describe actual behaviour, because there is to be no privacy text.
+
+**What that changes, and what it does not.** Shipping *nothing* is the decision. Shipping
+document 02 §7's sentence is a different thing and is still out: it does not merely omit the
+upload, it asserts the opposite of what happens. The same bar applies to any other string —
+**no copy anywhere may state or imply that the recorded clip stays on the device**, including
+the Save My Video and Not Now screens, which are about the *personal recording* and must not be
+worded so they appear to cover the scan upload too. Silence is the decision; a false claim is
+not covered by it.
+
+The code-level separation in `apps/edu/AGENTS.md` is unaffected — the two concepts still must
+not share a code path.
+
+Two things the owner should know are riding on this, recorded here rather than argued: the
+store listings still have to declare what leaves the device, and the source documents are
+partly Danish, so an EU market is likely. Neither is this plan's decision to take.
 
 ### 3.4 The profile must survive a move leaving the catalog
 
@@ -614,9 +629,10 @@ deliberately not fixed here" in `plans/educational-app.md`.
 
 ## 8. Open decisions
 
-Six were raised; **four still need the product owner.** Question 2 was settled by
-`plans/educational-app-collection.md`, and question 5 by the precedent already shipped in
-`apps/mobile`; both are kept here struck through so nobody reopens them.
+Six were raised; **three still need the product owner.** Question 2 was settled by
+`plans/educational-app-collection.md`, question 5 by the precedent already shipped in
+`apps/mobile`, and question 4 by the owner on 2026-09-17; all three are kept here struck
+through so nobody reopens them.
 The rest are settled above and listed only so nobody reopens them by accident.
 
 | # | Question | Blocks | Recommendation |
@@ -624,7 +640,7 @@ The rest are settled above and listed only so nobody reopens them by accident.
 | 1 | Is the silhouette a visual guide or a position gate? (§3.1) | F2's scope; a gate is a separate project | **Guide** in v1 |
 | ~~2~~ | ~~Does a fallback (non-external) score create a learned move and enter Average Score? (§3.1)~~ | — | **Settled:** yes, and `isExternalScore` is stored so the call stays reversible (collection plan §2) |
 | 3 | Likes: build against the brief, local-only, or drop? (§3.2) | F4 only | **Drop from v1** |
-| 4 | Final privacy wording for the upload (§3.3) | F1's pre-scan copy | Rewrite required either way; the suggested text in 02 §7 is factually wrong here |
+| ~~4~~ | ~~Final privacy wording for the upload (§3.3)~~ | — | **Settled 2026-09-17:** no disclosure ships. 02 §7's sentence is still barred — it claims the opposite of what happens (§3.3) |
 | ~~5~~ | ~~Which video field the feed plays? (§3.8)~~ | — | **Settled 2026-09-17:** reuse `apps/mobile`'s shipped chain verbatim, image fallback included (§3.8) |
 | 6 | Shuffled default feed order? (§3.7) | Nothing in v1 | Deterministic in v1; seeded shuffle later if wanted |
 
