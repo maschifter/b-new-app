@@ -15,7 +15,15 @@ jest.mock("expo-router", () => {
   return { Stack };
 });
 
-jest.mock("@/lib/bootstrap/dance-flow", () => ({}));
+// The layout also mounts the developer menu, whose toggles live in the dance flow's
+// persisted atoms — so the bootstrap stub still has to configure the flow.
+jest.mock("@/lib/bootstrap/dance-flow", () => {
+  require("@bnewapp/dance-flow/config").configureDanceFlow({
+    apiUrl: "http://localhost:3000",
+    mmkvId: "edu-dance",
+  });
+  return {};
+});
 
 jest.mock("@/lib/auth/session-provider", () => ({
   AnonymousSessionProvider: ({ children }: { children: ReactNode }) => children,
@@ -79,4 +87,11 @@ it("mounts the gesture-handler root above every screen", () => {
   render(<RootLayout />);
 
   expect(screen.UNSAFE_getByType(GestureHandlerRootView)).toBeTruthy();
+});
+
+it("mounts the developer menu in development builds", () => {
+  mockedUseSession.mockReturnValue({ status: "ready", session: { user: { id: "anon" } }, retry });
+  render(<RootLayout />);
+
+  expect(screen.getByLabelText("Open developer menu")).toBeTruthy();
 });

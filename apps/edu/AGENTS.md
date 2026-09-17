@@ -39,7 +39,7 @@ TanStack Query conventions and applies here too.
 src/
 ├── app/            # Expo Router tree, routing composition only
 ├── components/     # app-wide primitives (promote to @bnewapp/mobile-kit if a second app needs one)
-├── features/       # feed, scan, profile — narrow index.ts, _atoms/ + ui/ as needed
+├── features/       # feed, scan, profile, dev-menu — narrow index.ts, _atoms/ + ui/ as needed
 └── lib/            # api transport, auth, bootstrap, persistence, router guards
 ```
 
@@ -50,6 +50,11 @@ src/
   and put anything Stepz adds around the flow in that feature.
 - Import shared code through public `@bnewapp/*` entry points and app-local code
   through `@/*`. Never import from `apps/mobile`.
+- `features/dev-menu` is the exception to the narrow-entry rule: a debug-only surface with
+  no `index.ts`, mounted by the root layout behind the Metro-safe
+  `__DEV__ ? require(...) : null` shape so it never reaches a production bundle. Its
+  toggles come from `@bnewapp/dance-flow/dev`; add a Stepz-only switch here, not a second
+  copy of one the flow already owns.
 
 ## Configuration
 

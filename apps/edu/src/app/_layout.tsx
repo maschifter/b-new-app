@@ -1,5 +1,6 @@
 import "@/global.css";
 import "@/lib/bootstrap/dance-flow";
+import type { DevMenu as DevMenuComponent } from "@/features/dev-menu/dev-menu";
 import { usePersonalRecordingReconciliation } from "@/features/scan/reconciliation";
 import { AnonymousSessionProvider, useAnonymousSession } from "@/lib/auth/session-provider";
 import { COLORS } from "@/lib/theme/colors";
@@ -11,6 +12,14 @@ import { ActivityIndicator, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+// `__DEV__ ? require(...) : null` is the Metro-safe shape: the bundler inlines
+// `__DEV__` and constant-folds the whole expression, so the dev-menu module never
+// enters a production bundle. The type-only import is erased and just keeps the
+// binding checked against the real component.
+const DevMenu: typeof DevMenuComponent | null = __DEV__
+  ? require("@/features/dev-menu/dev-menu").DevMenu
+  : null;
+
 export default function RootLayout() {
   // The feed's tempo bar is this monorepo's first gesture consumer, and nothing in
   // expo-router or react-navigation mounts this root for us: without it a pan never
@@ -21,6 +30,7 @@ export default function RootLayout() {
         <QueryProvider>
           <AnonymousSessionProvider>
             <RootNavigator />
+            {DevMenu ? <DevMenu /> : null}
             <StatusBar style="light" />
           </AnonymousSessionProvider>
         </QueryProvider>
