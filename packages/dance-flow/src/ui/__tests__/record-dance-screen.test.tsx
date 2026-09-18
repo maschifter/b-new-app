@@ -87,6 +87,10 @@ const mockBack = jest.fn();
 // keeps the recording flow under a frame instead of the ~2s a real move takes.
 const FAST_BPM = 12_000;
 
+// Recording starts at `countdownSeconds(bpm) * 500` ms, so this leaves a 300 ms
+// window inside the count-in to assert on.
+const COUNT_IN_BPM = 400;
+
 function move(overrides: Partial<DanceMove> = {}): DanceMove {
   return {
     id: MOVE_ID,
@@ -140,6 +144,11 @@ async function mount(
   );
   mountedScreens.push(result);
   return result;
+}
+
+/** The guide is decorative, so it is hidden from assistive tech and from the default query. */
+function silhouette() {
+  return screen.queryByTestId("dance-silhouette", { includeHiddenElements: true });
 }
 
 /** A recorder that only finishes when the user presses Stop. */
@@ -278,6 +287,31 @@ it("keeps choreography audio playing while the camera session is active", async 
 
   expect(screen.UNSAFE_getByType(Camera).props.allowBackgroundAudioPlayback).toBe(true);
   expect(screen.UNSAFE_getByType(Camera).props.device).toBe("front");
+});
+
+it("keeps the silhouette guide up through the count-in and drops it at the first frame", async () => {
+  mockCameraPermission.hasPermission = true;
+  const recorder = stoppableRecorder();
+  mockCreateRecorder.mockResolvedValue(recorder);
+
+  await mount(move({ bpm: COUNT_IN_BPM }));
+
+  await waitFor(() => expect(silhouette()).not.toBeNull());
+
+  await fireEventAsync.press(screen.getByLabelText("Start recording"));
+  expect(silhouette()).not.toBeNull();
+
+  await waitFor(() => expect(screen.getByLabelText("Stop recording")).toBeOnTheScreen());
+  expect(silhouette()).toBeNull();
+
+  await fireEventAsync.press(screen.getByLabelText("Stop recording"));
+});
+
+it("withholds the silhouette guide while the camera is still unauthorized", async () => {
+  await mount();
+
+  expect(await screen.findByText("Camera access is needed")).toBeOnTheScreen();
+  expect(silhouette()).toBeNull();
 });
 
 it("uses the back camera when the development toggle is enabled", async () => {

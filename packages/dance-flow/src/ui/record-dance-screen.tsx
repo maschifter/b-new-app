@@ -32,6 +32,7 @@ import {
   preloadSimulatedDanceVideo,
 } from "../recording-adapter";
 import { type CameraPermissionCopy, CameraPermissionOverlay } from "./camera-permission-overlay";
+import { DanceSilhouette } from "./dance-silhouette";
 
 export type { CameraPermissionCopy } from "./camera-permission-overlay";
 
@@ -360,6 +361,10 @@ function RecordDanceContent({
 
   const isRecording = step === FilmStep.RECORDING;
   const isStartDisabled = !isRecording && step !== FilmStep.READY;
+  const cameraSurfaceStyle = referenceOnTop ? StyleSheet.absoluteFill : styles.pip;
+  // The guide stays up through the count-in, where the dancer is still framing themselves,
+  // and comes down at the first recorded frame so it never sits on top of the take.
+  const showSilhouette = hasPermission && step < FilmStep.RECORDING;
 
   return (
     <View className="flex-1 bg-black">
@@ -377,7 +382,7 @@ function RecordDanceContent({
             player={simulatedCameraPlayer}
             contentFit="cover"
             nativeControls={false}
-            style={referenceOnTop ? StyleSheet.absoluteFill : styles.pip}
+            style={cameraSurfaceStyle}
           />
         ) : hasPermission ? (
           <Camera
@@ -387,7 +392,7 @@ function RecordDanceContent({
             mirrorMode="auto"
             outputs={[videoOutput]}
             constraints={[{ fps: 30 }]}
-            style={referenceOnTop ? StyleSheet.absoluteFill : styles.pip}
+            style={cameraSurfaceStyle}
           />
         ) : (
           <CameraPermissionOverlay
@@ -397,6 +402,7 @@ function RecordDanceContent({
             onDismiss={onBack}
           />
         )}
+        {showSilhouette ? <DanceSilhouette style={cameraSurfaceStyle} /> : null}
         {referenceOnTop ? (
           <View className="absolute right-4 top-4 h-48 w-28 overflow-hidden rounded-2xl border border-white/50 bg-black">
             <VideoView
