@@ -9,10 +9,10 @@ import { Text, View } from "react-native";
 interface ItemCardProps {
   item: CatalogItemDTO;
   width: number;
-  owned?: boolean;
-  disabled?: boolean;
-  disabledLabel?: string;
-  onPurchase?: (itemId: string) => void;
+  owned?: boolean | undefined;
+  disabled?: boolean | undefined;
+  disabledLabel?: string | undefined;
+  onPurchase?: ((itemId: string) => void) | undefined;
 }
 
 export const ItemCard = memo(function ItemCard({

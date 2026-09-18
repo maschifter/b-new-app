@@ -1,6 +1,6 @@
 import { artSource, catalogAtom } from "@/features/catalog";
 import { ownedItemIdsAtom } from "@/features/shop";
-import { COLORS } from "@bnewapp/mobile-kit/theme/colors";
+import { COLORS } from "@/lib/theme/colors";
 import { BouncablePress, MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
 import { type ContentRef, type Spot, fits } from "@bnewapp/studio-core";
 import { Image } from "expo-image";
@@ -29,7 +29,7 @@ const SHEET_BORDER = 1;
 // items that `fits()` the spot -> pick one (assign) or remove the current one
 // (clear). Compatibility is enforced here at write time; reconcile re-checks it
 // at read time. This is presentation only — the studio logic is untouched.
-export function ItemPicker({ onOpenShop }: { onOpenShop?: () => void }) {
+export function ItemPicker({ onOpenShop }: { onOpenShop?: (() => void) | undefined }) {
   const { state, template, selectSpot, assign, clear } = useStudio();
   const { width } = useWindowDimensions();
 
@@ -49,13 +49,9 @@ export function ItemPicker({ onOpenShop }: { onOpenShop?: () => void }) {
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
-      <Pressable
-        className="flex-1 bg-[#060410]/55"
-        onPress={close}
-        accessibilityLabel="Close picker"
-      />
+      <Pressable className="flex-1 bg-scrim/55" onPress={close} accessibilityLabel="Close picker" />
       <View
-        className="max-h-[72%] rounded-t-3xl border border-neon/35 bg-[#160E29] px-5 pb-8 pt-[10px]"
+        className="max-h-[72%] rounded-t-3xl border border-neon/35 bg-sheet px-5 pb-8 pt-[10px]"
         style={{
           shadowColor: COLORS.neon,
           shadowOffset: { width: 0, height: -6 },
@@ -69,7 +65,7 @@ export function ItemPicker({ onOpenShop }: { onOpenShop?: () => void }) {
           className="mb-[6px] h-[3px] w-[120px] self-center rounded-sm bg-neon opacity-90"
           style={{ shadowColor: COLORS.neon, shadowOpacity: 1, shadowRadius: 8 }}
         />
-        <View className="mb-3 h-[5px] w-11 self-center rounded-[3px] bg-white/20" />
+        <View className="mb-3 h-[5px] w-11 self-center rounded-[3px] bg-foreground/20" />
 
         <View className="mb-4 flex-row items-center justify-between">
           <Text className="flex-1 text-xl font-extrabold text-foreground">
@@ -128,7 +124,7 @@ interface CatalogGridProps {
   current: ContentRef | undefined;
   cardWidth: number;
   onAssign: (itemId: string) => void;
-  onOpenShop?: () => void;
+  onOpenShop?: (() => void) | undefined;
 }
 
 function CatalogGrid({ spot, current, cardWidth, onAssign, onOpenShop }: CatalogGridProps) {
@@ -195,7 +191,7 @@ function CatalogGrid({ spot, current, cardWidth, onAssign, onOpenShop }: Catalog
               style={{ width: cardWidth }}
             >
               <View
-                className={`aspect-square w-full items-center justify-center overflow-hidden rounded-2xl border bg-white/5 ${isCurrent ? "border-2 border-neon" : "border-white/10"}`}
+                className={`aspect-square w-full items-center justify-center overflow-hidden rounded-2xl border bg-foreground/5 ${isCurrent ? "border-2 border-neon" : "border-foreground/10"}`}
                 style={{
                   ...(isCurrent
                     ? {
@@ -217,12 +213,12 @@ function CatalogGrid({ spot, current, cardWidth, onAssign, onOpenShop }: Catalog
                 ) : null}
                 {isCurrent ? (
                   <View className="absolute right-[6px] top-[6px] size-[22px] items-center justify-center rounded-full bg-neon">
-                    <Text className="text-[13px] font-black text-[#160E29]">✓</Text>
+                    <Text className="text-[13px] font-black text-sheet">✓</Text>
                   </View>
                 ) : null}
               </View>
               <Text
-                className={`text-center text-xs ${isCurrent ? "font-extrabold text-foreground" : "font-semibold text-[#C9C6D6]"}`}
+                className={`text-center text-xs ${isCurrent ? "font-extrabold text-foreground" : "font-semibold text-copy"}`}
                 numberOfLines={1}
               >
                 {label}

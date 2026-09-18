@@ -26,8 +26,8 @@ interface StudioConfig {
 const StudioConfigContext = createContext<StudioConfig | undefined>(undefined);
 
 interface StudioProviderProps extends PropsWithChildren {
-  ownerId?: string;
-  mode?: StudioMode;
+  ownerId?: string | undefined;
+  mode?: StudioMode | undefined;
 }
 
 export function StudioProvider({

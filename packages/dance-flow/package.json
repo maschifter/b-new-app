@@ -18,6 +18,11 @@
       "types": "./src/score-polling.ts",
       "default": "./src/score-polling.ts"
     },
+    "./use-dance-submission": {
+      "react-native": "./src/use-dance-submission.ts",
+      "types": "./src/use-dance-submission.ts",
+      "default": "./src/use-dance-submission.ts"
+    },
     "./submission-state": {
       "react-native": "./src/ui/submission-state.ts",
       "types": "./src/ui/submission-state.ts",

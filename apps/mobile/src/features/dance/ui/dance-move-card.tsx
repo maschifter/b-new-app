@@ -92,7 +92,7 @@ function LevelDots({ level }: { level: number }) {
       {[1, 2, 3].map((dot) => (
         <View
           key={dot}
-          className={`h-1.5 w-1.5 rounded-full ${dot <= level ? "bg-neon" : "bg-white/30"}`}
+          className={`h-1.5 w-1.5 rounded-full ${dot <= level ? "bg-neon" : "bg-foreground/30"}`}
         />
       ))}
     </View>

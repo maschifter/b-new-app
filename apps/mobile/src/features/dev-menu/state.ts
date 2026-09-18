@@ -1,12 +1,8 @@
 import { createAtomWithMMKV } from "@bnewapp/mobile-kit";
+import type { DevMenuFabPosition } from "@bnewapp/mobile-kit/ui/dev-menu";
 import { MMKV } from "react-native-mmkv";
 
 const atomWithDevMenuMMKV = createAtomWithMMKV(new MMKV({ id: "dev-menu" }));
-
-export interface DevMenuFabPosition {
-  right: number;
-  bottom: number;
-}
 
 /** Starts clear of the tab bar; dragging the DEV button persists a preferred position. */
 export const devMenuFabPositionAtom = atomWithDevMenuMMKV<DevMenuFabPosition>(

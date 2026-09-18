@@ -1,5 +1,5 @@
 import { LearnDanceScreen } from "@/features/dance";
-import { isUuidParam } from "@/lib/router/uuid-param";
+import { isUuidParam } from "@bnewapp/mobile-kit";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 
 // Thin route entry: validate the segment, then hand off to the feature screen.

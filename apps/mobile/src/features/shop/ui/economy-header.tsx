@@ -1,4 +1,4 @@
-import { COLORS } from "@bnewapp/mobile-kit/theme/colors";
+import { COLORS } from "@/lib/theme/colors";
 import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import { Ionicons } from "@expo/vector-icons";
 import { Text, View } from "react-native";
@@ -6,8 +6,8 @@ import { Text, View } from "react-native";
 interface EconomyHeaderProps {
   title: string;
   glow: number;
-  onBack?: () => void;
-  action?: { label: string; onPress: () => void };
+  onBack?: (() => void) | undefined;
+  action?: { label: string; onPress: () => void } | undefined;
 }
 
 export function EconomyHeader({ title, glow, onBack, action }: EconomyHeaderProps) {

@@ -7,21 +7,15 @@ import {
 } from "@/lib/collection";
 import type { LearnedMoveSnapshot } from "@/lib/collection";
 import { resolvePreviewMedia } from "@bnewapp/dance-core";
-import {
-  activeDanceScanAtom,
-  danceScoreAtom,
-  optionalDanceMoveAtomFamily,
-  startDanceScorePollingAtom,
-  submitDanceRecordingMutationAtom,
-} from "@bnewapp/dance-flow/atoms";
-import { isScorePollingSlow } from "@bnewapp/dance-flow/score-polling";
-import { type SubmissionState, deriveSubmissionState } from "@bnewapp/dance-flow/submission-state";
+import { optionalDanceMoveAtomFamily } from "@bnewapp/dance-flow/atoms";
+import type { SubmissionState } from "@bnewapp/dance-flow/submission-state";
+import { useDanceSubmission } from "@bnewapp/dance-flow/use-dance-submission";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
 import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import type { DanceMove } from "@bnewapp/types";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useAtom, useAtomValue, useSetAtom, useStore } from "jotai";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BackHandler, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { discardScanUploadMutationAtom } from "../_atoms/mutations";
@@ -74,30 +68,23 @@ export function ScanResultScreen({
 
   const store = useStore();
   const move = useAtomValue(optionalDanceMoveAtomFamily(moveId));
-  const [activeScan, setActiveScan] = useAtom(activeDanceScanAtom);
   const [decision, setDecision] = useAtom(scanDecisionAtom);
-  const startScorePolling = useSetAtom(startDanceScorePollingAtom);
   const recordFirstScan = useSetAtom(recordFirstScanAtom);
   const saveConfirmedScore = useSetAtom(saveConfirmedScoreAtom);
   const savePersonalRecording = useSetAtom(savePersonalRecordingAtom);
-  const submit = useAtomValue(submitDanceRecordingMutationAtom);
-  const score = useAtomValue(danceScoreAtom);
   const discardUpload = useAtomValue(discardScanUploadMutationAtom);
 
-  const submission = deriveSubmissionState({
-    hasClip: true,
-    isUploading: submit.isPending,
-    uploadError: submit.error ?? null,
-    isScanning: activeScan !== null,
-    isScorePollingSlow: activeScan !== null && isScorePollingSlow(activeScan.startedAt),
-    score: score.data,
-    scoreError: score.error ?? null,
+  const { submission, scoreStatus, isTerminal, retry, getSubmittedPostId } = useDanceSubmission({
+    moveId,
+    clipPath,
+    clipDuration,
+    clipAudioOffsetMs,
   });
 
   // `deriveSubmissionState` only reports `scored` when the polled status carries a score,
   // so the flag is read off that same status rather than defaulted.
   const scoredValue = submission.kind === "scored" ? submission.score : null;
-  const isExternalScore = score.data?.isExternalScore === true;
+  const isExternalScore = scoreStatus?.isExternalScore === true;
 
   const [saveState, setSaveState] = useState<SaveState>({ kind: "pending" });
   const [isRetryingSave, setIsRetryingSave] = useState(false);
@@ -106,44 +93,18 @@ export function ScanResultScreen({
   const [isSavingVideo, setIsSavingVideo] = useState(false);
   const [hasVideoSaveFailed, setHasVideoSaveFailed] = useState(false);
 
-  const submissionInput = useMemo(
-    () => ({
-      danceMoveId: moveId,
-      path: clipPath,
-      videoLength: clipDuration,
-      // Spread rather than an explicit undefined: exactOptionalPropertyTypes rejects one,
-      // and a measured 0 must survive as 0.
-      ...(clipAudioOffsetMs === undefined ? {} : { audioOffsetMs: clipAudioOffsetMs }),
-    }),
-    [clipAudioOffsetMs, clipDuration, clipPath, moveId],
-  );
+  // An unconfirmed attempt must leave nothing behind, so the step resets when the
+  // screen goes away.
+  useEffect(() => () => setDecision("score"), [setDecision]);
 
-  useEffect(() => {
-    submit.mutate(submissionInput);
-    return () => {
-      setActiveScan(null);
-      setDecision("score");
-    };
-  }, [setActiveScan, setDecision, submissionInput, submit.mutate]);
-
-  // The post id must outlive `activeDanceScanAtom`, which the unmount cleanup clears.
-  const postIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (submit.isSuccess && submit.data !== undefined) {
-      postIdRef.current = submit.data;
-      startScorePolling(submit.data);
-    }
-  }, [startScorePolling, submit.data, submit.isSuccess]);
-
-  const isTerminal = submission.kind === "scored" || submission.kind === "failed";
   const discardedPostIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (!isTerminal) return;
-    const postId = postIdRef.current;
+    const postId = getSubmittedPostId();
     if (postId === null || discardedPostIdRef.current === postId) return;
     discardedPostIdRef.current = postId;
     discardUpload.mutate(postId);
-  }, [discardUpload.mutate, isTerminal]);
+  }, [discardUpload.mutate, getSubmittedPostId, isTerminal]);
 
   // A first terminal score saves itself (document 02 section 2); a repeat scan writes
   // nothing until the user confirms. Both writers reject silently, so the collection is
@@ -303,7 +264,7 @@ export function ScanResultScreen({
               canConfirm={scoredValue !== null && saveState.kind === "ready"}
               isAdvancing={isAdvancing}
               onRetrySave={retrySave}
-              onRetryUpload={() => submit.mutate(submissionInput)}
+              onRetryUpload={retry}
               onConfirm={confirmScore}
               onBack={onBack}
             />

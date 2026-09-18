@@ -1,6 +1,1 @@
-module.exports = (api) => {
-  api.cache(true);
-  return {
-    presets: [["babel-preset-expo", { jsxImportSource: "nativewind" }]],
-  };
-};
+module.exports = require("@bnewapp/mobile-kit/babel/expo-preset");

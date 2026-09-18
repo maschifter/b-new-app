@@ -6,14 +6,14 @@ import { ItemPicker } from "./item-picker";
 import { StudioStage } from "./studio-stage";
 
 interface StudioScreenProps {
-  ownerId?: string;
-  visitorCount?: number;
+  ownerId?: string | undefined;
+  visitorCount?: number | undefined;
   /** Single letter shown inside the floating avatar (e.g. the account initial). */
-  avatarLabel?: string;
+  avatarLabel?: string | undefined;
   /** Opens the profile screen; wired by the app so the feature stays route-agnostic. */
-  onOpenProfile?: () => void;
-  onOpenShop?: () => void;
-  onOpenDance?: () => void;
+  onOpenProfile?: (() => void) | undefined;
+  onOpenShop?: (() => void) | undefined;
+  onOpenDance?: (() => void) | undefined;
 }
 
 export function StudioScreen({
@@ -44,11 +44,11 @@ function StudioContent({
   onOpenShop,
   onOpenDance,
 }: {
-  avatarLabel?: string;
-  visitorCount?: number;
-  onOpenProfile?: () => void;
-  onOpenShop?: () => void;
-  onOpenDance?: () => void;
+  avatarLabel?: string | undefined;
+  visitorCount?: number | undefined;
+  onOpenProfile?: (() => void) | undefined;
+  onOpenShop?: (() => void) | undefined;
+  onOpenDance?: (() => void) | undefined;
 }) {
   const { state, template, selectSpot } = useStudio();
 

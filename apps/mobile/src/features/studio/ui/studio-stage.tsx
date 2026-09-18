@@ -16,8 +16,8 @@ interface StudioStageProps {
   template: RoomTemplate;
   map: Record<string, ContentRef>;
   mode: StudioMode;
-  selectedSpotId?: string | null;
-  onSelectSpot?: (spotId: string) => void;
+  selectedSpotId?: string | null | undefined;
+  onSelectSpot?: ((spotId: string) => void) | undefined;
 }
 
 // Full-bleed, uniformly-scaled canvas (design §9.1). The fixed design canvas is

@@ -1,5 +1,5 @@
-import { renderWithProviders } from "@/test-utils/render-with-providers";
 import { getDancePosts } from "@bnewapp/dance-flow/api";
+import { renderWithProviders } from "@bnewapp/mobile-kit/testing";
 import type { DancePostsPage } from "@bnewapp/types";
 import { act, fireEvent, screen } from "@testing-library/react-native";
 import type { ReactElement } from "react";

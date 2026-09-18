@@ -1,5 +1,5 @@
-import { createTestQueryClient, renderWithProviders } from "@/test-utils/render-with-providers";
 import { deleteRecordedDancePost, getDancePost } from "@bnewapp/dance-flow/api";
+import { createTestQueryClient, renderWithProviders } from "@bnewapp/mobile-kit/testing";
 import type { DancePostDetail } from "@bnewapp/types";
 import { InfiniteQueryObserver } from "@tanstack/react-query";
 import { act, fireEventAsync, screen, waitFor } from "@testing-library/react-native";

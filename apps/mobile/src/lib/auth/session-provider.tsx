@@ -1,4 +1,4 @@
-import { type QueryAuth, queryAuthAtom } from "@bnewapp/mobile-kit";
+import { createQueryAuthProjection, queryAuthAtom } from "@bnewapp/mobile-kit";
 import type { Session } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSetAtom } from "jotai";
@@ -22,41 +22,7 @@ export function AuthSessionProvider({ children }: PropsWithChildren) {
     if (!supabase) return;
 
     const client = supabase;
-
-    // The query layer's view of the current identity. It lags `session` only
-    // across a transition, and is the anchor for scoping cache cleanup to the
-    // outgoing user so a concurrent sign-in for another user is never wiped.
-    let currentUserId: string | null = null;
-
-    // Projects a session into the query layer and drives cache transitions.
-    // Same-user token refresh updates the token in place (key/cache preserved);
-    // any identity change disables queries, drops only the previous user's
-    // cached entries, then enables the next identity. Runs synchronously, so
-    // ordered auth events stay serialized and a stale event cannot disable a
-    // newer session.
-    const applySession = (next: Session | null) => {
-      const nextUserId = next?.user.id ?? null;
-      const accessToken = next?.access_token ?? null;
-      const nextAuth: QueryAuth | null =
-        nextUserId && accessToken ? { userId: nextUserId, accessToken } : null;
-
-      if (nextUserId !== null && nextUserId === currentUserId) {
-        setQueryAuth(nextAuth);
-        return;
-      }
-
-      setQueryAuth(null);
-      if (currentUserId !== null) {
-        const outgoing = currentUserId;
-        const filter = {
-          predicate: (query: { queryKey: readonly unknown[] }) => query.queryKey[1] === outgoing,
-        };
-        void queryClient.cancelQueries(filter);
-        queryClient.removeQueries(filter);
-      }
-      currentUserId = nextUserId;
-      setQueryAuth(nextAuth);
-    };
+    const applySession = createQueryAuthProjection({ setQueryAuth, queryClient });
 
     // onAuthStateChange delivers events in order (INITIAL_SESSION, then refresh /
     // sign-in / sign-out), so it is the serialized transition stream. getSession

@@ -1,4 +1,4 @@
-import { type TestStore, createTestStore } from "@/test-utils/render-with-providers";
+import { type TestStore, createTestStore } from "@bnewapp/mobile-kit/testing";
 import { CATALOG } from "@bnewapp/studio-core";
 import type { StudioCatalog } from "@bnewapp/types";
 import { queryClientAtom } from "jotai-tanstack-query";

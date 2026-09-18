@@ -270,13 +270,17 @@ Rules:
 The transport, auth projection, query provider, MMKV/jotai helpers, UI primitives, media
 hooks, theme tokens and jest harness live in **`@bnewapp/mobile-kit`**. Feature code imports
 them from the package directly — `@bnewapp/mobile-kit` (transport helpers, auth/query seam,
-jotai helpers, `QueryProvider`), `@bnewapp/mobile-kit/ui`, `@bnewapp/mobile-kit/ui/tempo-bar`,
-`@bnewapp/mobile-kit/ui/tempo-steps`, `@bnewapp/mobile-kit/theme/colors` and the two
-`@bnewapp/mobile-kit/media/*` hooks. One `exports` entry per concern, so a consumer never
-loads a native dependency it does not use — `ui/tempo-bar` sits outside the `ui` barrel
-because it is the only primitive that pulls in react-native-gesture-handler, and
-`ui/tempo-steps` is its scale alone, importable by state code that never renders the bar. Change the implementation in `mobile-kit`, not in a feature, and
-never add a second copy of a primitive it already owns.
+jotai helpers, `isUuidParam`, `QueryProvider`), `@bnewapp/mobile-kit/auth/supabase-client`,
+`@bnewapp/mobile-kit/ui`, `@bnewapp/mobile-kit/ui/dev-menu`,
+`@bnewapp/mobile-kit/ui/tempo-bar`, `@bnewapp/mobile-kit/ui/tempo-steps` and the two
+`@bnewapp/mobile-kit/media/*` hooks. `theme/colors` is not one of them: it holds the
+preset's placeholder values, which only `theme/tailwind-preset.js` reads, and a component
+takes its runtime colors from its own app's `@/lib/theme/colors`. One `exports` entry per
+concern, so a consumer never loads a native dependency it does not use — `ui/tempo-bar`
+sits outside the `ui` barrel because it is the only primitive that pulls in
+react-native-gesture-handler, and `ui/tempo-steps` is its scale alone, importable by state
+code that never renders the bar. Change the implementation in `mobile-kit`, not in a
+feature, and never add a second copy of a primitive it already owns.
 
 `TempoBar` is the shared playback-speed control, rendered by the Stepz feed and the mobile
 lesson screen. It is controlled (`rate` + `onRateChange`) and snaps a drag or a tap to the nearest
@@ -287,13 +291,19 @@ takes only the vertical drags so a sideways swipe still turns the page. Both app
 mount `GestureHandlerRootView` at the root of `app/_layout.tsx` — nothing in expo-router
 mounts it, and without it a pan never activates on Android.
 
-`apps/mobile/src/lib/api/client.ts` is the one app-owned module in that seam: the package
-exposes `resolveExpoApiUrl`, and each app calls it once with its own env value and port to
-own the resulting `apiUrl` constant. `apps/edu` has the mirror-image module.
+`apps/mobile/src/lib/api/client.ts` and `src/lib/auth/supabase.ts` are the app-owned modules
+in that seam: the package exposes `resolveExpoApiUrl` and `createSupabaseAuthClient`, and each
+app calls them once with its own `EXPO_PUBLIC_*` values, which Expo inlines per project.
+`apps/edu` has the mirror-image modules. The session providers differ (mobile signs in, Stepz
+is anonymous) but both drive the query layer through one `createQueryAuthProjection`; never
+re-implement that cache transition in an app.
 
 **`@bnewapp/dance-flow`** owns the record and result screens plus the flow state behind
-them. The app's `dance` feature keeps catalog, learning, post history and feed UI. The app
-injects the flow's base URL and MMKV store id once at startup through `configureDanceFlow`
+them. `useDanceSubmission` (`@bnewapp/dance-flow/use-dance-submission`) is the submit → poll →
+submission-state sequence both result screens run; a screen adds its own product decisions
+around it rather than repeating the sequence. The app's `dance` feature keeps catalog,
+learning, post history and feed UI. The app injects the flow's base URL and MMKV store id
+once at startup through `configureDanceFlow`
 (`apps/mobile/src/lib/bootstrap/dance-flow.ts`, imported for side effect by the root layout).
 
 > **Legacy shape — do not copy for new features.** The **studio** feature predates
@@ -336,9 +346,13 @@ Key UI rules:
   form submissions. Suspense does not replace those states.
 - Use NativeWind `className` for static component styling. Keep React Native `style` for values
   computed at runtime, animated styles, or third-party components without NativeWind interop.
-  Shared design tokens come from `packages/mobile-kit/theme/`, applied through its Tailwind
-  preset in `apps/mobile/tailwind.config.js`; that config also globs `packages/*/src` so
-  package-owned classes are generated.
+  The token *names* come from `packages/mobile-kit/theme/`, applied through its Tailwind
+  preset; each app then supplies the *values* from its own `theme/colors.js`, because the two
+  apps are different products and `mobile-kit` owns no brand. A component needing a runtime
+  color prop reads `@/lib/theme/colors`, never the package's. Each app's `tailwind.config.js`
+  also globs `packages/*/src` so package-owned classes are generated. Never write raw hex in a
+  component; the one exception is chrome laid over video, which stays white to survive an
+  arbitrary frame.
 
 Compose feeds as **screen → list → item card**:
 
@@ -358,7 +372,7 @@ expo-router **file-based** routing under `apps/mobile/src/app/`. Tabs live in `a
 params via path segments — a room detail is `app/room/[ownerId].tsx`, opened with
 `router.push("/room/" + ownerId)` and read via `useLocalSearchParams()`; the dance flow is
 `app/dance/[moveId].tsx` → `record.tsx` → `result.tsx`, with `app/dance/post/[postId].tsx`
-for a published post. Validate uuid params with `@/lib/router/uuid-param`.
+for a published post. Validate uuid params with `isUuidParam` (`@bnewapp/mobile-kit`).
 
 Authenticated routes outside the protected `(tabs)` group must also be declared inside the
 `session !== null` `Stack.Protected` block in the root `app/_layout.tsx`; filesystem discovery
@@ -378,9 +392,13 @@ rendered read-only.
   describe the history of a fix.
 - **Biome** is the formatter + linter: 2-space indent, line width 100, organized
   imports. `noExplicitAny` is an **error** — no `any`.
-- **TypeScript strict** (`tsconfig.base.json`): `strict`, `noUncheckedIndexedAccess`,
-  `exactOptionalPropertyTypes`. Type inputs and outputs precisely; no unchecked casts or
-  non-null assertions to silence an error.
+- **TypeScript strict**: `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`
+  everywhere. Packages get them from `tsconfig.base.json`; the two Expo apps must extend
+  `expo/tsconfig.base` instead, so they get the same set from
+  `@bnewapp/mobile-kit/tsconfig.expo-app.json` and add only their own `baseUrl`, `paths` and
+  `include`. Type inputs and outputs precisely; no unchecked casts or non-null assertions to
+  silence an error. Under `exactOptionalPropertyTypes` an optional prop a caller may pass as
+  `undefined` is declared `name?: T | undefined`, not `name?: T`.
 - Never hand-edit generated files, including `packages/types/src/database.generated.ts`.
 - Match the surrounding file's naming and idiom; no broad refactors or new
   dependencies without discussion.

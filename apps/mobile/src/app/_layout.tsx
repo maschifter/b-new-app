@@ -3,6 +3,7 @@ import "@/lib/bootstrap/dance-flow";
 import type { DevMenu as DevMenuComponent } from "@/features/dev-menu/dev-menu";
 import { NativeAnimatedWarningGuard } from "@/lib/animation/native-animated-warning-guard";
 import { AuthSessionProvider, useAuthSession } from "@/lib/auth/session-provider";
+import { COLORS } from "@/lib/theme/colors";
 import { QueryProvider } from "@bnewapp/mobile-kit";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -43,8 +44,8 @@ function RootNavigator() {
 
   if (!hydrated) {
     return (
-      <View className="flex-1 items-center justify-center">
-        <ActivityIndicator color="#FFFFFF" />
+      <View className="flex-1 items-center justify-center bg-app">
+        <ActivityIndicator color={COLORS.foreground} />
       </View>
     );
   }

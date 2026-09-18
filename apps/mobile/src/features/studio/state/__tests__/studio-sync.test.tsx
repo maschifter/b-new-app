@@ -2,7 +2,7 @@ import {
   type TestStore,
   createTestQueryClient,
   createTestStore,
-} from "@/test-utils/render-with-providers";
+} from "@bnewapp/mobile-kit/testing";
 import {
   CURRENT_VERSION,
   DEFAULT_TEMPLATE_ID,

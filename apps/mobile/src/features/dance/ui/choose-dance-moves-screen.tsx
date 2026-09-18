@@ -1,4 +1,4 @@
-import { COLORS } from "@bnewapp/mobile-kit/theme/colors";
+import { COLORS } from "@/lib/theme/colors";
 import { BouncablePress, DanceSkeleton, MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
 import type { DanceGenre, DanceMove } from "@bnewapp/types";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,7 +21,7 @@ import { DanceMoveCard } from "./dance-move-card";
 
 interface ChooseDanceMovesScreenProps {
   onOpenMove: (moveId: string) => void;
-  onBack?: () => void;
+  onBack?: (() => void) | undefined;
 }
 
 const MOVE_CARD_ASPECT = 0.72;

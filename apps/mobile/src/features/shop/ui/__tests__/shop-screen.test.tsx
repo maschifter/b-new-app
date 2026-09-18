@@ -1,4 +1,4 @@
-import { createTestQueryClient, renderWithProviders } from "@/test-utils/render-with-providers";
+import { createTestQueryClient, renderWithProviders } from "@bnewapp/mobile-kit/testing";
 import type { StudioCatalog } from "@bnewapp/types";
 import { fireEventAsync, screen } from "@testing-library/react-native";
 import { getCatalog } from "../../../catalog/api";

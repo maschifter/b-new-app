@@ -1,4 +1,4 @@
-import { renderWithProviders } from "@/test-utils/render-with-providers";
+import { renderWithProviders } from "@bnewapp/mobile-kit/testing";
 import type { DanceMove } from "@bnewapp/types";
 import { act, fireEvent, fireEventAsync, screen, waitFor } from "@testing-library/react-native";
 import { Dimensions, StyleSheet } from "react-native";

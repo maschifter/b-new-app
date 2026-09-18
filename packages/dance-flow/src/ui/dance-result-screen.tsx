@@ -3,17 +3,12 @@ import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playba
 import { useSyncedMusicTrack } from "@bnewapp/mobile-kit/media/use-synced-music-track";
 import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import { VideoView, useVideoPlayer } from "expo-video";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { useEffect, useMemo } from "react";
+import { useAtomValue } from "jotai";
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { startDanceScorePollingAtom } from "../_atoms/effects";
-import { submitDanceRecordingMutationAtom } from "../_atoms/mutations";
-import { danceScoreAtom, optionalDanceMoveAtomFamily } from "../_atoms/queries";
-import { activeDanceScanAtom } from "../_atoms/ui";
-import { isScorePollingSlow } from "../score-polling";
+import { optionalDanceMoveAtomFamily } from "../_atoms/queries";
+import { useDanceSubmission } from "../use-dance-submission";
 import { SubmissionFeedback } from "./submission-feedback";
-import { deriveSubmissionState } from "./submission-state";
 
 interface DanceResultScreenProps {
   moveId: string;
@@ -50,43 +45,11 @@ export function DanceResultScreen({
       clipAudioOffsetMs ??
       mergeAudioOffsetMs(move?.bpm ?? null, music?.delayBeforeAvatarDance ?? null),
   });
-  const [activeScan, setActiveScan] = useAtom(activeDanceScanAtom);
-  const startScorePolling = useSetAtom(startDanceScorePollingAtom);
-  const submit = useAtomValue(submitDanceRecordingMutationAtom);
-  const score = useAtomValue(danceScoreAtom);
-  const submission = deriveSubmissionState({
-    hasClip: true,
-    isUploading: submit.isPending,
-    uploadError: submit.error ?? null,
-    isScanning: activeScan !== null,
-    isScorePollingSlow: activeScan !== null && isScorePollingSlow(activeScan.startedAt),
-    score: score.data,
-    scoreError: score.error ?? null,
-  });
-
-  const submissionInput = useMemo(
-    () => ({
-      danceMoveId: moveId,
-      path: clipPath,
-      videoLength: clipDuration,
-      // Spread, not `audioOffsetMs: clipAudioOffsetMs`: exactOptionalPropertyTypes makes
-      // an explicit undefined a type error, and a measured 0 must survive as 0.
-      ...(clipAudioOffsetMs === undefined ? {} : { audioOffsetMs: clipAudioOffsetMs }),
-    }),
-    [clipAudioOffsetMs, clipDuration, clipPath, moveId],
-  );
-
-  useEffect(() => {
-    submit.mutate(submissionInput);
-    return () => setActiveScan(null);
-  }, [setActiveScan, submissionInput, submit.mutate]);
-
-  useEffect(() => {
-    if (submit.isSuccess && submit.data !== undefined) startScorePolling(submit.data);
-  }, [startScorePolling, submit.data, submit.isSuccess]);
-
-  const retrySubmission = () => submit.mutate(submissionInput);
-  const canFinish = submission.kind === "scored" || submission.kind === "failed";
+  const {
+    submission,
+    isTerminal: canFinish,
+    retry: retrySubmission,
+  } = useDanceSubmission({ moveId, clipPath, clipDuration, clipAudioOffsetMs });
 
   return (
     <SafeAreaView className="flex-1 bg-black" edges={["top", "right", "bottom", "left"]}>

@@ -1,7 +1,7 @@
 import { Screen } from "@/components/screen";
 import { TextField } from "@/components/text-field";
 import { supabase } from "@/lib/auth/supabase";
-import { COLORS } from "@bnewapp/mobile-kit/theme/colors";
+import { COLORS } from "@/lib/theme/colors";
 import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import { router } from "expo-router";
 import { useState } from "react";

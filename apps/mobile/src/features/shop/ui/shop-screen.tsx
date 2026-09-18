@@ -1,5 +1,5 @@
 import { catalogAtom } from "@/features/catalog";
-import { COLORS } from "@bnewapp/mobile-kit/theme/colors";
+import { COLORS } from "@/lib/theme/colors";
 import { MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
 import { canAfford } from "@bnewapp/studio-core";
 import type { CatalogItemDTO } from "@bnewapp/types";
@@ -20,7 +20,7 @@ import { ItemCard } from "./item-card";
 import { ShopSkeleton } from "./shop-skeleton";
 
 interface ShopScreenProps {
-  onBack?: () => void;
+  onBack?: (() => void) | undefined;
 }
 
 export function ShopScreen({ onBack }: ShopScreenProps) {

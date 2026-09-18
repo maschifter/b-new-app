@@ -93,10 +93,15 @@ src/features/<feature>/
 - Use NativeWind `className` for static component styling. Keep React Native `style` only for values
   that are computed at runtime, animated styles, or third-party components that do not support
   NativeWind interop.
-- Define shared design tokens in `packages/mobile-kit/theme/` and consume its Tailwind preset
-  from `tailwind.config.js`; keep app-specific extensions in the app config. Prefer semantic token classes over repeating
-  raw color values. When conditional classes are needed, keep complete class names visible to the
-  NativeWind content scanner.
+- `theme/colors.js` is this app's single palette source: `tailwind.config.js` builds the token
+  values from it, and a component needing a runtime color prop reads the same values through
+  `@/lib/theme/colors`. The token *names* come from the `@bnewapp/mobile-kit` preset — the shared
+  packages ship `className` strings that resolve against them, so renaming or dropping one breaks
+  both apps; a token only this app uses (the studio surfaces) is added here alone. Style with
+  `className` and never write raw hex in a component. The exception is chrome laid over video,
+  where white must stay legible against an arbitrary frame rather than follow the palette.
+  When conditional classes are needed, keep complete class names visible to the NativeWind
+  content scanner.
 - Keep shared package source paths in Tailwind's `content` globs so package-owned classes are generated.
 - Provide accessibility roles, labels, states, and reasonable touch targets for interactive controls.
 - Respect safe areas and keyboard behavior; do not hardcode device-specific offsets.

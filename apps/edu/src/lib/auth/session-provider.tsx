@@ -1,4 +1,4 @@
-import { type QueryAuth, queryAuthAtom } from "@bnewapp/mobile-kit";
+import { createQueryAuthProjection, queryAuthAtom } from "@bnewapp/mobile-kit";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSetAtom } from "jotai";
@@ -57,36 +57,9 @@ export function AnonymousSessionProvider({ children }: PropsWithChildren) {
     if (!supabase) return;
 
     const client = supabase;
-
-    // The query layer's view of the current identity. It lags `session` only across
-    // a transition, and is the anchor for scoping cache cleanup to the outgoing
-    // identity. A lost anonymous session is replaced by a *different* anonymous
-    // user, so that transition is real here, not hypothetical.
-    let currentUserId: string | null = null;
-
-    const applySession = (next: Session | null) => {
-      const nextUserId = next?.user.id ?? null;
-      const accessToken = next?.access_token ?? null;
-      const nextAuth: QueryAuth | null =
-        nextUserId && accessToken ? { userId: nextUserId, accessToken } : null;
-
-      if (nextUserId !== null && nextUserId === currentUserId) {
-        setQueryAuth(nextAuth);
-        return;
-      }
-
-      setQueryAuth(null);
-      if (currentUserId !== null) {
-        const outgoing = currentUserId;
-        const filter = {
-          predicate: (query: { queryKey: readonly unknown[] }) => query.queryKey[1] === outgoing,
-        };
-        void queryClient.cancelQueries(filter);
-        queryClient.removeQueries(filter);
-      }
-      currentUserId = nextUserId;
-      setQueryAuth(nextAuth);
-    };
+    // A lost anonymous session is replaced by a *different* anonymous user, so the
+    // projection's identity-change path is exercised here, not hypothetical.
+    const applySession = createQueryAuthProjection({ setQueryAuth, queryClient });
 
     let active = true;
     let receivedAuthEvent = false;

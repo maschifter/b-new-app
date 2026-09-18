@@ -1,0 +1,10 @@
+{
+  "//": "The TypeScript contract both Expo apps compile under. It restates the repo's strictness from tsconfig.base.json, which an app cannot extend directly because it must extend expo/tsconfig.base. An app adds only its own baseUrl, paths and include.",
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "allowImportingTsExtensions": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true
+  }
+}

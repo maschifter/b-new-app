@@ -20,7 +20,7 @@ interface SpotLayerProps {
   selected: boolean;
   /** Render empty spots as a tappable outline (edit mode); hidden otherwise. */
   showEmpty: boolean;
-  onPress?: (spotId: string) => void;
+  onPress?: ((spotId: string) => void) | undefined;
 }
 
 export function SpotLayer({
@@ -68,8 +68,8 @@ export function SpotLayer({
       testID={`spot-empty-${spot.id}`}
       className={`flex-1 items-center justify-center rounded-[10px] border-[1.5px] border-dashed p-1 ${selected ? "border-2 border-solid border-neon" : "border-border"}`}
     >
-      <Text className="text-xl font-bold text-[#6C6C7A]">+</Text>
-      <Text numberOfLines={1} className="text-center text-[10px] text-[#6C6C7A]">
+      <Text className="text-xl font-bold text-spot-hint">+</Text>
+      <Text numberOfLines={1} className="text-center text-[10px] text-spot-hint">
         {itemLabel(spot.id)}
       </Text>
     </View>
@@ -154,11 +154,11 @@ function PlayBadge({ size }: { size: number }) {
   return (
     <View pointerEvents="none" className="absolute inset-0 items-center justify-center">
       <View
-        className="items-center justify-center border-2 border-white/90 bg-[#140A20]/45"
+        className="items-center justify-center border-2 border-foreground/90 bg-veil/45"
         style={{ width: size, height: size, borderRadius: size / 2 }}
       >
         <View
-          className="size-0 border-solid border-y-transparent border-l-white bg-transparent"
+          className="size-0 border-solid border-y-transparent border-l-foreground bg-transparent"
           style={{
             borderTopWidth: tri / 2,
             borderBottomWidth: tri / 2,

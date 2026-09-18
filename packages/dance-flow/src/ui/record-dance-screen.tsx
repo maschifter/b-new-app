@@ -442,13 +442,13 @@ function RecordDanceContent({
             : `Recording length: ${recordingLength}s`}
         </Text>
         {simulatedRecordingEnabled ? (
-          <Text className="text-xs text-violet-300">
+          <Text className="text-xs text-neon">
             DEV · Simulated{" "}
             {simulatedVideoUrl === move.filmYourselfVideoUrl ? "reference" : "catalog"} recording
           </Text>
         ) : null}
         {recordingError ? (
-          <Text accessibilityLiveRegion="polite" className="text-sm text-red-400">
+          <Text accessibilityLiveRegion="polite" className="text-sm text-danger">
             {recordingError}
           </Text>
         ) : null}

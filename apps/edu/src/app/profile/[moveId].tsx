@@ -1,5 +1,5 @@
 import { ProfileMoveScreen } from "@/features/profile";
-import { isUuidParam } from "@/lib/router/uuid-param";
+import { isUuidParam } from "@bnewapp/mobile-kit";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 
 export default function ProfileMoveRoute() {

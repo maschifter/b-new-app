@@ -1,9 +1,5 @@
 import { persistedEduAtom } from "@/lib/jotai/atom-with-mmkv";
-
-export interface DevMenuFabPosition {
-  right: number;
-  bottom: number;
-}
+import type { DevMenuFabPosition } from "@bnewapp/mobile-kit/ui/dev-menu";
 
 /**
  * Starts clear of the feed's call to action and its right rail; dragging the DEV

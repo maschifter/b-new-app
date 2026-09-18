@@ -1,4 +1,4 @@
-import { COLORS } from "@bnewapp/mobile-kit/theme/colors";
+import { COLORS } from "@/lib/theme/colors";
 import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import { ActivityIndicator, Text, View } from "react-native";
 

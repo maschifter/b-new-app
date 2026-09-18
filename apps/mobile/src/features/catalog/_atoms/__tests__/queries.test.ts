@@ -1,4 +1,4 @@
-import { createTestStore } from "@/test-utils/render-with-providers";
+import { createTestStore } from "@bnewapp/mobile-kit/testing";
 import type { StudioCatalog } from "@bnewapp/types";
 import { waitFor } from "@testing-library/react-native";
 import { Image } from "expo-image";

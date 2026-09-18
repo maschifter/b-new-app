@@ -1,4 +1,4 @@
-import { renderWithProviders } from "@/test-utils/render-with-providers";
+import { renderWithProviders } from "@bnewapp/mobile-kit/testing";
 import { CURRENT_VERSION, DEFAULT_TEMPLATE_ID } from "@bnewapp/studio-core";
 import type { ExploreRoom, ExploreRoomsPage } from "@bnewapp/types";
 import { act, fireEvent, fireEventAsync, screen, waitFor } from "@testing-library/react-native";

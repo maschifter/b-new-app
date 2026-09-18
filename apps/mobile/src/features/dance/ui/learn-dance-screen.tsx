@@ -1,6 +1,6 @@
+import { COLORS } from "@/lib/theme/colors";
 import { danceMoveDetailAtomFamily } from "@bnewapp/dance-flow/atoms";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
-import { COLORS } from "@bnewapp/mobile-kit/theme/colors";
 import { BouncablePress, DanceSkeleton, MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
 import { TempoBar } from "@bnewapp/mobile-kit/ui/tempo-bar";
 import type { DanceMove } from "@bnewapp/types";
@@ -22,8 +22,8 @@ import { danceVideoRateAtom } from "../_atoms/ui";
 
 interface LearnDanceScreenProps {
   moveId: string;
-  onBack?: () => void;
-  onStartRecording?: () => void;
+  onBack?: (() => void) | undefined;
+  onStartRecording?: (() => void) | undefined;
 }
 
 /**

@@ -26,7 +26,7 @@ export function SubmissionFeedback({ submission, onRetry }: SubmissionFeedbackPr
     return <Text className="text-sm text-neon">You scored {submission.score} points!</Text>;
   return (
     <View className="gap-2">
-      <Text accessibilityLiveRegion="polite" className="text-sm text-red-400">
+      <Text accessibilityLiveRegion="polite" className="text-sm text-danger">
         {submission.message}
       </Text>
       {submission.canRetry ? (

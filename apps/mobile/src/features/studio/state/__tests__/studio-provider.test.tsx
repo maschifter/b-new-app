@@ -1,5 +1,5 @@
-import { type TestStore, createTestStore } from "@/test-utils/render-with-providers";
 import { queryAuthAtom } from "@bnewapp/mobile-kit";
+import { type TestStore, createTestStore } from "@bnewapp/mobile-kit/testing";
 import type { StudioCatalog } from "@bnewapp/types";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";

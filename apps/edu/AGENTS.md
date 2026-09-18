@@ -38,12 +38,15 @@ TanStack Query conventions and applies here too.
 ```text
 src/
 ├── app/            # Expo Router tree, routing composition only
-├── components/     # app-wide primitives (promote to @bnewapp/mobile-kit if a second app needs one)
 ├── features/       # feed, scan, profile, dev-menu — narrow index.ts, _atoms/ + ui/ as needed
-└── lib/            # api transport, auth, bootstrap, persistence, router guards
+└── lib/            # api transport, auth, bootstrap, persistence, catalog
 ```
 
-- Routes parse and validate params (`isUuidParam`) and hand off to a feature screen.
+There is deliberately no `src/components/`: every primitive both apps render lives in
+`@bnewapp/mobile-kit/ui`. Add one there, not here, unless it is genuinely Stepz-only.
+
+- Routes parse and validate params (`isUuidParam` from `@bnewapp/mobile-kit`) and hand off
+  to a feature screen.
   No screen UI, list feedback or feature controls in a route file.
 - `features/scan` is the app's seam onto `@bnewapp/dance-flow`'s record and result
   screens. Import the flow through `@/features/scan`, not from the package directly,

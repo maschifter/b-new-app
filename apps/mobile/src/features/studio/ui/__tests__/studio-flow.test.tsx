@@ -1,5 +1,5 @@
-import { createTestQueryClient, createTestStore } from "@/test-utils/render-with-providers";
 import { queryAuthAtom } from "@bnewapp/mobile-kit";
+import { createTestQueryClient, createTestStore } from "@bnewapp/mobile-kit/testing";
 import type { StudioCatalog } from "@bnewapp/types";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react-native";
@@ -29,7 +29,7 @@ function testStore(queryClient = createTestQueryClient()) {
 
 // Wire the real stage + picker to provider state without the route chrome
 // (SafeAreaView / expo-router) so the test exercises only the interaction path.
-function Harness({ onOpenShop }: { onOpenShop?: () => void }) {
+function Harness({ onOpenShop }: { onOpenShop?: (() => void) | undefined }) {
   const { state, template, selectSpot } = useStudio();
   return (
     <>

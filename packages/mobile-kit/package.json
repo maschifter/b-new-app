@@ -13,10 +13,20 @@
       "types": "./src/api/api-url.ts",
       "default": "./src/api/api-url.ts"
     },
+    "./auth/supabase-client": {
+      "react-native": "./src/auth/supabase-client.ts",
+      "types": "./src/auth/supabase-client.ts",
+      "default": "./src/auth/supabase-client.ts"
+    },
     "./ui": {
       "react-native": "./src/ui/index.ts",
       "types": "./src/ui/index.ts",
       "default": "./src/ui/index.ts"
+    },
+    "./ui/dev-menu": {
+      "react-native": "./src/ui/dev-menu.tsx",
+      "types": "./src/ui/dev-menu.tsx",
+      "default": "./src/ui/dev-menu.tsx"
     },
     "./ui/tempo-bar": {
       "react-native": "./src/ui/tempo-bar.tsx",
@@ -43,11 +53,18 @@
       "types": "./src/expo/index.ts",
       "default": "./src/expo/index.ts"
     },
+    "./expo/app-config": {
+      "types": "./src/expo/app-config.ts",
+      "default": "./src/expo/app-config.ts"
+    },
     "./testing": {
       "react-native": "./src/testing/index.ts",
       "types": "./src/testing/index.ts",
       "default": "./src/testing/index.ts"
     },
+    "./babel/expo-preset": "./babel/expo-preset.js",
+    "./metro/expo-app-config": "./metro/expo-app-config.js",
+    "./tsconfig.expo-app.json": "./tsconfig.expo-app.json",
     "./config-plugins/with-ios-min-deployment-target": "./config-plugins/with-ios-min-deployment-target.js",
     "./theme/colors": "./theme/colors.js",
     "./theme/tailwind-preset": "./theme/tailwind-preset.js",
@@ -65,7 +82,9 @@
     "@bnewapp/types": "workspace:*"
   },
   "peerDependencies": {
+    "@react-native-async-storage/async-storage": "*",
     "@react-navigation/native": "*",
+    "@supabase/supabase-js": "*",
     "@tanstack/react-query": "*",
     "@testing-library/react-native": "*",
     "expo": "*",
@@ -80,6 +99,7 @@
     "react-native-gesture-handler": "*",
     "react-native-mmkv": "*",
     "react-native-reanimated": "*",
+    "react-native-url-polyfill": "*",
     "react-native-worklets": "*"
   },
   "peerDependenciesMeta": {

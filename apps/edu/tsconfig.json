@@ -1,9 +1,6 @@
 {
-  "extends": "expo/tsconfig.base",
+  "extends": "@bnewapp/mobile-kit/tsconfig.expo-app.json",
   "compilerOptions": {
-    "strict": true,
-    "allowImportingTsExtensions": true,
-    "noUncheckedIndexedAccess": true,
     "baseUrl": ".",
     "paths": { "@/*": ["./src/*"] }
   },

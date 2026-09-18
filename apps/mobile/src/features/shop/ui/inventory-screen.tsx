@@ -1,5 +1,5 @@
 import { catalogAtom } from "@/features/catalog";
-import { COLORS } from "@bnewapp/mobile-kit/theme/colors";
+import { COLORS } from "@/lib/theme/colors";
 import { MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
 import type { CatalogItemDTO } from "@bnewapp/types";
 import { useAtomValue } from "jotai";

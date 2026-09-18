@@ -1,4 +1,4 @@
-import { renderWithProviders } from "@/test-utils/render-with-providers";
+import { renderWithProviders } from "@bnewapp/mobile-kit/testing";
 import { CURRENT_VERSION, DEFAULT_TEMPLATE_ID } from "@bnewapp/studio-core";
 import type { VisitedStudioRoom } from "@bnewapp/types";
 import { fireEvent, screen } from "@testing-library/react-native";

@@ -57,6 +57,13 @@ config-plugin subpaths instead export JavaScript for configuration tools.
 - `mobile-kit/config-plugins/` holds Expo config plugins both apps apply from their own
   `app.config.ts`. They are plain Node modules run by `expo prebuild`, not RN code, and a
   native-build workaround shared by two apps belongs here rather than duplicated per app.
+- `mobile-kit` also owns the build configuration both apps would otherwise copy:
+  `babel/expo-preset.js`, `metro/expo-app-config.js`, `tsconfig.expo-app.json` and
+  `src/expo/app-config.ts`. Each app keeps a one-line `babel.config.js` and
+  `metro.config.js`, and an `app.config.ts` holding only the values that actually differ.
+  A module reached by Expo's config loader resolves its own imports as ESM, so it imports a
+  sibling through this package's public specifier (`@bnewapp/mobile-kit/api-url`) rather than
+  a relative path, which would need a file extension.
 - Still declare `typecheck` and `test`. Turbo only fans a task out to packages that declare
   it, so a missing script silently drops the package from `corepack pnpm typecheck`, leaving
   its sources checked only through a consuming app's looser tsconfig.

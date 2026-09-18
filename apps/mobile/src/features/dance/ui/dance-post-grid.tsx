@@ -1,4 +1,4 @@
-import { COLORS } from "@bnewapp/mobile-kit/theme/colors";
+import { COLORS } from "@/lib/theme/colors";
 import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import type { DancePostHistoryItem } from "@bnewapp/types";
 import { Image } from "expo-image";
@@ -19,8 +19,8 @@ import { dancePostsAtom, dancePostsInfiniteAtom } from "../_atoms/queries";
 const GRID_GAP = 2;
 
 interface DancePostGridProps {
-  header?: ReactElement;
-  onOpenPost?: (postId: string) => void;
+  header?: ReactElement | undefined;
+  onOpenPost?: ((postId: string) => void) | undefined;
 }
 
 export function DancePostGrid({ header, onOpenPost }: DancePostGridProps) {
@@ -104,7 +104,7 @@ export function DancePostGrid({ header, onOpenPost }: DancePostGridProps) {
 interface DancePostCellProps {
   post: DancePostHistoryItem;
   size: number;
-  onPress?: (postId: string) => void;
+  onPress?: ((postId: string) => void) | undefined;
 }
 
 /**
