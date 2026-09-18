@@ -2,6 +2,7 @@ import RootLayout from "@/app/_layout";
 import { useAuthSession } from "@/lib/auth/session-provider";
 import { render, screen } from "@testing-library/react-native";
 import type { ReactNode } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 // A Stack mock that honors Stack.Protected's guard and prints each screen name,
 // so we can assert which routes the real layout exposes for a given session.
@@ -58,4 +59,13 @@ it("exposes the room route only inside the authenticated stack", () => {
   expect(screen.getByText("room/[ownerId]")).toBeTruthy();
   expect(screen.getByText("dance")).toBeTruthy();
   expect(screen.queryByText("auth")).toBeNull();
+});
+
+// The lesson tempo bar is a gesture consumer and nothing in expo-router mounts this
+// root on our behalf, so its absence would only show on an Android device.
+it("mounts the gesture-handler root above every screen", () => {
+  mockedUseAuth.mockReturnValue({ hydrated: true, session: { user: { id: "u" } } });
+  render(<RootLayout />);
+
+  expect(screen.UNSAFE_getByType(GestureHandlerRootView)).toBeTruthy();
 });

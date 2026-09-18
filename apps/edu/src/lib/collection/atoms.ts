@@ -1,5 +1,5 @@
 import { persistedEduAtom } from "@/lib/jotai/atom-with-mmkv";
-import { atom } from "jotai";
+import { type Setter, atom } from "jotai";
 import { atomFamily } from "jotai-family";
 import { coerceLearnedMoves, coercePersonalRecordings } from "./coerce";
 import {
@@ -92,7 +92,26 @@ export const savePersonalRecordingAtom = atom(
   },
 );
 
-export const deletePersonalRecordingAtom = atom(null, (get, set, moveId: string) => {
-  const recordings = get(personalRecordingsAtom);
-  set(personalRecordingsStorageAtom, deletePersonalRecording(recordings, moveId));
+/**
+ * Reports whether the removal reached the disk. `atomWithStorage` writes its in-memory
+ * value before it persists, so a rejected write would otherwise drop the record from the
+ * screen while the device still holds it, with nothing left to retry from.
+ */
+export const deletePersonalRecordingAtom = atom(null, (get, set, moveId: string): boolean => {
+  const stored = get(personalRecordingsStorageAtom);
+  const next = deletePersonalRecording(get(personalRecordingsAtom), moveId);
+  if (persistRecordings(set, next)) return true;
+  // The in-memory value goes back even when this write cannot reach the disk the first
+  // one failed on: the disk still holds the record, so the two agree again either way.
+  persistRecordings(set, stored);
+  return false;
 });
+
+function persistRecordings(set: Setter, recordings: unknown): boolean {
+  try {
+    set(personalRecordingsStorageAtom, recordings);
+    return true;
+  } catch {
+    return false;
+  }
+}

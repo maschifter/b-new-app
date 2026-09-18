@@ -7,6 +7,7 @@ import { QueryProvider } from "@bnewapp/mobile-kit";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ActivityIndicator, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 // `__DEV__ ? require(...) : null` is the Metro-safe shape: the bundler inlines
@@ -18,17 +19,22 @@ const DevMenu: typeof DevMenuComponent | null = __DEV__
   : null;
 
 export default function RootLayout() {
+  // The lesson tempo bar is a gesture consumer, and nothing in expo-router or
+  // react-navigation mounts this root for us: without it a pan never activates on
+  // Android.
   return (
-    <SafeAreaProvider>
-      <QueryProvider>
-        <AuthSessionProvider>
-          <NativeAnimatedWarningGuard />
-          <RootNavigator />
-          {DevMenu ? <DevMenu /> : null}
-          <StatusBar style="light" />
-        </AuthSessionProvider>
-      </QueryProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <QueryProvider>
+          <AuthSessionProvider>
+            <NativeAnimatedWarningGuard />
+            <RootNavigator />
+            {DevMenu ? <DevMenu /> : null}
+            <StatusBar style="light" />
+          </AuthSessionProvider>
+        </QueryProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 

@@ -1,13 +1,9 @@
 import { deletePersonalRecordingFile, personalRecordingUri } from "@/features/scan/recording-store";
-import {
-  type PersonalRecording,
-  deletePersonalRecordingAtom,
-  personalRecordingsAtom,
-} from "@/lib/collection";
+import { type PersonalRecording, deletePersonalRecordingAtom } from "@/lib/collection";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
 import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import { VideoView, useVideoPlayer } from "expo-video";
-import { useSetAtom, useStore } from "jotai";
+import { useSetAtom } from "jotai";
 import { useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 
@@ -21,7 +17,6 @@ interface PersonalVideoSectionProps {
  * deleting it never touches the learned move or its score.
  */
 export function PersonalVideoSection({ moveId, recording }: PersonalVideoSectionProps) {
-  const store = useStore();
   const dropPointer = useSetAtom(deletePersonalRecordingAtom);
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasDeleteFailed, setHasDeleteFailed] = useState(false);
@@ -39,8 +34,7 @@ export function PersonalVideoSection({ moveId, recording }: PersonalVideoSection
   const deleteRecording = () => {
     const { fileName } = recording;
     setIsPlaying(false);
-    dropPointer(moveId);
-    if (store.get(personalRecordingsAtom)[moveId] !== undefined) {
+    if (!dropPointer(moveId)) {
       setHasDeleteFailed(true);
       return;
     }

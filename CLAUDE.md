@@ -270,10 +270,22 @@ Rules:
 The transport, auth projection, query provider, MMKV/jotai helpers, UI primitives, media
 hooks, theme tokens and jest harness live in **`@bnewapp/mobile-kit`**. Feature code imports
 them from the package directly — `@bnewapp/mobile-kit` (transport helpers, auth/query seam,
-jotai helpers, `QueryProvider`), `@bnewapp/mobile-kit/ui`, `@bnewapp/mobile-kit/theme/colors`
-and the two `@bnewapp/mobile-kit/media/*` hooks. One `exports` entry per concern, so a
-consumer never loads a native dependency it does not use. Change the implementation in
-`mobile-kit`, not in a feature, and never add a second copy of a primitive it already owns.
+jotai helpers, `QueryProvider`), `@bnewapp/mobile-kit/ui`, `@bnewapp/mobile-kit/ui/tempo-bar`,
+`@bnewapp/mobile-kit/ui/tempo-steps`, `@bnewapp/mobile-kit/theme/colors` and the two
+`@bnewapp/mobile-kit/media/*` hooks. One `exports` entry per concern, so a consumer never
+loads a native dependency it does not use — `ui/tempo-bar` sits outside the `ui` barrel
+because it is the only primitive that pulls in react-native-gesture-handler, and
+`ui/tempo-steps` is its scale alone, importable by state code that never renders the bar. Change the implementation in `mobile-kit`, not in a feature, and
+never add a second copy of a primitive it already owns.
+
+`TempoBar` is the shared playback-speed control, rendered by the Stepz feed and the mobile
+lesson screen. It is controlled (`rate` + `onRateChange`) and snaps a drag or a tap to the nearest
+level in `TEMPO_STEPS`; a surface needing its own scale passes `steps`. A surface that lays the bar
+over a pager also passes that pager's `Gesture.Native()` as `pagerGesture` and its `pagerAxis`:
+on a vertical pager the bar keeps every drag that starts on it, and on a horizontal one it
+takes only the vertical drags so a sideways swipe still turns the page. Both apps therefore
+mount `GestureHandlerRootView` at the root of `app/_layout.tsx` — nothing in expo-router
+mounts it, and without it a pan never activates on Android.
 
 `apps/mobile/src/lib/api/client.ts` is the one app-owned module in that seam: the package
 exposes `resolveExpoApiUrl`, and each app calls it once with its own env value and port to
@@ -379,9 +391,11 @@ rendered read-only.
   (`@bnewapp/mobile-kit/testing/jest/config`, spread beside `preset: "jest-expo"` in
   `jest.config.js`). Tests live in `__tests__/` next to the code; `@bnewapp/studio-core`
   is mapped to its `src/` so no dist build is needed. Use React Native Testing Library, and
-  `renderWithProviders` from `@bnewapp/mobile-kit/testing` for provider-dependent trees.
-- **Edu** (`apps/edu`): the same harness and conventions, plus its own gesture-handler setup
-  file and `__mocks__/`. Tests live in `__tests__/` next to the code.
+  `renderWithProviders` from `@bnewapp/mobile-kit/testing` for provider-dependent trees. The
+  harness also installs `react-native-gesture-handler/jestSetup`, because every consumer
+  renders the tempo bar.
+- **Edu** (`apps/edu`): the same harness and conventions, plus its own `__mocks__/`. Tests
+  live in `__tests__/` next to the code.
 - **Server** (`apps/server`): **Vitest** — tests in `apps/server/tests/*.test.ts`. For protected
   routes, cover authentication, invalid boundary input, success/not-found behavior, and
   Supabase failures according to risk.

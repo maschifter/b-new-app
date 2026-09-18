@@ -7,7 +7,6 @@ export {
   learnedCount,
   learnedCountByGenre,
   learnedMovesByGenre,
-  learnedMovesSorted,
   recordFirstScan,
   savePersonalRecording,
   saveConfirmedScore,

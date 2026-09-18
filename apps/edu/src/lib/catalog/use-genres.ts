@@ -1,6 +1,6 @@
 import type { DanceGenre } from "@bnewapp/types";
 import { useAtomValue, useSetAtom } from "jotai";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { cachedGenresAtom, genresQueryAtom, writeGenresCacheAtom } from "./genres";
 
 export interface GenresState {
@@ -8,6 +8,10 @@ export interface GenresState {
   genres: DanceGenre[];
   /** `true` while the list is still unknown, which is not the same as empty. */
   isPending: boolean;
+  /** `true` once the fetch has failed. A cold cache alongside it means still unknown. */
+  isError: boolean;
+  /** Fetches again, for a screen that has no error boundary above it to retry from. */
+  retry: () => void;
 }
 
 /**
@@ -17,7 +21,16 @@ export interface GenresState {
 export function useGenres(): GenresState {
   const query = useAtomValue(genresQueryAtom);
   const cached = useAtomValue(cachedGenresAtom);
-  return { genres: query.data ?? cached, isPending: query.isPending };
+  const { refetch } = query;
+  const retry = useCallback(() => {
+    void refetch();
+  }, [refetch]);
+  return {
+    genres: query.data ?? cached,
+    isPending: query.isPending,
+    isError: query.isError,
+    retry,
+  };
 }
 
 /**

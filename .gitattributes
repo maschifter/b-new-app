@@ -1,0 +1,7 @@
+# Biome writes LF into every source file it formats, so git stores and checks out LF
+# for them. Without this, a Windows checkout re-commits a whole file as changed the
+# first time the formatter touches it.
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.json text eol=lf

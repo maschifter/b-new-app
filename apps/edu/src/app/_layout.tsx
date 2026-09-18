@@ -22,9 +22,9 @@ const DevMenu: typeof DevMenuComponent | null = __DEV__
   : null;
 
 export default function RootLayout() {
-  // The feed's tempo bar is this monorepo's first gesture consumer, and nothing in
-  // expo-router or react-navigation mounts this root for us: without it a pan never
-  // activates on Android.
+  // The feed's tempo bar is a gesture consumer, and nothing in expo-router or
+  // react-navigation mounts this root for us: without it a pan never activates on
+  // Android.
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>

@@ -82,7 +82,6 @@ export function StyleSection({ genre, onOpenStyle, onOpenMove }: StyleSectionPro
         ItemSeparatorComponent={() => <View style={{ width: ROW_GAP }} />}
         contentContainerStyle={{ paddingHorizontal: ROW_PADDING }}
         showsHorizontalScrollIndicator={false}
-        removeClippedSubviews
         windowSize={3}
       />
     </View>

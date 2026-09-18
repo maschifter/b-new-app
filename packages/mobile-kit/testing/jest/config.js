@@ -3,7 +3,12 @@
 // Spread beside `preset: "jest-expo"` — jest's `preset` key is singular, so this
 // cannot itself be a preset.
 const mobileKitJestConfig = {
-  setupFiles: [require.resolve("./setup.js")],
+  setupFiles: [
+    require.resolve("./setup.js"),
+    // Both apps and this package render the tempo bar, so the gesture mocks belong
+    // to the shared harness rather than to one consumer.
+    require.resolve("react-native-gesture-handler/jestSetup"),
+  ],
   setupFilesAfterEnv: [require.resolve("./after-env.js")],
   moduleNameMapper: {
     ".css$": require.resolve("./style-mock.js"),

@@ -354,13 +354,13 @@ it("hands the focused move to the scan route and the profile to its route prop",
   expect(onOpenProfile).toHaveBeenCalledTimes(1);
 });
 
-it("changes speed continuously through the drag, within the shared 0.5x to 1.5x bounds", async () => {
+it("snaps the drag onto a tempo level, within the shared 0.5x to 1.5x bounds", async () => {
   const store = await mount();
   await screen.findByLabelText("Dance this Move, Move a");
 
   const barHeight = Math.round(Dimensions.get("window").height * 0.36);
   await act(async () => {
-    fireGestureHandler(getByGestureTestId("feed-tempo-pan"), [
+    fireGestureHandler(getByGestureTestId("tempo-bar-pan"), [
       { state: State.BEGAN, translationY: 0 },
       { state: State.ACTIVE, translationY: 0 },
       { translationY: -barHeight / 4 },
@@ -371,7 +371,7 @@ it("changes speed continuously through the drag, within the shared 0.5x to 1.5x 
   expect(store.get(playbackRateAtom)).toBeCloseTo(1.25, 5);
 
   await act(async () => {
-    fireGestureHandler(getByGestureTestId("feed-tempo-pan"), [
+    fireGestureHandler(getByGestureTestId("tempo-bar-pan"), [
       { state: State.BEGAN, translationY: 0 },
       { state: State.ACTIVE, translationY: 0 },
       { translationY: barHeight * 4 },
@@ -388,10 +388,10 @@ it("keeps the tempo value off the screen outside an interaction", async () => {
   await mount();
   await screen.findByLabelText("Dance this Move, Move a");
 
-  expect(screen.queryByTestId("feed-tempo-value")).toBeNull();
+  expect(screen.queryByTestId("tempo-bar-value")).toBeNull();
 
   await act(async () => {
-    fireGestureHandler(getByGestureTestId("feed-tempo-pan"), [
+    fireGestureHandler(getByGestureTestId("tempo-bar-pan"), [
       { state: State.BEGAN, translationY: 0 },
       { state: State.ACTIVE, translationY: 0 },
       { translationY: -10 },
@@ -399,7 +399,7 @@ it("keeps the tempo value off the screen outside an interaction", async () => {
     ]);
   });
 
-  expect(screen.queryByTestId("feed-tempo-value")).toBeNull();
+  expect(screen.queryByTestId("tempo-bar-value")).toBeNull();
 });
 
 it("pages through the server cursor rather than the flattened list length", async () => {
@@ -427,7 +427,7 @@ it("blocks the pager's own scroll gesture while the tempo bar is dragged", async
   await mount();
   await screen.findByLabelText("Dance this Move, Move a");
 
-  const pan = getByGestureTestId("feed-tempo-pan");
+  const pan = getByGestureTestId("tempo-bar-pan");
   const pager = getByGestureTestId("feed-pager-native");
 
   expect(pager.handlerTag).toBeGreaterThan(0);

@@ -91,11 +91,6 @@ function byLearnedAtDescending(left: LearnedMove, right: LearnedMove): number {
   return left.moveId < right.moveId ? -1 : left.moveId > right.moveId ? 1 : 0;
 }
 
-/** Every learned move, most recently learned first. */
-export function learnedMovesSorted(moves: Record<string, LearnedMove>): LearnedMove[] {
-  return Object.values(moves).sort(byLearnedAtDescending);
-}
-
 /**
  * The learned moves in one genre, same ordering rule. `genreIds` is a list, so a move
  * carrying two genres belongs to both sections.

@@ -5,7 +5,6 @@ import {
   learnedCount,
   learnedCountByGenre,
   learnedMovesByGenre,
-  learnedMovesSorted,
   recordFirstScan,
   saveConfirmedScore,
   savePersonalRecording,
@@ -77,22 +76,6 @@ describe("averageScorePercent", () => {
   });
 });
 
-describe("learnedMovesSorted", () => {
-  it("puts the most recently learned move first", () => {
-    const moves = learn(learn({}, "a", 40), "b", 60, { now: LATER });
-
-    expect(learnedMovesSorted(moves).map((move) => move.moveId)).toEqual(["b", "a"]);
-  });
-
-  it("breaks a shared timestamp on moveId, so the order does not depend on insertion", () => {
-    const first = learn(learn({}, "b", 40), "a", 60);
-    const second = learn(learn({}, "a", 60), "b", 40);
-
-    expect(learnedMovesSorted(first).map((move) => move.moveId)).toEqual(["a", "b"]);
-    expect(learnedMovesSorted(second).map((move) => move.moveId)).toEqual(["a", "b"]);
-  });
-});
-
 describe("learnedMovesByGenre", () => {
   it("lists a genre's moves most recently learned first", () => {
     const moves = learn(
@@ -103,6 +86,14 @@ describe("learnedMovesByGenre", () => {
     );
 
     expect(learnedMovesByGenre(moves, "hiphop").map((move) => move.moveId)).toEqual(["b", "a"]);
+  });
+
+  it("breaks a shared timestamp on moveId, so the order does not depend on insertion", () => {
+    const first = learn(learn({}, "b", 40), "a", 60);
+    const second = learn(learn({}, "a", 60), "b", 40);
+
+    expect(learnedMovesByGenre(first, "hiphop").map((move) => move.moveId)).toEqual(["a", "b"]);
+    expect(learnedMovesByGenre(second, "hiphop").map((move) => move.moveId)).toEqual(["a", "b"]);
   });
 
   it("returns a move that belongs to two genres from both, and the learned count counts it once", () => {

@@ -1,6 +1,7 @@
 import { genresAtom } from "@/lib/catalog";
 import { COLORS } from "@/lib/theme/colors";
 import { BouncablePress, DanceSkeleton, MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
+import { TempoBar } from "@bnewapp/mobile-kit/ui/tempo-bar";
 import type { DanceGenre, DanceMove } from "@bnewapp/types";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -17,7 +18,7 @@ import {
   type ViewToken,
   useWindowDimensions,
 } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { Gesture, GestureDetector, type NativeGesture } from "react-native-gesture-handler";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { feedMovesAtom, feedMovesInfiniteAtom } from "../_atoms/queries";
 import {
@@ -34,7 +35,6 @@ import { FEED_LEVELS, levelLabel } from "../data/levels";
 import { FeedFilterSheet, type FilterOption } from "./feed-filter-sheet";
 import { FeedMovePage } from "./feed-move-page";
 import { ProTipOverlay, hasProTip } from "./pro-tip-overlay";
-import { TempoBar } from "./tempo-bar";
 
 interface FeedScreenProps {
   onOpenProfile: () => void;
@@ -160,6 +160,30 @@ function FilterButton({
       <Text className="font-bold text-foreground text-sm">{label}</Text>
       <Ionicons name="chevron-down" size={14} color={COLORS.foreground} />
     </BouncablePress>
+  );
+}
+
+// The rate is read here rather than in the pager, so a drag re-renders the bar alone
+// instead of the whole full-screen page under it.
+function FeedTempoBar({
+  height,
+  pagerGesture,
+  onDragChange,
+}: {
+  height: number;
+  pagerGesture: NativeGesture;
+  onDragChange: (dragging: boolean) => void;
+}) {
+  const [rate, setRate] = useAtom(playbackRateAtom);
+
+  return (
+    <TempoBar
+      height={height}
+      rate={rate}
+      onRateChange={setRate}
+      pagerGesture={pagerGesture}
+      onDragChange={onDragChange}
+    />
   );
 }
 
@@ -316,7 +340,7 @@ function FeedPager({ onOpenProfile }: FeedScreenProps) {
           className="absolute right-3"
           style={{ bottom: insets.bottom + 150 }}
         >
-          <TempoBar
+          <FeedTempoBar
             height={Math.round(height * 0.36)}
             pagerGesture={pagerGesture}
             onDragChange={setTempoDragging}

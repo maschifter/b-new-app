@@ -2,6 +2,7 @@ import { danceMoveDetailAtomFamily } from "@bnewapp/dance-flow/atoms";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
 import { COLORS } from "@bnewapp/mobile-kit/theme/colors";
 import { BouncablePress, DanceSkeleton, MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
+import { TempoBar } from "@bnewapp/mobile-kit/ui/tempo-bar";
 import type { DanceMove } from "@bnewapp/types";
 import { Ionicons } from "@expo/vector-icons";
 import { VideoView, useVideoPlayer } from "expo-video";
@@ -15,6 +16,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { danceVideoRateAtom } from "../_atoms/ui";
 
@@ -23,6 +25,14 @@ interface LearnDanceScreenProps {
   onBack?: () => void;
   onStartRecording?: () => void;
 }
+
+/**
+ * The column the tempo bar is laid into. The player keeps its own native controls, so the
+ * bar sits beside it rather than over it: a control cluster under the bar's pan area would
+ * be unreachable while the controls overlay is up. Every lesson page reserves this much on
+ * its right, and the bar is centred in what it leaves.
+ */
+const TEMPO_GUTTER = 64;
 
 export function LearnDanceScreen({ moveId, onBack, onStartRecording }: LearnDanceScreenProps) {
   return (
@@ -43,6 +53,10 @@ function LearnDanceContent({ moveId, onBack, onStartRecording }: LearnDanceScree
   const videos = useMemo(() => lessonVideos(move), [move]);
   const [videoAreaHeight, setVideoAreaHeight] = useState(0);
   const [activeVideoIndex, setActiveVideoIndex] = useState(0);
+  const [tempoDragging, setTempoDragging] = useState(false);
+  // Created once: a new instance each render would carry a new handler tag and leave
+  // the tempo bar blocking a handler that no longer exists.
+  const pagerGesture = useMemo(() => Gesture.Native().withTestId("dance-lesson-pager"), []);
   const onVideoAreaLayout = (event: LayoutChangeEvent) => {
     setVideoAreaHeight(event.nativeEvent.layout.height);
   };
@@ -76,26 +90,47 @@ function LearnDanceContent({ moveId, onBack, onStartRecording }: LearnDanceScree
         </View>
       </View>
       {videos.length > 0 ? (
-        <View className="flex-1" onLayout={onVideoAreaLayout}>
-          <FlatList
-            horizontal
-            testID="dance-lesson-videos"
-            pagingEnabled
-            data={videos}
-            extraData={activeVideoIndex}
-            keyExtractor={(video) => video.label}
-            renderItem={({ item, index }) => (
-              <LessonVideo
-                video={item}
-                width={width}
-                height={videoAreaHeight}
+        <View testID="dance-lesson-stage" className="flex-1" onLayout={onVideoAreaLayout}>
+          <GestureDetector gesture={pagerGesture}>
+            <FlatList
+              horizontal
+              testID="dance-lesson-videos"
+              pagingEnabled
+              data={videos}
+              extraData={activeVideoIndex}
+              keyExtractor={(video) => video.label}
+              renderItem={({ item, index }) => (
+                <LessonVideo
+                  video={item}
+                  width={width}
+                  height={videoAreaHeight}
+                  rate={rate}
+                  playing={index === activeVideoIndex}
+                />
+              )}
+              scrollEnabled={!tempoDragging}
+              onMomentumScrollEnd={onVideoPageChanged}
+              showsHorizontalScrollIndicator={false}
+            />
+          </GestureDetector>
+          {videoAreaHeight > 0 ? (
+            <View
+              testID="dance-tempo-gutter"
+              pointerEvents="box-none"
+              className="absolute right-0 items-center"
+              style={{ width: TEMPO_GUTTER, bottom: Math.round(videoAreaHeight * 0.22) }}
+            >
+              <TempoBar
+                height={Math.round(videoAreaHeight * 0.45)}
                 rate={rate}
-                playing={index === activeVideoIndex}
+                onRateChange={setRate}
+                pagerGesture={pagerGesture}
+                pagerAxis="horizontal"
+                onDragChange={setTempoDragging}
+                showValueAtRest
               />
-            )}
-            onMomentumScrollEnd={onVideoPageChanged}
-            showsHorizontalScrollIndicator={false}
-          />
+            </View>
+          ) : null}
         </View>
       ) : (
         <View className="mx-4 flex-1 items-center justify-center rounded-3xl border border-border bg-panel px-8">
@@ -107,7 +142,6 @@ function LearnDanceContent({ moveId, onBack, onStartRecording }: LearnDanceScree
           </Text>
         </View>
       )}
-      <PlaybackRateBar rate={rate} onChange={setRate} />
       {onStartRecording ? (
         <BouncablePress
           accessibilityRole="button"
@@ -159,10 +193,17 @@ function LessonVideo({
   }, [player, rate]);
   useFocusedPlayback(player, playing);
   return (
-    <View style={{ width, height }} className="gap-2 px-4 pb-2">
+    <View
+      testID="dance-lesson-page"
+      // The page stays the full window width so a sideways swipe pages from anywhere,
+      // including the gutter; only the player inside it gives the column up.
+      style={{ width, height, paddingRight: TEMPO_GUTTER }}
+      className="gap-2 pl-4 pb-2"
+    >
       <Text className="text-sm font-bold text-copy">{video.label}</Text>
       <View className="flex-1 overflow-hidden rounded-3xl bg-black">
         <VideoView
+          testID="dance-lesson-video"
           player={player}
           nativeControls
           contentFit="cover"
@@ -172,33 +213,3 @@ function LessonVideo({
     </View>
   );
 }
-
-function PlaybackRateBar({ rate, onChange }: { rate: number; onChange: (rate: number) => void }) {
-  return (
-    <View
-      accessibilityRole="toolbar"
-      accessibilityLabel="Playback speed"
-      className="flex-row justify-center gap-2 px-4"
-    >
-      {PLAYBACK_RATES.map((value) => {
-        const selected = rate === value;
-        return (
-          <BouncablePress
-            key={value}
-            accessibilityRole="button"
-            accessibilityLabel={`Set playback speed to ${value}x`}
-            accessibilityState={{ selected }}
-            onPress={() => onChange(value)}
-            className={`rounded-full border px-4 py-2 ${selected ? "border-neon bg-neon/20" : "border-border"}`}
-          >
-            <Text className={selected ? "font-bold text-foreground" : "font-bold text-copy"}>
-              {value}×
-            </Text>
-          </BouncablePress>
-        );
-      })}
-    </View>
-  );
-}
-
-const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5];

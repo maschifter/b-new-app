@@ -120,6 +120,26 @@ describe("the style sections", () => {
     expect(screen.queryAllByTestId("profile-empty-slot", HIDDEN)).toHaveLength(0);
   });
 
+  // The sections are the only door into the collection, so a permanent "no styles" would
+  // lock a user with learned moves out of their own moves.
+  it("offers a retry rather than an empty when the fetch fails with nothing cached", async () => {
+    mockedGetGenres.mockRejectedValue(new Error("offline"));
+    const { store } = createTestStore({ auth: AUTH });
+    learn(store, "a", 70);
+
+    await mount(store);
+
+    expect(await screen.findByLabelText("Retry loading your styles")).toBeOnTheScreen();
+    expect(screen.queryByText("No styles to show yet.")).toBeNull();
+    expect(screen.queryByTestId("profile-sections")).toBeNull();
+
+    mockedGetGenres.mockResolvedValue([HIP_HOP]);
+    await fireEventAsync.press(screen.getByLabelText("Retry loading your styles"));
+
+    expect(await screen.findByText("Hip Hop")).toBeOnTheScreen();
+    expect(screen.queryByLabelText("Retry loading your styles")).toBeNull();
+  });
+
   it("pads an unlearned style with non-interactive empty slots and disables its See More", async () => {
     const store = storeWithCachedGenres([AFRO]);
 

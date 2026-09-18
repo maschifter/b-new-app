@@ -18,9 +18,6 @@ export const playbackRateAtom = atom(1);
 /** `null` = the Pro Tip overlay is closed. */
 export const proTipMoveIdAtom = atom<string | null>(null);
 
-export const MIN_PLAYBACK_RATE = 0.5;
-export const MAX_PLAYBACK_RATE = 1.5;
-
 /**
  * A filter change replaces the whole result set, so the index into it has to go back
  * to 0 with the rate. Resetting only the rate strands the index past the end of a

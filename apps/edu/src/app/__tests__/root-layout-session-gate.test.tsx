@@ -85,8 +85,8 @@ it("exposes the full route set once the session is ready", () => {
   }
 });
 
-// The tempo bar in the feed is this repository's first gesture consumer and nothing
-// in the navigation stack mounts this root on our behalf.
+// The tempo bar in the feed is a gesture consumer and nothing in the navigation
+// stack mounts this root on our behalf.
 it("mounts the gesture-handler root above every screen", () => {
   mockedUseSession.mockReturnValue({ status: "ready", session: { user: { id: "anon" } }, retry });
   render(<RootLayout />);

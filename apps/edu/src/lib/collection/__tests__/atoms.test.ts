@@ -113,3 +113,24 @@ it("keeps the learned move when its personal recording is deleted", () => {
   expect(store.get(personalRecordingsAtom)).toEqual({});
   expect(store.get(learnedMovesAtom).a?.savedScore).toBe(70);
 });
+
+it("reports a rejected delete and puts the record back", () => {
+  const store = createStore();
+  learn(store, "a", 70);
+  store.set(savePersonalRecordingAtom, { moveId: "a", fileName: "a.mp4", durationS: 8 });
+  const write = MMKV.prototype.set;
+  const rejected = jest.spyOn(MMKV.prototype, "set").mockImplementation((key, value) => {
+    if (key.endsWith("personal-recordings")) throw new Error("the device rejected the write");
+    write.call(eduStore, key, value);
+  });
+
+  expect(store.set(deletePersonalRecordingAtom, "a")).toBe(false);
+  // What the screen reads now matches the disk the write never reached, so its retry
+  // still has both the record and the file it is about.
+  expect(store.get(personalRecordingsAtom).a?.fileName).toBe("a.mp4");
+
+  rejected.mockRestore();
+
+  expect(store.set(deletePersonalRecordingAtom, "a")).toBe(true);
+  expect(store.get(personalRecordingsAtom)).toEqual({});
+});

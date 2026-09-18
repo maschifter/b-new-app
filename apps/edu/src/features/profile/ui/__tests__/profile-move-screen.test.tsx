@@ -8,6 +8,7 @@ import {
 import { type TestStore, createTestStore, renderWithProviders } from "@bnewapp/mobile-kit/testing";
 import { act, fireEventAsync, screen } from "@testing-library/react-native";
 import { Alert } from "react-native";
+import { MMKV } from "react-native-mmkv";
 import { ProfileMoveScreen } from "../profile-move-screen";
 
 const mockPush = jest.fn();
@@ -29,20 +30,19 @@ jest.mock("@/features/scan/recording-store", () => ({
   deletePersonalRecordingFile: jest.fn(),
 }));
 
-// The store rejects a write by keeping the record, which is the only failure the delete
-// order leaves any UI to retry from.
-const mockRejectPointerWrite = { current: false };
-jest.mock("@/lib/collection", () => {
-  const actual = jest.requireActual<typeof import("@/lib/collection")>("@/lib/collection");
-  const { atom } = require("jotai") as typeof import("jotai");
-  return {
-    ...actual,
-    deletePersonalRecordingAtom: atom(null, (_get, set, moveId: string) => {
-      if (mockRejectPointerWrite.current) return;
-      set(actual.deletePersonalRecordingAtom, moveId);
-    }),
-  };
-});
+/**
+ * Makes the device reject the one write the delete has to persist, which is the failure
+ * the retry exists for. It has to come from the device: `atomWithStorage` drops its
+ * in-memory value before it ever reaches storage, so nothing above it can refuse a write.
+ */
+function rejectRecordingWrites() {
+  const write = MMKV.prototype.set;
+  const device = new MMKV({ id: "edu" });
+  return jest.spyOn(MMKV.prototype, "set").mockImplementation((key, value) => {
+    if (key.endsWith("personal-recordings")) throw new Error("the device rejected the write");
+    write.call(device, key, value);
+  });
+}
 
 const { deletePersonalRecordingFile } = jest.requireMock("@/features/scan/recording-store") as {
   deletePersonalRecordingFile: jest.Mock;
@@ -93,7 +93,6 @@ beforeEach(() => {
   mockPush.mockReset();
   onBack.mockReset();
   deletePersonalRecordingFile.mockReset();
-  mockRejectPointerWrite.current = false;
   jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
 });
 
@@ -132,20 +131,23 @@ it("deletes the pointer first and then the file, leaving the learned move and it
   expect(screen.getByText("Two Step")).toBeOnTheScreen();
 });
 
-it("keeps the video on screen with a Retry when the pointer write is rejected", async () => {
-  mockRejectPointerWrite.current = true;
+it("keeps the video on screen with a Retry when the device rejects the write", async () => {
   const store = storeWithLearnedMove({ withRecording: true });
   await mount(store);
+  const rejectedWrite = rejectRecordingWrites();
 
   await confirmDelete();
 
   expect(screen.getByText("Couldn't delete your video")).toBeOnTheScreen();
   expect(screen.getByText("My Video")).toBeOnTheScreen();
+  // Both halves of the rollback: the record the screen reads is the record the device
+  // still holds, so the retry is offered against a state that actually exists.
+  expect(store.get(personalRecordingsAtom)[MOVE_ID]?.fileName).toBe(FILE_NAME);
   // The file outlives a pointer that is still there; deleting it would be the one state
   // that renders a broken video.
   expect(deletePersonalRecordingFile).not.toHaveBeenCalled();
 
-  mockRejectPointerWrite.current = false;
+  rejectedWrite.mockRestore();
   await act(async () => {
     await fireEventAsync.press(screen.getByLabelText("Retry deleting my video"));
   });

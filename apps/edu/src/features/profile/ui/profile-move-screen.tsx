@@ -91,6 +91,7 @@ function OfficialVideo({ url, onBack }: { url: string; onBack: () => void }) {
   const [isPlaying, setIsPlaying] = useState(true);
   const player = useVideoPlayer(url, (created) => {
     created.loop = true;
+    created.muted = true;
   });
   useFocusedPlayback(player, isPlaying);
 
