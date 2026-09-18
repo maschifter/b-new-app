@@ -1,6 +1,8 @@
 import { validatePublishedBuildApiUrl } from "@bnewapp/mobile-kit/api-url";
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
+type ExpoPlugin = NonNullable<ExpoConfig["plugins"]>[number];
+
 interface ExpoAppConfigOptions {
   /** Product name, before the build-profile suffix. */
   name: string;
@@ -11,6 +13,13 @@ interface ExpoAppConfigOptions {
   bundleIdentifier: string;
   /** Why this app films the user, shown in the iOS permission prompt. */
   cameraUsageDescription: string;
+  /**
+   * Why this app writes a video to the device gallery, shown in the iOS permission
+   * prompt. Present only in an app that offers that export: it is what adds
+   * `expo-media-library`'s config plugin, so an app that omits it ships neither the
+   * permission nor the native module.
+   */
+  photoLibraryAddUsageDescription?: string | undefined;
 }
 
 function buildProfileSuffix(buildProfile: string | undefined): string {
@@ -51,6 +60,7 @@ export function createExpoAppConfig({
   version,
   bundleIdentifier,
   cameraUsageDescription,
+  photoLibraryAddUsageDescription,
 }: ExpoAppConfigOptions): (context: ConfigContext) => ExpoConfig {
   const buildProfile = process.env.EAS_BUILD_PROFILE;
 
@@ -60,6 +70,24 @@ export function createExpoAppConfig({
 
   const suffix = buildProfileSuffix(buildProfile);
   const appDisplayName = displayName(name, buildProfile);
+
+  // Write only: the app saves a clip to the gallery and never reads it back, so the read
+  // prompt is deleted (`false`) rather than left to the plugin's generic default, and
+  // Android is narrowed to video from the plugin's photo + video + audio.
+  const galleryPlugins: ExpoPlugin[] =
+    photoLibraryAddUsageDescription === undefined
+      ? []
+      : [
+          [
+            "expo-media-library",
+            {
+              photosPermission: false,
+              savePhotosPermission: photoLibraryAddUsageDescription,
+              isAccessMediaLocationEnabled: false,
+              granularPermissions: ["video"],
+            },
+          ],
+        ];
 
   return ({ config }: ConfigContext): ExpoConfig => ({
     ...config,
@@ -90,6 +118,7 @@ export function createExpoAppConfig({
       // Playback only: both recorders capture video with audio disabled, so the
       // plugin's default microphone permission and background services are opted out.
       ["expo-audio", { recordAudioAndroid: false, enableBackgroundPlayback: false }],
+      ...galleryPlugins,
       "@bnewapp/mobile-kit/config-plugins/with-ios-min-deployment-target",
     ],
     experiments: { typedRoutes: true },

@@ -2,10 +2,17 @@ import { deletePersonalRecordingFile, personalRecordingUri } from "@/features/sc
 import { type PersonalRecording, deletePersonalRecordingAtom } from "@/lib/collection";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
 import { BouncablePress } from "@bnewapp/mobile-kit/ui";
+import * as MediaLibrary from "expo-media-library";
+import * as Sharing from "expo-sharing";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useSetAtom } from "jotai";
 import { useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
+
+interface ExportMessage {
+  tone: "error" | "success";
+  text: string;
+}
 
 interface PersonalVideoSectionProps {
   moveId: string;
@@ -20,8 +27,11 @@ export function PersonalVideoSection({ moveId, recording }: PersonalVideoSection
   const dropPointer = useSetAtom(deletePersonalRecordingAtom);
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasDeleteFailed, setHasDeleteFailed] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState<ExportMessage | null>(null);
 
-  const player = useVideoPlayer(personalRecordingUri(recording.fileName), (created) => {
+  const videoUri = personalRecordingUri(recording.fileName);
+  const player = useVideoPlayer(videoUri, (created) => {
     created.loop = true;
   });
   useFocusedPlayback(player, isPlaying);
@@ -39,6 +49,61 @@ export function PersonalVideoSection({ moveId, recording }: PersonalVideoSection
       return;
     }
     deletePersonalRecordingFile(fileName);
+  };
+
+  /**
+   * Both exports read the file and write nothing, so neither can leave the collection
+   * half-changed: every failure below is a message over a recording that is still there.
+   * One flag for both, because they share the one file and a second tap mid-export would
+   * either save the clip twice or open a sheet behind the first one.
+   */
+  const download = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    setExportMessage(null);
+    try {
+      // Asked at the tap and never at mount: a gallery prompt on a screen the user only
+      // opened to watch a video is a prompt they have no reason to grant.
+      const permission = await MediaLibrary.requestPermissionsAsync(true, ["video"]);
+      if (!permission.granted) {
+        setExportMessage({
+          tone: "error",
+          text: permission.canAskAgain
+            ? "Stepz needs access to your gallery to save this video."
+            : "Allow gallery access for Stepz in Settings, then tap Download again.",
+        });
+        return;
+      }
+      await MediaLibrary.saveToLibraryAsync(videoUri);
+      setExportMessage({ tone: "success", text: "Saved to your gallery" });
+    } catch {
+      setExportMessage({ tone: "error", text: "Couldn't save to your gallery. Try again." });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const share = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    setExportMessage(null);
+    try {
+      if (!(await Sharing.isAvailableAsync())) {
+        setExportMessage({ tone: "error", text: "Sharing isn't available on this device." });
+        return;
+      }
+      // A cancelled sheet resolves exactly like a completed one. Nothing here writes, so
+      // the two outcomes are the same state and the difference does not have to be known.
+      await Sharing.shareAsync(videoUri, {
+        mimeType: "video/mp4",
+        UTI: "public.mpeg-4",
+        dialogTitle: "Share your dance",
+      });
+    } catch {
+      setExportMessage({ tone: "error", text: "Couldn't share your video. Try again." });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const confirmDelete = () => {
@@ -82,6 +147,36 @@ export function PersonalVideoSection({ moveId, recording }: PersonalVideoSection
           <Text className="font-bold text-base text-danger">Delete Video</Text>
         </BouncablePress>
       </View>
+      <View className="flex-row gap-3">
+        <BouncablePress
+          accessibilityRole="button"
+          accessibilityLabel="Download my video"
+          accessibilityState={{ disabled: isExporting }}
+          disabled={isExporting}
+          onPress={() => void download()}
+          className="min-h-11 flex-1 items-center justify-center rounded-2xl bg-panel-raised px-4"
+        >
+          <Text className="font-bold text-base text-foreground">Download</Text>
+        </BouncablePress>
+        <BouncablePress
+          accessibilityRole="button"
+          accessibilityLabel="Share my video"
+          accessibilityState={{ disabled: isExporting }}
+          disabled={isExporting}
+          onPress={() => void share()}
+          className="min-h-11 flex-1 items-center justify-center rounded-2xl bg-panel-raised px-4"
+        >
+          <Text className="font-bold text-base text-foreground">Share</Text>
+        </BouncablePress>
+      </View>
+      {exportMessage === null ? null : (
+        <Text
+          accessibilityLiveRegion="polite"
+          className={exportMessage.tone === "error" ? "text-danger text-sm" : "text-copy text-sm"}
+        >
+          {exportMessage.text}
+        </Text>
+      )}
       {hasDeleteFailed ? (
         <View className="gap-2">
           <Text accessibilityLiveRegion="polite" className="text-danger text-sm">

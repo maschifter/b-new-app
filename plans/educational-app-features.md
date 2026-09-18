@@ -461,7 +461,7 @@ phase with visible behavior ends with a device run.
 | S1 — Level filter | — | `level` filter on `GET /api/dance/moves`. ~~`GET /api/dance/catalog-summary`~~ **cut** — see `plans/educational-app-level-filter.md` |
 | F1 — Feed | S1 | Vertical pager, filters, tempo bar, Pro Tip, CTA, permission entry |
 | F2 — Scan seam | D1, F1 | Stepz result screen, score confirmation, video decision, upload cleanup |
-| F3 — Profile & collection | D1, F2 | Overview, style rows, move detail, video actions, Scan Again |
+| F3 — Profile & collection | D1, F2 | **Built — F3a 2026-09-17, F3b 2026-09-18.** Overview, style rows, move detail, video actions, Scan Again |
 | S3 — Retention backstop | F2 | **Built 2026-09-18.** Sweep terminal anonymous scan posts + their storage objects |
 | F4 — Likes | §3.2 answer | **Unscheduled.** Only if the owner overrides the brief |
 

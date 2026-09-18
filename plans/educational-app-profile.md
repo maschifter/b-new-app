@@ -1,10 +1,29 @@
 # Stepz — F3: Profile & Collection
 
-Status: **F3a implemented 2026-09-17; §7's device checklist is partly open. F3b is not started
-and stays blocked on §10 question 1.** Written 2026-09-17 against `efba755`; every file and line
-reference below was checked against the working tree as it stood then. F3 is the last product
-phase of the Stepz programme — D1, S1, F1 and F2 are shipped, S3 (the retention backstop) is
-still open and is *not* part of this plan.
+Status: **F3a implemented 2026-09-17, F3b implemented 2026-09-18; §7's device checklist is
+partly open for both.** Written 2026-09-17 against `efba755`; every file and line reference
+below was checked against the working tree as it stood then. F3 is the last product phase of the
+Stepz programme — D1, S1, F1, F2 and S3 are all shipped, so this plan closes it.
+
+What F3b shipped, after the owner approved §10 question 1 on 2026-09-18: `expo-media-library`
+`~55.0.19` and `expo-sharing` `~55.0.22` in `apps/edu` alone, the iOS add-permission string, and
+§4.5's two actions in `personal-video-section.tsx` with their permission, failure and
+unavailable states. Two things the plan did not decide:
+
+- **The permission is declared through the shared config factory, not `apps/edu/app.config.ts`
+  directly.** That file only calls `createExpoAppConfig`, so the factory gained one optional
+  option — `photoLibraryAddUsageDescription` — whose presence is what adds the
+  `expo-media-library` plugin. An app that omits it ships neither the permission nor the plugin,
+  which is how `apps/mobile` stays untouched (verified: its introspected config carries no
+  `NSPhotoLibrary*` key).
+- **The plugin is narrowed to writing video.** `photosPermission: false` deletes
+  `NSPhotoLibraryUsageDescription` rather than letting the plugin write its generic default, and
+  `granularPermissions: ["video"]` drops `READ_MEDIA_IMAGES` and `READ_MEDIA_AUDIO`. The
+  regenerated Android manifest was checked against exactly that.
+
+`corepack pnpm edu:prebuild` ran on Windows, so it regenerated `android/` only; the iOS keys were
+verified through `expo config --type introspect` instead. iOS therefore stays **declared but
+unexercised**, as §9 planned.
 
 What F3a shipped: §4.2's three helpers and their two derived atoms, §4.1's move of the genres to
 `apps/edu/src/lib/catalog/` with its MMKV cache and the root layout's single writer, and §4.3's
@@ -41,8 +60,8 @@ outside this repository has to be opened to execute it.
 
 **Prerequisites: none for §5's F3a.** The local collection (`d481648`) holds everything the
 browse surface renders, and no server change, migration, `db:push` approval or new dependency is
-needed for it. **F3b is gated** on one product decision — §10's question 1, two new native
-dependencies — and is the only part of this plan that needs a prebuild.
+needed for it. **F3b's gate is cleared** — §10's question 1 was approved on 2026-09-18 — and it
+is the only part of this plan that needed a prebuild.
 
 ---
 
@@ -181,7 +200,7 @@ and §4.1's disk cache is what makes even that rare.
 | Detail video | `LearnedMoveSnapshot.videoUrl`, played with `expo-video` | Already resolved through the feed's fallback chain at learn time |
 | Delete Video | Drops the pointer first, then deletes the file. **Retry covers the pointer write only** | A pointer to a missing file is the one state that renders a broken video; the reverse order creates it. Once the pointer is gone the section is gone, so a file failure has no UI left to retry from — the next launch's reconciliation collects it (§2.6) |
 | Scan Again | `router.push("/move/<id>/scan")` | Reuses F2 unchanged; the flow's own exit already lands on the profile |
-| Download / Share | **F3b, behind §10 question 1** | Two new native dependencies and a prebuild; they must not hold up the browse surface |
+| Download / Share | **F3b, shipped 2026-09-18** | Read-only exports: every failure is a message over a recording that is still there. One busy flag for both, so a second tap cannot save the clip twice or stack two sheets |
 
 ---
 
@@ -405,7 +424,7 @@ scroll position — is accepted in v1 and is listed in §10 so the owner can ove
    Play and Delete.
 6. Device run (§7), then the commit.
 
-**F3b — export actions** (blocked on §10 question 1, separate commit)
+**F3b — export actions** (§10 question 1 approved 2026-09-18, separate commit)
 
 7. Add `expo-media-library` and `expo-sharing` to `apps/edu` only, at the versions Expo SDK 55
    pins; declare the iOS usage strings in `app.config.ts`; `corepack pnpm edu:prebuild`.
@@ -431,7 +450,7 @@ Document 03 §9, item by item, with this app's two knowing omissions marked:
 - [ ] Each card opens the matching detail screen.
 - [ ] A learned move exists independently of its personal recording.
 - [ ] Delete Video removes only the recording; the learned move, its snapshot and its score stay.
-- [ ] Download and Share appear only when a recording exists, and only act on a user tap. *(F3b)*
+- [x] Download and Share appear only when a recording exists, and only act on a user tap. *(F3b)*
 - [ ] Returning from detail restores the profile's scroll position.
 - [ ] Scan Again changes the saved score only after **Continue and Save your Score**, and the
       Average Score recalculates after that save.
@@ -504,7 +523,7 @@ is pre-existing and recorded under P0 in `plans/educational-app.md`.
 
 | # | Question | Blocks | Recommendation |
 |---|---|---|---|
-| 1 | Approve `expo-media-library` + `expo-sharing` in `apps/edu`, with the prebuild and iOS usage strings they require? | **F3b only** | Approve — Download and Share are document 03 §3 features, and nothing else in the app needs a prebuild |
+| ~~1~~ | ~~Approve `expo-media-library` + `expo-sharing` in `apps/edu`, with the prebuild and iOS usage strings they require?~~ | — | **Approved 2026-09-18**, as recommended. Both are `apps/edu`-only, so the version-parity rule has nothing to match against |
 | 2 | Is "`<n>` moves learned" with no denominator the final copy? | Copy only | Yes; it follows from the cut catalog summary (§0) |
 | 3 | After Scan Again from a detail screen, return to the detail screen instead of the profile? | Navigation | Keep the profile (document 03 §4); revisit if the device run makes the loss feel wrong |
 | 4 | Styles with learned moves before the fixed order (03 §11)? | Section order | Fixed order in v1 |

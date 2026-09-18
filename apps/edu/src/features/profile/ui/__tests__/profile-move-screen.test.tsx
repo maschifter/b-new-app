@@ -30,6 +30,16 @@ jest.mock("@/features/scan/recording-store", () => ({
   deletePersonalRecordingFile: jest.fn(),
 }));
 
+jest.mock("expo-media-library", () => ({
+  requestPermissionsAsync: jest.fn(),
+  saveToLibraryAsync: jest.fn(),
+}));
+
+jest.mock("expo-sharing", () => ({
+  isAvailableAsync: jest.fn(),
+  shareAsync: jest.fn(),
+}));
+
 /**
  * Makes the device reject the one write the delete has to persist, which is the failure
  * the retry exists for. It has to come from the device: `atomWithStorage` drops its
@@ -48,8 +58,19 @@ const { deletePersonalRecordingFile } = jest.requireMock("@/features/scan/record
   deletePersonalRecordingFile: jest.Mock;
 };
 
+const mediaLibrary = jest.requireMock("expo-media-library") as {
+  requestPermissionsAsync: jest.Mock;
+  saveToLibraryAsync: jest.Mock;
+};
+
+const sharing = jest.requireMock("expo-sharing") as {
+  isAvailableAsync: jest.Mock;
+  shareAsync: jest.Mock;
+};
+
 const MOVE_ID = "move-a";
 const FILE_NAME = "move-a-1.mp4";
+const VIDEO_URI = `file:///documents/${FILE_NAME}`;
 const onBack = jest.fn();
 
 const SNAPSHOT: LearnedMoveSnapshot = {
@@ -93,6 +114,13 @@ beforeEach(() => {
   mockPush.mockReset();
   onBack.mockReset();
   deletePersonalRecordingFile.mockReset();
+  mediaLibrary.requestPermissionsAsync.mockReset().mockResolvedValue({
+    granted: true,
+    canAskAgain: true,
+  });
+  mediaLibrary.saveToLibraryAsync.mockReset().mockResolvedValue(undefined);
+  sharing.isAvailableAsync.mockReset().mockResolvedValue(true);
+  sharing.shareAsync.mockReset().mockResolvedValue(undefined);
   jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
 });
 
@@ -115,6 +143,74 @@ it("offers My Video only when a recording exists", async () => {
 
   expect(screen.queryByText("My Video")).toBeNull();
   expect(screen.queryByLabelText("Delete my video")).toBeNull();
+  expect(screen.queryByLabelText("Download my video")).toBeNull();
+  expect(screen.queryByLabelText("Share my video")).toBeNull();
+});
+
+it("asks for gallery access at the Download tap, never at mount, then saves the file", async () => {
+  await mount(storeWithLearnedMove({ withRecording: true }));
+  expect(mediaLibrary.requestPermissionsAsync).not.toHaveBeenCalled();
+
+  await fireEventAsync.press(screen.getByLabelText("Download my video"));
+
+  // Write-only, video-only: the app saves one clip and never reads the library back.
+  expect(mediaLibrary.requestPermissionsAsync).toHaveBeenCalledWith(true, ["video"]);
+  expect(mediaLibrary.saveToLibraryAsync).toHaveBeenCalledWith(VIDEO_URI);
+  expect(screen.getByText("Saved to your gallery")).toBeOnTheScreen();
+});
+
+it("keeps the video and explains the next step when Download is refused or fails", async () => {
+  mediaLibrary.requestPermissionsAsync.mockResolvedValue({ granted: false, canAskAgain: false });
+  const store = storeWithLearnedMove({ withRecording: true });
+  await mount(store);
+
+  await fireEventAsync.press(screen.getByLabelText("Download my video"));
+
+  expect(mediaLibrary.saveToLibraryAsync).not.toHaveBeenCalled();
+  expect(
+    screen.getByText("Allow gallery access for Stepz in Settings, then tap Download again."),
+  ).toBeOnTheScreen();
+  expect(screen.getByText("My Video")).toBeOnTheScreen();
+  expect(store.get(personalRecordingsAtom)[MOVE_ID]?.fileName).toBe(FILE_NAME);
+
+  mediaLibrary.requestPermissionsAsync.mockResolvedValue({ granted: true, canAskAgain: true });
+  mediaLibrary.saveToLibraryAsync.mockRejectedValue(new Error("the gallery is full"));
+
+  await fireEventAsync.press(screen.getByLabelText("Download my video"));
+
+  expect(screen.getByText("Couldn't save to your gallery. Try again.")).toBeOnTheScreen();
+  expect(screen.getByText("My Video")).toBeOnTheScreen();
+  expect(store.get(personalRecordingsAtom)[MOVE_ID]?.fileName).toBe(FILE_NAME);
+});
+
+it("shares the resolved file, and a cancelled share changes nothing", async () => {
+  const store = storeWithLearnedMove({ withRecording: true });
+  await mount(store);
+
+  await fireEventAsync.press(screen.getByLabelText("Share my video"));
+
+  expect(sharing.shareAsync).toHaveBeenCalledWith(
+    VIDEO_URI,
+    expect.objectContaining({
+      mimeType: "video/mp4",
+    }),
+  );
+  // A cancelled sheet resolves like a completed one, so this is that case too: no
+  // message, no pointer change, and the recording still on screen.
+  expect(screen.queryByText("Couldn't share your video. Try again.")).toBeNull();
+  expect(store.get(personalRecordingsAtom)[MOVE_ID]?.fileName).toBe(FILE_NAME);
+  expect(store.get(learnedMovesAtom)[MOVE_ID]?.savedScore).toBe(82);
+  expect(screen.getByText("My Video")).toBeOnTheScreen();
+});
+
+it("reports a device that cannot share instead of failing silently", async () => {
+  sharing.isAvailableAsync.mockResolvedValue(false);
+  await mount(storeWithLearnedMove({ withRecording: true }));
+
+  await fireEventAsync.press(screen.getByLabelText("Share my video"));
+
+  expect(sharing.shareAsync).not.toHaveBeenCalled();
+  expect(screen.getByText("Sharing isn't available on this device.")).toBeOnTheScreen();
 });
 
 it("deletes the pointer first and then the file, leaving the learned move and its score", async () => {
