@@ -18,7 +18,11 @@ export function DanceSilhouette({ style }: DanceSilhouetteProps) {
       importantForAccessibility="no-hide-descendants"
       style={style}
     >
-      <Image source={SILHOUETTE_SOURCE} resizeMode="contain" style={StyleSheet.absoluteFill} />
+      <Image source={SILHOUETTE_SOURCE} resizeMode="contain" style={styles.image} />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  image: { width: "100%", height: "100%" },
+});
