@@ -45,6 +45,19 @@ function drag(translationY: number) {
   });
 }
 
+/** Drags through each `translationY` in turn, lifting the finger at the last one. */
+function dragThrough(...translations: number[]) {
+  const last = translations[translations.length - 1] ?? 0;
+  act(() => {
+    fireGestureHandler(getByGestureTestId("tempo-bar-pan"), [
+      { state: State.BEGAN, translationY: 0 },
+      { state: State.ACTIVE, translationY: 0 },
+      ...translations.map((translationY) => ({ translationY })),
+      { state: State.END, translationY: last },
+    ]);
+  });
+}
+
 /** Taps `y` pixels down from the top of the bar, where 0 is the fastest level. */
 function tapAt(y: number) {
   act(() => {
@@ -92,6 +105,27 @@ it("clamps a drag past either end of the scale", () => {
 
   drag(-BAR_HEIGHT * 10);
   expect(rateFromLabel()).toBe("1.5×");
+});
+
+// The fill follows the finger and only settles on release, so travel inside one level's
+// span moves the bar without touching the level itself.
+it("leaves the level alone while the finger moves inside it", () => {
+  const onRateChange = jest.fn();
+  render(<Host onRateChange={onRateChange} />);
+
+  dragThrough(-10, -20, -30);
+
+  expect(onRateChange).not.toHaveBeenCalled();
+});
+
+it("reports each level a drag crosses exactly once", () => {
+  const onRateChange = jest.fn();
+  render(<Host onRateChange={onRateChange} />);
+
+  // Past 1.25x, further into it, then past 1.5x.
+  dragThrough(-BAR_HEIGHT * 0.15, -BAR_HEIGHT * 0.275, -BAR_HEIGHT * 0.4);
+
+  expect(onRateChange.mock.calls).toEqual([[1.25], [1.5]]);
 });
 
 it("keeps the value off the screen at rest unless the host asks for it", () => {
@@ -184,8 +218,8 @@ it("follows a caller's own scale", () => {
   expect(rateFromLabel()).toBe("2×");
 });
 
-// A rebuilt gesture carries a new handler tag, and the swap would land mid-drag: every
-// `onUpdate` re-renders the host, so an inline scale would be a fresh array each frame.
+// A rebuilt gesture carries a new handler tag, and the swap would land mid-drag: crossing
+// a level re-renders the host, so an inline scale would be a fresh array by the next one.
 it("keeps one gesture across renders that pass an equal but fresh scale", () => {
   render(<Host steps={[1, 2, 3]} />);
   const { handlerTag } = getByGestureTestId("tempo-bar-pan");
