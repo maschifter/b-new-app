@@ -1,6 +1,6 @@
 import { genresAtom } from "@/lib/catalog";
 import { COLORS } from "@/lib/theme/colors";
-import { BouncablePress, DanceSkeleton, MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
+import { BouncablePress, MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
 import { TempoBar } from "@bnewapp/mobile-kit/ui/tempo-bar";
 import type { DanceGenre, DanceMove } from "@bnewapp/types";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,6 +23,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { feedMovesAtom, feedMovesInfiniteAtom } from "../_atoms/queries";
 import {
   activeMoveIndexAtom,
+  feedPausedAtom,
   playbackRateAtom,
   proTipMoveIdAtom,
   resetFeedFiltersAtom,
@@ -34,6 +35,7 @@ import {
 import { FEED_LEVELS, levelLabel } from "../data/levels";
 import { FeedFilterSheet, type FilterOption } from "./feed-filter-sheet";
 import { FeedMovePage } from "./feed-move-page";
+import { FeedSkeleton } from "./feed-skeleton";
 import { ProTipOverlay, hasProTip } from "./pro-tip-overlay";
 
 interface FeedScreenProps {
@@ -46,7 +48,7 @@ export function FeedScreen({ onOpenProfile }: FeedScreenProps) {
   return (
     <View className="flex-1 bg-app">
       <MobileQueryErrorBoundary title="Couldn't load the feed" retryLabel="Retry loading the feed">
-        <Suspense fallback={<DanceSkeleton />}>
+        <Suspense fallback={<FeedSkeleton />}>
           <FeedContent onOpenProfile={onOpenProfile} />
         </Suspense>
       </MobileQueryErrorBoundary>
@@ -69,7 +71,7 @@ function FeedContent({ onOpenProfile }: FeedScreenProps) {
         copy="The feed didn't load. Your filters are kept."
         retryLabel="Retry"
       >
-        <Suspense fallback={<DanceSkeleton />}>
+        <Suspense fallback={<FeedSkeleton showFilters={false} />}>
           <FeedPager onOpenProfile={onOpenProfile} />
         </Suspense>
       </MobileQueryErrorBoundary>
@@ -195,6 +197,7 @@ function FeedPager({ onOpenProfile }: FeedScreenProps) {
   const activeIndex = useAtomValue(activeMoveIndexAtom);
   const setActiveIndex = useSetAtom(activeMoveIndexAtom);
   const setPlaybackRate = useSetAtom(playbackRateAtom);
+  const setPaused = useSetAtom(feedPausedAtom);
   const resetFilters = useSetAtom(resetFeedFiltersAtom);
   const [proTipMoveId, setProTipMoveId] = useAtom(proTipMoveIdAtom);
   const genreId = useAtomValue(selectedGenreIdAtom);
@@ -212,8 +215,10 @@ function FeedPager({ onOpenProfile }: FeedScreenProps) {
         if (first?.index === null || first?.index === undefined) return;
         setActiveIndex(first.index);
         // Document 01 line 47. Done here rather than in the tempo control so it
-        // holds for a swipe as much as for a Pro Tip dismissal.
+        // holds for a swipe as much as for a Pro Tip dismissal. A pause belongs to
+        // the move it was taken on, so the move that arrives plays.
         setPlaybackRate(1);
+        setPaused(false);
       },
     },
   ]).current;
@@ -249,8 +254,9 @@ function FeedPager({ onOpenProfile }: FeedScreenProps) {
       setProTipMoveId(null);
       setActiveIndex(0);
       setPlaybackRate(1);
+      setPaused(false);
     },
-    [setActiveIndex, setPlaybackRate, setProTipMoveId],
+    [setActiveIndex, setPaused, setPlaybackRate, setProTipMoveId],
   );
 
   if (moves.length === 0) {

@@ -1,13 +1,15 @@
+import { COLORS } from "@/lib/theme/colors";
 import { resolvePreviewMedia } from "@bnewapp/dance-core";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
 import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import type { DanceMove } from "@bnewapp/types";
+import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { VideoView, useVideoPlayer } from "expo-video";
-import { useAtomValue } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 import { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
-import { playbackRateAtom } from "../_atoms/ui";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { feedPausedAtom, playbackRateAtom } from "../_atoms/ui";
 
 interface FeedMovePageProps {
   move: DanceMove;
@@ -21,6 +23,8 @@ export function FeedMovePage({ move, active, width, height }: FeedMovePageProps)
   const { videoUrl, imageUrl } = resolvePreviewMedia(move);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [paused, setPaused] = useAtom(feedPausedAtom);
+  const playable = Boolean(videoUrl) && !failed;
 
   return (
     <View style={{ width, height }} className="bg-app">
@@ -29,10 +33,34 @@ export function FeedMovePage({ move, active, width, height }: FeedMovePageProps)
           key={attempt}
           url={videoUrl}
           active={active}
+          paused={paused}
           onFail={() => setFailed(true)}
         />
       ) : imageUrl ? (
         <Image source={imageUrl} contentFit="cover" style={StyleSheet.absoluteFill} />
+      ) : null}
+      {/* Only the page that plays carries the toggle, so a neighbour held in the pager's
+          window leaves no live touch target behind the one on the screen. The glyph is
+          the only thing it draws, which keeps the central area free while playing
+          (document 01 lines 62-63). */}
+      {playable && active ? (
+        <Pressable
+          testID="feed-playback-toggle"
+          accessibilityRole="button"
+          accessibilityLabel={paused ? `Play ${move.title}` : `Pause ${move.title}`}
+          onPress={() => setPaused((current) => !current)}
+          style={StyleSheet.absoluteFill}
+          className="items-center justify-center"
+        >
+          {paused ? (
+            <View
+              pointerEvents="none"
+              className="size-20 items-center justify-center rounded-full bg-black/50"
+            >
+              <Ionicons name="play" size={40} color={COLORS.foreground} />
+            </View>
+          ) : null}
+        </Pressable>
       ) : null}
       {failed ? (
         <View className="flex-1 items-center justify-center gap-3 px-10">
@@ -59,10 +87,12 @@ export function FeedMovePage({ move, active, width, height }: FeedMovePageProps)
 function FeedMoveVideo({
   url,
   active,
+  paused,
   onFail,
 }: {
   url: string;
   active: boolean;
+  paused: boolean;
   onFail: () => void;
 }) {
   const rate = useAtomValue(playbackRateAtom);
@@ -72,7 +102,7 @@ function FeedMoveVideo({
     // a product change. See the plan's section 4.1.
     createdPlayer.muted = true;
   });
-  useFocusedPlayback(player, active);
+  useFocusedPlayback(player, active && !paused);
 
   useEffect(() => {
     if (active) player.playbackRate = rate;

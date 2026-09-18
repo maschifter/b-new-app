@@ -8,6 +8,7 @@ import { fireGestureHandler, getByGestureTestId } from "react-native-gesture-han
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import {
   activeMoveIndexAtom,
+  feedPausedAtom,
   playbackRateAtom,
   proTipMoveIdAtom,
   selectLevelAtom,
@@ -63,6 +64,15 @@ const mockedGetGenres = getDanceGenres as jest.Mock;
 const mockedGetMoves = getDanceMoves as jest.Mock;
 
 const MOVE_ID = "00000000-0000-4000-8000-00000000000";
+
+const HIDDEN = { includeHiddenElements: true } as const;
+
+/** The mocked hook builds a player per render, so the live one is the newest. */
+function latestPlayer(): MockPlayer {
+  const entry = mockPlayers.at(-1);
+  if (!entry) throw new Error("no player was created");
+  return entry.player;
+}
 
 function move(id: string, overrides: Partial<DanceMove> = {}): DanceMove {
   return {
@@ -480,6 +490,7 @@ it("rebuilds the pager at the top, not on the position the last one left", async
   await swipeTo(1, moves);
   await act(async () => {
     store.set(playbackRateAtom, 1.5);
+    store.set(feedPausedAtom, true);
   });
   expect(screen.getByLabelText("Dance this Move, Move b")).toBeOnTheScreen();
 
@@ -492,6 +503,7 @@ it("rebuilds the pager at the top, not on the position the last one left", async
   expect(await screen.findByLabelText("Dance this Move, Move a")).toBeOnTheScreen();
   expect(store.get(activeMoveIndexAtom)).toBe(0);
   expect(store.get(playbackRateAtom)).toBe(1);
+  expect(store.get(feedPausedAtom)).toBe(false);
 });
 
 it("holds the call to action above the system bar the feed draws under", async () => {
@@ -511,4 +523,81 @@ it("holds the call to action above the system bar the feed draws under", async (
   // The gap alone leaves the button under a three-button navigation bar, which is
   // where the title and the label were on a device.
   expect(screen.getByTestId("feed-actions")).toHaveStyle({ paddingBottom: 48 + 16 });
+});
+
+it("holds the move on a tap and plays it again on the next one", async () => {
+  const store = await mount();
+  await screen.findByLabelText("Dance this Move, Move a");
+  expect(latestPlayer().play).toHaveBeenCalled();
+
+  await fireEventAsync.press(screen.getByLabelText("Pause Move a"));
+
+  expect(store.get(feedPausedAtom)).toBe(true);
+  expect(latestPlayer().pause).toHaveBeenCalled();
+  expect(latestPlayer().play).not.toHaveBeenCalled();
+
+  await fireEventAsync.press(screen.getByLabelText("Play Move a"));
+
+  expect(store.get(feedPausedAtom)).toBe(false);
+  expect(latestPlayer().play).toHaveBeenCalled();
+});
+
+it("offers the hold only on the move that is on the screen", async () => {
+  const moves = [move("a"), move("b")];
+  mockedGetMoves.mockResolvedValue(page(moves, null));
+  const store = await mount();
+  await screen.findByLabelText("Dance this Move, Move a");
+
+  expect(screen.getAllByTestId("feed-playback-toggle")).toHaveLength(1);
+  await fireEventAsync.press(screen.getByLabelText("Pause Move a"));
+
+  await swipeTo(1, moves);
+
+  expect(store.get(feedPausedAtom)).toBe(false);
+  expect(screen.getByLabelText("Pause Move b")).toBeOnTheScreen();
+});
+
+it("clears a hold when the filters replace the feed", async () => {
+  const store = await mount();
+  await screen.findByLabelText("Dance this Move, Move a");
+  await fireEventAsync.press(screen.getByLabelText("Pause Move a"));
+
+  mockedGetMoves.mockResolvedValue(page([move("filtered")], null));
+  await fireEventAsync.press(screen.getByLabelText("Level filter, All Levels"));
+  await fireEventAsync.press(screen.getByLabelText("Level 2"));
+  await screen.findByLabelText("Dance this Move, Move filtered");
+
+  expect(store.get(feedPausedAtom)).toBe(false);
+  expect(screen.getByLabelText("Pause Move filtered")).toBeOnTheScreen();
+});
+
+it("leaves nothing to hold on a move with no video", async () => {
+  mockedGetMoves.mockResolvedValue(page([move("a", { filmYourselfVideoUrl: "" })], null));
+  await mount();
+  await screen.findByText("Move a");
+
+  expect(screen.queryByTestId("feed-playback-toggle")).toBeNull();
+});
+
+it("falls back to the feed's own shape, with one set of filter chips", async () => {
+  let deliver: (moves: DanceMovesPage) => void = () => {};
+  mockedGetMoves.mockReturnValue(
+    new Promise<DanceMovesPage>((resolve) => {
+      deliver = resolve;
+    }),
+  );
+  await mount();
+
+  // The chips come from the real bar above the pager's boundary; the fallback under it
+  // draws the pager's furniture only, so the two cannot stack.
+  await screen.findByLabelText("Level filter, All Levels");
+  expect(screen.getByTestId("feed-skeleton", HIDDEN)).toBeOnTheScreen();
+  expect(screen.getAllByLabelText(/^Level filter/)).toHaveLength(1);
+
+  await act(async () => {
+    deliver(page([move("a")], null));
+  });
+
+  await screen.findByLabelText("Dance this Move, Move a");
+  expect(screen.queryByTestId("feed-skeleton", HIDDEN)).toBeNull();
 });
