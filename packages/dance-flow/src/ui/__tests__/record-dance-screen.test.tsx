@@ -315,6 +315,72 @@ it("withholds the silhouette guide while the camera is still unauthorized", asyn
   expect(silhouette()).toBeNull();
 });
 
+/** The session's own error channel: no device on this phone, or another app holding it. */
+function failTheCameraSession() {
+  return fireEventAsync(
+    screen.UNSAFE_getByType(Camera),
+    "error",
+    new Error("no camera device available"),
+  );
+}
+
+it("explains a camera that will not start and keeps a way back to the caller", async () => {
+  mockCameraPermission.hasPermission = true;
+
+  await mount(move(), undefined, { onBack: mockBack });
+  await screen.findByLabelText("Start recording");
+  await failTheCameraSession();
+
+  expect(screen.getByText("Camera unavailable")).toBeOnTheScreen();
+  expect(screen.UNSAFE_queryByType(Camera)).toBeNull();
+  expect(silhouette()).toBeNull();
+  // Nothing to film, so the primary action stays shut rather than failing on press.
+  expect(screen.getByLabelText("Start recording")).toBeDisabled();
+
+  await fireEventAsync.press(screen.getByLabelText("Cancel"));
+  expect(mockBack).toHaveBeenCalledTimes(1);
+});
+
+it("hides the escape from the unavailable state when the host screen passed no way back", async () => {
+  mockCameraPermission.hasPermission = true;
+
+  await mount();
+  await screen.findByLabelText("Start recording");
+  await failTheCameraSession();
+
+  expect(screen.getByText("Camera unavailable")).toBeOnTheScreen();
+  expect(screen.queryByLabelText("Cancel")).toBeNull();
+});
+
+it("builds a new camera session when the user retries", async () => {
+  mockCameraPermission.hasPermission = true;
+
+  await mount();
+  await screen.findByLabelText("Start recording");
+  await failTheCameraSession();
+
+  await fireEventAsync.press(screen.getByLabelText("Try the camera again"));
+
+  expect(screen.queryByText("Camera unavailable")).not.toBeOnTheScreen();
+  expect(screen.UNSAFE_getByType(Camera)).toBeTruthy();
+  expect(screen.getByLabelText("Start recording")).not.toBeDisabled();
+});
+
+it("tears the take down when the camera fails after the count-in has started", async () => {
+  mockCameraPermission.hasPermission = true;
+  const recorder = stoppableRecorder();
+  mockCreateRecorder.mockResolvedValue(recorder);
+
+  await mount(move({ bpm: COUNT_IN_BPM }));
+  await fireEventAsync.press(await screen.findByLabelText("Start recording"));
+  await failTheCameraSession();
+
+  expect(screen.getByText("Camera unavailable")).toBeOnTheScreen();
+  // Back at the start of the flow rather than mid-take: no countdown, no Stop.
+  expect(screen.queryByLabelText("Stop recording")).toBeNull();
+  expect(mockAudioPlayerPause).toHaveBeenCalled();
+});
+
 it("holds the recording controls above the system bar the camera draws under", async () => {
   mockCameraPermission.hasPermission = true;
   mockedGetDanceMove.mockResolvedValue(move());

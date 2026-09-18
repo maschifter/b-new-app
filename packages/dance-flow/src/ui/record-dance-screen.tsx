@@ -33,6 +33,7 @@ import {
   preloadSimulatedDanceVideo,
 } from "../recording-adapter";
 import { type CameraPermissionCopy, CameraPermissionOverlay } from "./camera-permission-overlay";
+import { CameraUnavailableOverlay } from "./camera-unavailable-overlay";
 import { DanceSilhouette } from "./dance-silhouette";
 
 export type { CameraPermissionCopy } from "./camera-permission-overlay";
@@ -98,6 +99,7 @@ function RecordDanceContent({
   const [referenceDuration, setReferenceDuration] = useState<number | null>(null);
   const [countdownText, setCountdownText] = useState<string | null>(null);
   const [recordingError, setRecordingError] = useState<string | null>(null);
+  const [cameraFailed, setCameraFailed] = useState(false);
   const [simulatedVideoUrl, setSimulatedVideoUrl] = useState(move.filmYourselfVideoUrl);
   const auth = useAtomValue(queryAuthAtom);
   const simulatedRecordingToggle = useAtomValue(simulatedDanceRecordingEnabledAtom);
@@ -252,6 +254,31 @@ function RecordDanceContent({
     });
   }, [clearTimers]);
 
+  /**
+   * The camera session refused to configure, or stopped: no camera on this device, or
+   * another app holding the one there is. Everything the count-in set running is torn
+   * down here, because the overlay that follows replaces the surface it was filming.
+   */
+  const handleCameraError = useCallback(() => {
+    if (!isMountedRef.current) return;
+    clearTimers();
+    const recorder = recorderRef.current;
+    recorderRef.current = null;
+    stopRequestedRef.current = false;
+    recordingStartedAtRef.current = null;
+    audioOffsetMsRef.current = null;
+    if (recorder?.isRecording) void recorder.cancelRecording();
+    musicPlayer.pause();
+    referencePlayer.pause();
+    referencePlayer.currentTime = 0;
+    setCountdownText(null);
+    // The overlay is the more specific explanation, so a stale recorder message under
+    // it would only offer a retry that cannot work.
+    setRecordingError(null);
+    setStep(FilmStep.READY);
+    setCameraFailed(true);
+  }, [clearTimers, musicPlayer, referencePlayer]);
+
   const beginRecording = useCallback(async () => {
     setStep(FilmStep.START_CAMERA);
     try {
@@ -362,12 +389,12 @@ function RecordDanceContent({
   ]);
 
   const isRecording = step === FilmStep.RECORDING;
-  const isStartDisabled = !isRecording && step !== FilmStep.READY;
+  const isStartDisabled = cameraFailed || (!isRecording && step !== FilmStep.READY);
   const pipStyle = [styles.pip, { top: insets.top + PIP_TOP_MARGIN }];
   const cameraSurfaceStyle = referenceOnTop ? StyleSheet.absoluteFill : pipStyle;
   // The guide stays up through the count-in, where the dancer is still framing themselves,
   // and comes down at the first recorded frame so it never sits on top of the take.
-  const showSilhouette = hasPermission && step < FilmStep.RECORDING;
+  const showSilhouette = hasPermission && !cameraFailed && step < FilmStep.RECORDING;
 
   return (
     <View className="flex-1 bg-black">
@@ -387,7 +414,7 @@ function RecordDanceContent({
             nativeControls={false}
             style={cameraSurfaceStyle}
           />
-        ) : hasPermission ? (
+        ) : hasPermission && !cameraFailed ? (
           <Camera
             device={useBackCamera ? "back" : "front"}
             isActive={step !== FilmStep.FINISHED}
@@ -395,8 +422,13 @@ function RecordDanceContent({
             mirrorMode="auto"
             outputs={[videoOutput]}
             constraints={[{ fps: 30 }]}
+            onError={handleCameraError}
             style={cameraSurfaceStyle}
           />
+        ) : hasPermission ? (
+          // Unmounted rather than hidden, so clearing the flag builds a new session
+          // instead of leaving the failed one to report the same error again.
+          <CameraUnavailableOverlay onRetry={() => setCameraFailed(false)} onDismiss={onBack} />
         ) : (
           <CameraPermissionOverlay
             {...cameraPermissionCopy}
