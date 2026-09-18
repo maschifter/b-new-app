@@ -514,11 +514,10 @@ is pre-existing and recorded under P0 in `plans/educational-app.md`.
 
 At a Stepz whose three surfaces are all real: browse, scan, remember. It does **not** cover:
 
-- **S3 — the retention backstop**, which is still unbuilt and is now the only server-side work
-  left in the programme. Two findings from 2026-09-17 belong to it, not here: there is no
-  retention sweep anywhere in `apps/server` (the comment in
-  `apps/edu/src/features/scan/_atoms/mutations.ts` that calls one "the backstop" describes
-  something that does not exist), and an anonymous caller can create posts at the global rate
-  limit. Both are S3's scope in `plans/educational-app-features.md` §5.
+- **S3 — the retention backstop**, which was the last server-side work in the programme and
+  **shipped on 2026-09-18**. Both findings from 2026-09-17 are closed: the sweep the comment in
+  `apps/edu/src/features/scan/_atoms/mutations.ts` calls "the backstop" now exists
+  (`apps/server/src/modules/dance/retention-worker.ts`), and `POST /api/dance/posts` carries a
+  per-owner ceiling. See `plans/educational-app-features.md` §5.
 - F4 (likes), which stays unscheduled pending the owner's answer to §8 question 3 of that plan.
 - Any second app's reuse of what F3 builds; the profile is Stepz-specific and stays in `apps/edu`.

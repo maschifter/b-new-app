@@ -10,8 +10,13 @@ import type { Env } from "./config.js";
 import { errorHandlerPlugin } from "./lib/errors.js";
 import { adminRoutes } from "./modules/admin/routes.js";
 import { catalogRoutes } from "./modules/catalog/routes.js";
-import { DANCE_MEDIA_CONFIG, DANCE_SCAN_CONFIG } from "./modules/dance/config.js";
+import {
+  DANCE_MEDIA_CONFIG,
+  DANCE_RETENTION_CONFIG,
+  DANCE_SCAN_CONFIG,
+} from "./modules/dance/config.js";
 import { startMediaWorker } from "./modules/dance/media-worker.js";
+import { startRetentionWorker } from "./modules/dance/retention-worker.js";
 import { danceRoutes } from "./modules/dance/routes.js";
 import { startScanWorker } from "./modules/dance/scan-worker.js";
 import { devRoutes } from "./modules/dev/routes.js";
@@ -87,6 +92,14 @@ export async function buildApp(config: Env) {
       ffmpegTimeoutMs: DANCE_MEDIA_CONFIG.ffmpegTimeoutMs,
       maxUploadBytes: DANCE_MEDIA_CONFIG.maxUploadBytes,
       uploadTimeoutMs: DANCE_MEDIA_CONFIG.uploadTimeoutMs,
+    });
+  }
+  if (config.NODE_ENV !== "test" && DANCE_RETENTION_CONFIG.workerEnabled) {
+    startRetentionWorker(app, {
+      danceVideoBucket: DANCE_SCAN_CONFIG.danceVideoBucket,
+      postTtlMs: DANCE_RETENTION_CONFIG.postTtlMs,
+      sweepIntervalMs: DANCE_RETENTION_CONFIG.sweepIntervalMs,
+      sweepLimit: DANCE_RETENTION_CONFIG.sweepLimit,
     });
   }
   await app.register(danceRoutes, {

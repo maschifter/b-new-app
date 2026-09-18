@@ -591,6 +591,13 @@ export type Database = {
     }
     Functions: {
       count_room_visitors: { Args: { p_room_id: string }; Returns: number }
+      list_expired_anonymous_dance_posts: {
+        Args: { p_limit: number; p_older_than: string }
+        Returns: {
+          id: string
+          owner_id: string
+        }[]
+      }
       purchase_item: {
         Args: { p_item: string; p_owner: string }
         Returns: {

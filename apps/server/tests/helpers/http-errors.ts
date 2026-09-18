@@ -7,6 +7,7 @@ export const httpErrors = {
   forbidden: (message: string) => httpError(403, message),
   notFound: (message: string) => httpError(404, message),
   conflict: (message: string) => httpError(409, message),
+  tooManyRequests: (message: string) => httpError(429, message),
   internalServerError: (message: string) => httpError(500, message),
   serviceUnavailable: (message: string) => httpError(503, message),
 } as const;

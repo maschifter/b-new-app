@@ -462,7 +462,7 @@ phase with visible behavior ends with a device run.
 | F1 — Feed | S1 | Vertical pager, filters, tempo bar, Pro Tip, CTA, permission entry |
 | F2 — Scan seam | D1, F1 | Stepz result screen, score confirmation, video decision, upload cleanup |
 | F3 — Profile & collection | D1, F2 | Overview, style rows, move detail, video actions, Scan Again |
-| S3 — Retention backstop | F2 | Sweep terminal anonymous scan posts + their storage objects |
+| S3 — Retention backstop | F2 | **Built 2026-09-18.** Sweep terminal anonymous scan posts + their storage objects |
 | F4 — Likes | §3.2 answer | **Unscheduled.** Only if the owner overrides the brief |
 
 ### D1 — Local collection model
@@ -580,6 +580,29 @@ learned move whose catalog row was unpublished still renders from its snapshot; 
 from detail restores scroll position. Device run required.
 
 ### S3 — Retention backstop
+
+**Built 2026-09-18.** `supabase/migrations/20260918063707_sweep_anonymous_dance_posts.sql`
+(pushed to the linked project, types regenerated),
+`apps/server/src/modules/dance/retention-worker.ts`, the per-owner ceiling inside
+`createPost`, and `apps/server/tests/dance-retention-worker.test.ts`. The three decisions
+this section left open were taken as follows:
+
+- **Where it runs.** A worker beside `startScanWorker` / `startMediaWorker` in `app.ts`,
+  on its own 5-minute interval with a 100-post batch, guarded against overlapping runs.
+  Not a database job: the deletion has to reach Storage, which SQL cannot.
+- **Anonymity test.** The SQL join, as recommended —
+  `list_expired_anonymous_dance_posts(p_older_than, p_limit)`, `security definer` because
+  `auth.users` is not readable through PostgREST, execute revoked from `anon` and
+  `authenticated`.
+- **TTL: 24 hours**, measured from `updated_at`, which is when the post became terminal.
+  The client deletes its own upload as soon as it has read the score, so the window only
+  has to outlast a client that is offline, backgrounded or retrying.
+- **Abuse:** 30 posts per owner per rolling hour on `POST /api/dance/posts`, counted in
+  `dance_posts` rather than in memory so it survives a restart and holds across replicas.
+
+**Known residue, out of this phase's scope:** a post abandoned in `uploading` keeps its
+recording object, because this section's acceptance criteria require the sweep never to
+touch that state. Deleting those needs its own predicate and its own decision.
 
 A sweep that deletes `dance_posts` in a terminal state, owned by an **anonymous** user,
 older than a TTL, together with their storage objects — reusing the deletion path of

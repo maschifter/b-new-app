@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { DANCE_POST_RATE_LIMIT } from "../src/modules/dance/config.js";
 import { createDanceService } from "../src/modules/dance/service.js";
 import { httpErrors } from "./helpers/http-errors.js";
 import { queryBuilder } from "./helpers/supabase.js";
@@ -36,6 +37,11 @@ function signedUrlsFor(...paths: string[]) {
   });
 }
 
+/** Every `createPost` opens with the per-owner rate-limit count, so it leads each mock. */
+function withinPostRateLimit() {
+  return queryBuilder({ count: 0, error: null });
+}
+
 const postMove = {
   title: "Electric Slide",
   description: "Start with the groove.",
@@ -43,6 +49,10 @@ const postMove = {
 const postMusic = { title: "The Track", artist: "The Artist" };
 
 describe("dance post service", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("scopes recorded-post deletion and its media cleanup to the authenticated owner", async () => {
     const deleted = queryBuilder({ data: { id: POST_ID }, error: null });
     const from = vi.fn().mockReturnValue(deleted);
@@ -212,7 +222,11 @@ describe("dance post service", () => {
       data: { signedUrl: "https://storage.example/upload" },
       error: null,
     });
-    const from = vi.fn().mockReturnValueOnce(move).mockReturnValueOnce(insert);
+    const from = vi
+      .fn()
+      .mockReturnValueOnce(withinPostRateLimit())
+      .mockReturnValueOnce(move)
+      .mockReturnValueOnce(insert);
     const service = createDanceService(
       { from, storage: { from: vi.fn(() => ({ createSignedUploadUrl })) } } as never,
       httpErrors as never,
@@ -237,7 +251,11 @@ describe("dance post service", () => {
       const insert = queryBuilder({ error: null });
       const service = createDanceService(
         {
-          from: vi.fn().mockReturnValueOnce(move).mockReturnValueOnce(insert),
+          from: vi
+            .fn()
+            .mockReturnValueOnce(withinPostRateLimit())
+            .mockReturnValueOnce(move)
+            .mockReturnValueOnce(insert),
           storage: {
             from: vi.fn(() => ({
               createSignedUploadUrl: vi
@@ -369,6 +387,7 @@ describe("dance post service", () => {
     const cleanup = queryBuilder({ error: null });
     const from = vi
       .fn()
+      .mockReturnValueOnce(withinPostRateLimit())
       .mockReturnValueOnce(move)
       .mockReturnValueOnce(insert)
       .mockReturnValueOnce(cleanup);
@@ -566,5 +585,55 @@ describe("dance post service", () => {
     await expect(service.getScoreStatus(OWNER_ID, POST_ID)).rejects.toMatchObject({
       statusCode: 404,
     });
+  });
+  it("refuses a new recording once the owner has filled the window, before touching the move", async () => {
+    const atCeiling = queryBuilder({ count: DANCE_POST_RATE_LIMIT.maxPosts, error: null });
+    const from = vi.fn().mockReturnValueOnce(atCeiling);
+    const createSignedUploadUrl = vi.fn();
+    const service = createDanceService(
+      { from, storage: { from: vi.fn(() => ({ createSignedUploadUrl })) } } as never,
+      httpErrors as never,
+    );
+
+    await expect(
+      service.createPost(OWNER_ID, { danceMoveId: MOVE_ID, videoLength: 12 }),
+    ).rejects.toMatchObject({ statusCode: 429 });
+    // A refused recording must cost nothing: no move read, no row, no upload target.
+    expect(from).toHaveBeenCalledOnce();
+    expect(createSignedUploadUrl).not.toHaveBeenCalled();
+  });
+
+  it("counts the rate-limit window per owner from its own start", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-18T12:00:00.000Z"));
+    const recent = queryBuilder({ count: DANCE_POST_RATE_LIMIT.maxPosts - 1, error: null });
+    const move = queryBuilder({ data: { id: MOVE_ID, music_id: null }, error: null });
+    const insert = queryBuilder({ error: null });
+    const service = createDanceService(
+      {
+        from: vi
+          .fn()
+          .mockReturnValueOnce(recent)
+          .mockReturnValueOnce(move)
+          .mockReturnValueOnce(insert),
+        storage: {
+          from: vi.fn(() => ({
+            createSignedUploadUrl: vi
+              .fn()
+              .mockResolvedValue({ data: { signedUrl: "https://up" }, error: null }),
+          })),
+        },
+      } as never,
+      httpErrors as never,
+    );
+
+    await expect(
+      service.createPost(OWNER_ID, { danceMoveId: MOVE_ID, videoLength: 12 }),
+    ).resolves.toMatchObject({ upload: { signedUrl: "https://up" } });
+    expect(recent.eq).toHaveBeenCalledWith("owner_id", OWNER_ID);
+    expect(recent.gte).toHaveBeenCalledWith(
+      "created_at",
+      new Date(Date.now() - DANCE_POST_RATE_LIMIT.windowMs).toISOString(),
+    );
   });
 });

@@ -15,6 +15,7 @@ import type {
 } from "@bnewapp/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyBaseLogger, FastifyInstance } from "fastify";
+import { DANCE_POST_RATE_LIMIT } from "./config.js";
 import { derivedObjectPaths, recordingObjectName, recordingObjectPath } from "./media-paths.js";
 import type { DanceMovesCursor, DancePostsCursor } from "./schemas.js";
 
@@ -345,6 +346,20 @@ export function createDanceService(
       ownerId: string,
       input: { danceMoveId: string; videoLength: number; audioOffsetMs?: number | undefined },
     ): Promise<CreateDancePostResult> {
+      // Per owner, because the global limiter counts requests per address and an
+      // anonymous client can hold as many identities as it likes. Counted in the table
+      // rather than in memory so the ceiling survives a restart and holds across replicas.
+      const windowStart = new Date(Date.now() - DANCE_POST_RATE_LIMIT.windowMs).toISOString();
+      const { count: recentPosts, error: recentError } = await supabase
+        .from("dance_posts")
+        .select("id", { count: "exact", head: true })
+        .eq("owner_id", ownerId)
+        .gte("created_at", windowStart);
+      if (recentError) throw httpErrors.internalServerError("Could not create dance post");
+      if ((recentPosts ?? 0) >= DANCE_POST_RATE_LIMIT.maxPosts) {
+        throw httpErrors.tooManyRequests("Too many dance recordings, try again later");
+      }
+
       const { data: move, error: moveError } = await supabase
         .from("dance_moves")
         .select("id, music_id")
