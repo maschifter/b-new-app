@@ -73,6 +73,7 @@
     "expo": "*",
     "expo-audio": "*",
     "expo-blur": "*",
+    "expo-device": "*",
     "expo-file-system": "*",
     "expo-linear-gradient": "*",
     "expo-video": "*",

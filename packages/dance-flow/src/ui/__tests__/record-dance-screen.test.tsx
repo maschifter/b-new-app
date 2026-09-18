@@ -5,6 +5,7 @@ import {
 } from "@bnewapp/mobile-kit/testing";
 import type { DanceMove } from "@bnewapp/types";
 import type { QueryClient } from "@tanstack/react-query";
+import * as Device from "expo-device";
 import { act, fireEventAsync, screen, waitFor } from "@testing-library/react-native";
 import type { createStore } from "jotai";
 import type { ComponentProps } from "react";
@@ -50,6 +51,7 @@ jest.mock("../../recording-adapter", () => ({
   preloadSimulatedDanceVideo: jest.fn().mockResolvedValue("file:///cache/reference.mp4"),
 }));
 jest.mock("expo-blur", () => ({ BlurView: "BlurView" }));
+jest.mock("expo-device", () => ({ isDevice: true }));
 jest.mock("expo-audio", () => ({
   setAudioModeAsync: jest.fn().mockResolvedValue(undefined),
   useAudioPlayer: () => mockAudioPlayer,
@@ -77,6 +79,7 @@ const mockedGetDanceMove = getDanceMove as jest.Mock;
 const mockedGetDanceMoves = getDanceMoves as jest.Mock;
 const mockUseVideoOutput = useVideoOutput as jest.Mock;
 const mockedCreateSimulatedRecorder = createSimulatedDanceRecorder as jest.Mock;
+const device = Device as unknown as { isDevice: boolean };
 const queryClients: QueryClient[] = [];
 const mountedScreens: Array<{ unmountAsync: () => Promise<void> }> = [];
 
@@ -216,6 +219,7 @@ beforeEach(() => {
   mockVideoPlayerPause.mockReset();
   mockRecordingComplete.mockReset();
   mockedCreateSimulatedRecorder.mockReset();
+  device.isDevice = true;
 });
 
 afterEach(async () => {
@@ -288,6 +292,23 @@ it("keeps choreography audio playing while the camera session is active", async 
 
   expect(screen.UNSAFE_getByType(Camera).props.allowBackgroundAudioPlayback).toBe(true);
   expect(screen.UNSAFE_getByType(Camera).props.device).toBe("front");
+});
+
+it("reads the physical orientation on a real device", async () => {
+  mockCameraPermission.hasPermission = true;
+
+  await mount();
+
+  expect(screen.UNSAFE_getByType(Camera).props.orientationSource).toBe("device");
+});
+
+it("falls back to the interface orientation where there is no accelerometer", async () => {
+  mockCameraPermission.hasPermission = true;
+  device.isDevice = false;
+
+  await mount();
+
+  expect(screen.UNSAFE_getByType(Camera).props.orientationSource).toBe("interface");
 });
 
 it("keeps the inset video composited above the full-bleed one on Android", async () => {

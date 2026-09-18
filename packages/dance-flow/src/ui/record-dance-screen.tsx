@@ -12,6 +12,7 @@ import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playba
 import { BouncablePress, DanceSkeleton, MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
 import { MediaScrimPanel } from "@bnewapp/mobile-kit/ui/media-scrim";
 import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
+import * as Device from "expo-device";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useAtomValue } from "jotai";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
@@ -414,6 +415,9 @@ function RecordDanceContent({
             isActive={step !== FilmStep.FINISHED}
             allowBackgroundAudioPlayback
             mirrorMode="auto"
+            // The device source reads the accelerometer, which a simulator does not have:
+            // vision-camera then throws out of render before `onError` can report anything.
+            orientationSource={Device.isDevice ? "device" : "interface"}
             // `compatible` is a TextureView, which the inset surface needs; see the PiP below.
             implementationMode={referenceOnTop ? "performance" : "compatible"}
             outputs={[videoOutput]}
