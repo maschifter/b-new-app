@@ -302,8 +302,14 @@ mounts it, and without it a pan never activates on Android.
 in that seam: the package exposes `resolveExpoApiUrl` and `createSupabaseAuthClient`, and each
 app calls them once with its own `EXPO_PUBLIC_*` values, which Expo inlines per project.
 `apps/edu` has the mirror-image modules. The session providers differ (mobile signs in, Stepz
-is anonymous) but both drive the query layer through one `createQueryAuthProjection`; never
-re-implement that cache transition in an app.
+is anonymous) but both drive the query layer through one `createQueryAuthProjection` and read
+the session through one `subscribeToSupabaseSession`
+(`@bnewapp/mobile-kit/auth/session-subscription`); never re-implement that cache transition or
+that subscription in an app. The subscription owns the ordering — `onAuthStateChange` is the
+serialized stream and `getSession` only a fallback for the first value — and reports a failed
+initial read through `onInitialReadError` so a gated tree never waits on a read that already
+gave up. An app supplies what differs: its own gate state, and `onNoInitialSession` for the
+identity Stepz creates.
 
 **`@bnewapp/dance-flow`** owns the record and result screens plus the flow state behind
 them. `useDanceSubmission` (`@bnewapp/dance-flow/use-dance-submission`) is the submit → poll →

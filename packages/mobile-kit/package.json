@@ -13,6 +13,11 @@
       "types": "./src/api/api-url.ts",
       "default": "./src/api/api-url.ts"
     },
+    "./auth/session-subscription": {
+      "react-native": "./src/auth/session-subscription.ts",
+      "types": "./src/auth/session-subscription.ts",
+      "default": "./src/auth/session-subscription.ts"
+    },
     "./auth/supabase-client": {
       "react-native": "./src/auth/supabase-client.ts",
       "types": "./src/auth/supabase-client.ts",

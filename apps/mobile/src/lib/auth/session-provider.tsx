@@ -1,4 +1,5 @@
 import { createQueryAuthProjection, queryAuthAtom } from "@bnewapp/mobile-kit";
+import { subscribeToSupabaseSession } from "@bnewapp/mobile-kit/auth/session-subscription";
 import type { Session } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSetAtom } from "jotai";
@@ -21,36 +22,20 @@ export function AuthSessionProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     if (!supabase) return;
 
-    const client = supabase;
     const applySession = createQueryAuthProjection({ setQueryAuth, queryClient });
 
-    // onAuthStateChange delivers events in order (INITIAL_SESSION, then refresh /
-    // sign-in / sign-out), so it is the serialized transition stream. getSession
-    // is only a fallback for the initial read and is ignored once a live event
-    // has already been handled.
-    let receivedAuthEvent = false;
-
-    const {
-      data: { subscription },
-    } = client.auth.onAuthStateChange((_event, nextSession) => {
-      receivedAuthEvent = true;
-      applySession(nextSession);
-      setSession(nextSession);
-      setHydrated(true);
+    return subscribeToSupabaseSession({
+      client: supabase,
+      onSession: (next) => {
+        applySession(next);
+        setSession(next);
+        setHydrated(true);
+      },
+      // A read that never answered is not a session, and the gate below treats it the
+      // same as none: the sign-in screen, which offers a way forward, rather than a
+      // spinner with nothing left to wait for.
+      onInitialReadError: () => setHydrated(true),
     });
-
-    let active = true;
-    void client.auth.getSession().then(({ data }) => {
-      if (!active || receivedAuthEvent) return;
-      applySession(data.session);
-      setSession(data.session);
-      setHydrated(true);
-    });
-
-    return () => {
-      active = false;
-      subscription.unsubscribe();
-    };
   }, [queryClient, setQueryAuth]);
 
   return (

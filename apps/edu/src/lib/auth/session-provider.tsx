@@ -1,4 +1,5 @@
 import { createQueryAuthProjection, queryAuthAtom } from "@bnewapp/mobile-kit";
+import { subscribeToSupabaseSession } from "@bnewapp/mobile-kit/auth/session-subscription";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSetAtom } from "jotai";
@@ -61,12 +62,9 @@ export function AnonymousSessionProvider({ children }: PropsWithChildren) {
     // projection's identity-change path is exercised here, not hypothetical.
     const applySession = createQueryAuthProjection({ setQueryAuth, queryClient });
 
-    let active = true;
-    let receivedAuthEvent = false;
     // Separates "still bootstrapping" from "had an identity and lost it". The second
     // is a dead end without a retry, so it must not sit on the spinner.
     let everReady = false;
-
     const settle = (next: Session | null) => {
       setSession(next);
       if (next) {
@@ -77,34 +75,26 @@ export function AnonymousSessionProvider({ children }: PropsWithChildren) {
       }
     };
 
-    const {
-      data: { subscription },
-    } = client.auth.onAuthStateChange((_event, nextSession) => {
-      receivedAuthEvent = true;
-      applySession(nextSession);
-      if (active) settle(nextSession);
+    // Guards the sign-in's own failure callback only; the subscription silences its
+    // own callbacks once unsubscribed.
+    let active = true;
+    const unsubscribe = subscribeToSupabaseSession({
+      client,
+      onSession: (next) => {
+        applySession(next);
+        settle(next);
+      },
+      onInitialReadError: () => setStatus("unavailable"),
+      onNoInitialSession: () => {
+        void startAnonymousSession(client, () => {
+          if (active) setStatus("unavailable");
+        });
+      },
     });
-
-    void (async () => {
-      const { data, error } = await client.auth.getSession();
-      if (!active) return;
-      if (error) {
-        setStatus("unavailable");
-        return;
-      }
-      if (!receivedAuthEvent) {
-        applySession(data.session);
-        settle(data.session);
-      }
-      if (data.session) return;
-      await startAnonymousSession(client, () => {
-        if (active) setStatus("unavailable");
-      });
-    })();
 
     return () => {
       active = false;
-      subscription.unsubscribe();
+      unsubscribe();
     };
   }, [queryClient, setQueryAuth]);
 
