@@ -412,6 +412,7 @@ function RecordDanceContent({
             player={simulatedCameraPlayer}
             contentFit="cover"
             nativeControls={false}
+            surfaceType="textureView"
             style={cameraSurfaceStyle}
           />
         ) : hasPermission && !cameraFailed ? (
@@ -420,6 +421,8 @@ function RecordDanceContent({
             isActive={step !== FilmStep.FINISHED}
             allowBackgroundAudioPlayback
             mirrorMode="auto"
+            // `compatible` is a TextureView, which the inset surface needs; see the PiP below.
+            implementationMode={referenceOnTop ? "performance" : "compatible"}
             outputs={[videoOutput]}
             constraints={[{ fps: 30 }]}
             onError={handleCameraError}
@@ -438,15 +441,22 @@ function RecordDanceContent({
           />
         )}
         {showSilhouette ? <DanceSilhouette style={cameraSurfaceStyle} /> : null}
+        {/*
+         * Android composites a SurfaceView below the window, where the full-bleed surface
+         * under it hides it and its hole punch clears this box's own background, leaving the
+         * inset looking transparent. A TextureView draws inside the view hierarchy instead.
+         */}
         {referenceOnTop ? (
           <View
             className="absolute right-4 h-48 w-28 overflow-hidden rounded-2xl border border-white/50 bg-black"
             style={{ top: insets.top + PIP_TOP_MARGIN }}
           >
             <VideoView
+              testID="reference-pip"
               player={referencePlayer}
               contentFit="cover"
               nativeControls={false}
+              surfaceType="textureView"
               style={StyleSheet.absoluteFill}
             />
           </View>

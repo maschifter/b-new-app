@@ -290,6 +290,24 @@ it("keeps choreography audio playing while the camera session is active", async 
   expect(screen.UNSAFE_getByType(Camera).props.device).toBe("front");
 });
 
+it("keeps the inset video composited above the full-bleed one on Android", async () => {
+  mockCameraPermission.hasPermission = true;
+
+  await mount();
+
+  // A SurfaceView sits below the window, so the inset would vanish under the full-bleed
+  // camera surface. Only the overlaid surface pays for a TextureView.
+  await waitFor(() =>
+    expect(screen.getByTestId("reference-pip").props.surfaceType).toBe("textureView"),
+  );
+  expect(screen.UNSAFE_getByType(Camera).props.implementationMode).toBe("performance");
+
+  await fireEventAsync.press(screen.getByLabelText("Swap reference and camera videos"));
+
+  expect(screen.queryByTestId("reference-pip")).toBeNull();
+  expect(screen.UNSAFE_getByType(Camera).props.implementationMode).toBe("compatible");
+});
+
 it("keeps the silhouette guide up through the count-in and drops it at the first frame", async () => {
   mockCameraPermission.hasPermission = true;
   const recorder = stoppableRecorder();
