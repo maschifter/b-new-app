@@ -314,8 +314,11 @@ identity Stepz creates.
 **`@bnewapp/dance-flow`** owns the record and result screens plus the flow state behind
 them. `useDanceSubmission` (`@bnewapp/dance-flow/use-dance-submission`) is the submit → poll →
 submission-state sequence both result screens run; a screen adds its own product decisions
-around it rather than repeating the sequence. `@bnewapp/dance-flow/clip-params` is the
-clip's round trip through router params (`toDanceClipParams` / `parseDanceClipParams`): a record route
+around it rather than repeating the sequence. `SubmissionFeedback`
+(`@bnewapp/dance-flow/submission-feedback`) renders that state; an app restates only the score
+through `renderScored`, so the upload, scoring and failure copy — and the retry the failure
+depends on — stay the flow's. `@bnewapp/dance-flow/clip-params` is the clip's round trip
+through router params (`toDanceClipParams` / `parseDanceClipParams`): a record route
 serializes, a result route rebuilds or gets `null` and redirects. It imports nothing native,
 so a route validates its params without loading the camera stack, and neither app re-derives
 the encoding that keeps a measured 0 apart from a missing offset. The app's `dance`

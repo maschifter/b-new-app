@@ -8,6 +8,7 @@ import {
 import type { LearnedMoveSnapshot } from "@/lib/collection";
 import { resolvePreviewMedia } from "@bnewapp/dance-core";
 import { optionalDanceMoveAtomFamily } from "@bnewapp/dance-flow/atoms";
+import { SubmissionFeedback } from "@bnewapp/dance-flow/submission-feedback";
 import type { SubmissionState } from "@bnewapp/dance-flow/submission-state";
 import { useDanceSubmission } from "@bnewapp/dance-flow/use-dance-submission";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
@@ -309,14 +310,19 @@ function ScorePanel({
       <Text accessibilityRole="header" className="font-extrabold text-2xl text-foreground">
         {submission.kind === "scored" ? "Your result" : "Reviewing your dance"}
       </Text>
-      {submission.kind === "scored" ? (
-        <View className="gap-1">
-          <Text className="font-extrabold text-4xl text-neon">{submission.score} / 100</Text>
-          {moveTitle === null ? null : <Text className="text-base text-copy">{moveTitle}</Text>}
-        </View>
-      ) : (
-        <ScanProgress submission={submission} onRetryUpload={onRetryUpload} />
-      )}
+      <SubmissionFeedback
+        submission={submission}
+        onRetry={onRetryUpload}
+        // Only the scored line is this app's: document 02 section 2 states the score as
+        // `xx / 100` beside the move's title. Upload, scoring and failure copy stay the
+        // flow's, so the retry affordance cannot drift from the package's own screen.
+        renderScored={(score) => (
+          <View className="gap-1">
+            <Text className="font-extrabold text-4xl text-neon">{score} / 100</Text>
+            {moveTitle === null ? null : <Text className="text-base text-copy">{moveTitle}</Text>}
+          </View>
+        )}
+      />
       {hasSaveError ? (
         <View className="gap-2">
           <Text accessibilityLiveRegion="polite" className="text-danger text-sm">
@@ -359,49 +365,6 @@ function ScorePanel({
         </View>
       ) : null}
     </>
-  );
-}
-
-/**
- * The progress copy. `deriveSubmissionState` is shared, but the package's renderer is
- * not exported and its scored branch reads "You scored 82 points!", which document 02
- * section 2 replaces with `xx / 100`.
- */
-function ScanProgress({
-  submission,
-  onRetryUpload,
-}: { submission: SubmissionState; onRetryUpload: () => void }) {
-  if (submission.kind === "idle") return null;
-  if (submission.kind === "uploading")
-    return <Text className="text-muted text-sm">Uploading your dance…</Text>;
-  if (submission.kind === "scanning")
-    return (
-      <View className="gap-1">
-        <Text className="text-muted text-sm">Scoring your dance…</Text>
-        {submission.isSlow ? (
-          <Text accessibilityLiveRegion="polite" className="text-muted text-sm">
-            Still scoring — you can check back here shortly.
-          </Text>
-        ) : null}
-      </View>
-    );
-  if (submission.kind === "scored") return null;
-  return (
-    <View className="gap-2">
-      <Text accessibilityLiveRegion="polite" className="text-danger text-sm">
-        {submission.message}
-      </Text>
-      {submission.canRetry ? (
-        <BouncablePress
-          accessibilityRole="button"
-          accessibilityLabel="Retry submitting your dance"
-          onPress={onRetryUpload}
-          className="self-start rounded-xl border border-border px-4 py-2"
-        >
-          <Text className="font-bold text-foreground text-sm">Retry upload</Text>
-        </BouncablePress>
-      ) : null}
-    </View>
   );
 }
 
