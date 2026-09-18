@@ -1,4 +1,11 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src/**/*.ts", "src/**/*.tsx", "nativewind-env.d.ts", "theme/colors.d.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "nativewind-env.d.ts",
+    "theme/colors.d.ts",
+    "api/published-api-url.d.ts",
+    "expo/app-config.d.ts"
+  ]
 }

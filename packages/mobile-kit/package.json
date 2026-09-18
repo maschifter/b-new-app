@@ -64,8 +64,8 @@
       "default": "./src/expo/index.ts"
     },
     "./expo/app-config": {
-      "types": "./src/expo/app-config.ts",
-      "default": "./src/expo/app-config.ts"
+      "types": "./expo/app-config.d.ts",
+      "default": "./expo/app-config.js"
     },
     "./testing": {
       "react-native": "./src/testing/index.ts",
