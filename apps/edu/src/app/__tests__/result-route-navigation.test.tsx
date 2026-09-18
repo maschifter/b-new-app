@@ -18,7 +18,10 @@ const mockOnFinished = jest.fn();
 jest.mock("@/features/scan", () => {
   const React = require("react");
   const { Text } = require("react-native");
+  // The clip parse stays real, so the route's redirect guard is exercised rather than
+  // mocked away.
   return {
+    ...require("@bnewapp/dance-flow/clip-params"),
     ScanResultScreen: ({ onBack, onFinished }: { onBack: () => void; onFinished: () => void }) => {
       mockOnBack.mockImplementation(onBack);
       mockOnFinished.mockImplementation(onFinished);

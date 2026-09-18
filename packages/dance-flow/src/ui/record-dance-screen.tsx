@@ -26,6 +26,7 @@ import {
 import { danceMoveDetailAtomFamily } from "../_atoms/queries";
 import { simulatedDanceRecordingEnabledAtom, useBackDanceCameraAtom } from "../_atoms/ui";
 import { getDanceMoves } from "../api";
+import type { RecordedDanceClip } from "../clip-params";
 import {
   type DanceRecorder,
   chooseSimulatedDanceVideo,
@@ -37,20 +38,12 @@ import { CameraUnavailableOverlay } from "./camera-unavailable-overlay";
 import { DanceSilhouette } from "./dance-silhouette";
 
 export type { CameraPermissionCopy } from "./camera-permission-overlay";
+// Re-exported so `./record-screen` stays the one entry a host app needs for the
+// screen and the clip it hands back.
+export type { RecordedDanceClip } from "../clip-params";
 
 const DEFAULT_RECORDING_LENGTH_SECONDS = 60;
 const VIDEO_BIT_RATE = 1_500_000;
-
-export interface RecordedDanceClip {
-  path: string;
-  duration: number;
-  /**
-   * Music playhead at the first recorded frame, in milliseconds. Undefined — never 0 —
-   * when the player never started, because 0 is a legitimate offset and would silently
-   * mux the track from its very start instead of reaching the server's fallback.
-   */
-  audioOffsetMs?: number | undefined;
-}
 
 interface RecordDanceScreenProps {
   moveId: string;

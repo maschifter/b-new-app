@@ -5,5 +5,13 @@
 //
 // `./reconciliation` is this feature's other public entry, kept separate so the root
 // layout can mount the startup hook without loading the camera stack re-exported here.
-export { RecordDanceScreen, type RecordedDanceClip } from "@bnewapp/dance-flow/record-screen";
+
+// The flow's own round trip through router params, so neither route re-derives the
+// encoding. This module pulls in nothing native, unlike the screens below it.
+export {
+  type RecordedDanceClip,
+  parseDanceClipParams,
+  toDanceClipParams,
+} from "@bnewapp/dance-flow/clip-params";
+export { RecordDanceScreen } from "@bnewapp/dance-flow/record-screen";
 export { ScanResultScreen } from "./ui/scan-result-screen";

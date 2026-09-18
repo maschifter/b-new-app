@@ -1,4 +1,4 @@
-import { RecordDanceScreen } from "@/features/dance";
+import { RecordDanceScreen, toDanceClipParams } from "@/features/dance";
 import { isUuidParam } from "@bnewapp/mobile-kit";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 
@@ -11,17 +11,10 @@ export default function DanceRecordRoute() {
     <RecordDanceScreen
       moveId={moveId}
       onBack={() => router.back()}
-      onRecordingComplete={({ path, duration, audioOffsetMs }) =>
+      onRecordingComplete={(clip) =>
         router.replace({
           pathname: "/dance/[moveId]/result",
-          params: {
-            moveId,
-            clipPath: path,
-            clipDuration: String(duration),
-            // Omitted rather than stringified when absent, so the result route can tell
-            // "never measured" from a measured 0.
-            ...(audioOffsetMs === undefined ? {} : { clipAudioOffsetMs: String(audioOffsetMs) }),
-          },
+          params: { moveId, ...toDanceClipParams(clip) },
         })
       }
     />

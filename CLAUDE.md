@@ -314,9 +314,13 @@ identity Stepz creates.
 **`@bnewapp/dance-flow`** owns the record and result screens plus the flow state behind
 them. `useDanceSubmission` (`@bnewapp/dance-flow/use-dance-submission`) is the submit → poll →
 submission-state sequence both result screens run; a screen adds its own product decisions
-around it rather than repeating the sequence. The app's `dance` feature keeps catalog,
-learning, post history and feed UI. The app injects the flow's base URL and MMKV store id
-once at startup through `configureDanceFlow`
+around it rather than repeating the sequence. `@bnewapp/dance-flow/clip-params` is the
+clip's round trip through router params (`toDanceClipParams` / `parseDanceClipParams`): a record route
+serializes, a result route rebuilds or gets `null` and redirects. It imports nothing native,
+so a route validates its params without loading the camera stack, and neither app re-derives
+the encoding that keeps a measured 0 apart from a missing offset. The app's `dance`
+feature keeps catalog, learning, post history and feed UI. The app injects the flow's
+base URL and MMKV store id once at startup through `configureDanceFlow`
 (`apps/mobile/src/lib/bootstrap/dance-flow.ts`, imported for side effect by the root layout).
 
 > **Legacy shape — do not copy for new features.** The **studio** feature predates

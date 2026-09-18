@@ -17,7 +17,10 @@ jest.mock("expo-router", () => {
 jest.mock("@/features/dance", () => {
   const React = require("react");
   const { Text } = require("react-native");
+  // The clip helpers stay real — driving the actual encode and decode is the point of
+  // this test. Only the two screens are stood in for.
   return {
+    ...require("@bnewapp/dance-flow/clip-params"),
     RecordDanceScreen: ({
       onRecordingComplete,
     }: {
@@ -31,12 +34,10 @@ jest.mock("@/features/dance", () => {
         },
         "finish",
       ),
-    DanceResultScreen: (props: { clipAudioOffsetMs?: number }) =>
-      React.createElement(
-        Text,
-        null,
-        `offset:${"clipAudioOffsetMs" in props ? props.clipAudioOffsetMs : "absent"}`,
-      ),
+    // `?? "absent"` rather than an `in` check: the route now forwards the parsed
+    // offset as a prop that is explicitly `undefined` when the clip never measured one.
+    DanceResultScreen: (props: { clipAudioOffsetMs?: number | undefined }) =>
+      React.createElement(Text, null, `offset:${props.clipAudioOffsetMs ?? "absent"}`),
   };
 });
 

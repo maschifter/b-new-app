@@ -23,6 +23,11 @@
       "types": "./src/use-dance-submission.ts",
       "default": "./src/use-dance-submission.ts"
     },
+    "./clip-params": {
+      "react-native": "./src/clip-params.ts",
+      "types": "./src/clip-params.ts",
+      "default": "./src/clip-params.ts"
+    },
     "./submission-state": {
       "react-native": "./src/ui/submission-state.ts",
       "types": "./src/ui/submission-state.ts",
