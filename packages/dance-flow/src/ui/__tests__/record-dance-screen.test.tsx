@@ -9,6 +9,7 @@ import { act, fireEventAsync, screen, waitFor } from "@testing-library/react-nat
 import type { createStore } from "jotai";
 import type { ComponentProps } from "react";
 import { Linking } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Camera, useVideoOutput } from "react-native-vision-camera";
 
 import { simulatedDanceRecordingEnabledAtom, useBackDanceCameraAtom } from "../../_atoms/ui";
@@ -312,6 +313,28 @@ it("withholds the silhouette guide while the camera is still unauthorized", asyn
 
   expect(await screen.findByText("Camera access is needed")).toBeOnTheScreen();
   expect(silhouette()).toBeNull();
+});
+
+it("holds the recording controls above the system bar the camera draws under", async () => {
+  mockCameraPermission.hasPermission = true;
+  mockedGetDanceMove.mockResolvedValue(move());
+  mockedGetDanceMoves.mockResolvedValue({ items: [], nextCursor: null });
+
+  const result = await renderWithProviders(
+    <SafeAreaProvider
+      initialMetrics={{
+        frame: { x: 0, y: 0, width: 360, height: 800 },
+        insets: { top: 44, right: 0, bottom: 48, left: 0 },
+      }}
+    >
+      <RecordDanceScreen moveId={MOVE_ID} onRecordingComplete={mockRecordingComplete} />
+    </SafeAreaProvider>,
+    { auth: { userId: "dancer", accessToken: "token" } },
+  );
+  mountedScreens.push(result);
+
+  await screen.findByLabelText("Start recording");
+  expect(screen.getByTestId("record-controls")).toHaveStyle({ paddingBottom: 48 + 20 });
 });
 
 it("uses the back camera when the development toggle is enabled", async () => {

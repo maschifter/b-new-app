@@ -272,15 +272,22 @@ hooks, theme tokens and jest harness live in **`@bnewapp/mobile-kit`**. Feature 
 them from the package directly — `@bnewapp/mobile-kit` (transport helpers, auth/query seam,
 jotai helpers, `isUuidParam`, `QueryProvider`), `@bnewapp/mobile-kit/auth/supabase-client`,
 `@bnewapp/mobile-kit/ui`, `@bnewapp/mobile-kit/ui/dev-menu`,
-`@bnewapp/mobile-kit/ui/tempo-bar`, `@bnewapp/mobile-kit/ui/tempo-steps` and the two
-`@bnewapp/mobile-kit/media/*` hooks. `theme/colors` is not one of them: it holds the
-preset's placeholder values, which only `theme/tailwind-preset.js` reads, and a component
+`@bnewapp/mobile-kit/ui/media-scrim`, `@bnewapp/mobile-kit/ui/tempo-bar`,
+`@bnewapp/mobile-kit/ui/tempo-steps` and the two `@bnewapp/mobile-kit/media/*` hooks.
+`theme/colors` is not one of them: it holds the preset's
+placeholder values, which only `theme/tailwind-preset.js` reads, and a component
 takes its runtime colors from its own app's `@/lib/theme/colors`. One `exports` entry per
 concern, so a consumer never loads a native dependency it does not use — `ui/tempo-bar`
 sits outside the `ui` barrel because it is the only primitive that pulls in
 react-native-gesture-handler, and `ui/tempo-steps` is its scale alone, importable by state
 code that never renders the bar. Change the implementation in `mobile-kit`, not in a
 feature, and never add a second copy of a primitive it already owns.
+
+`MediaScrimPanel` (`ui/media-scrim`) is the bottom overlay a full-bleed camera or video
+screen lays its controls on: an absolute panel over a transparent-to-black gradient, sized
+to its own content and padded by the bottom safe-area inset. The record screen and both
+result screens use it, so the media runs edge to edge and the controls stay readable
+without a black band hiding the frame.
 
 `TempoBar` is the shared playback-speed control, rendered by the Stepz feed and the mobile
 lesson screen. It is controlled (`rate` + `onRateChange`) and snaps a drag or a tap to the nearest

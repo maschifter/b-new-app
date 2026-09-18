@@ -64,6 +64,7 @@
     "expo-audio": "*",
     "expo-blur": "*",
     "expo-file-system": "*",
+    "expo-linear-gradient": "*",
     "expo-video": "*",
     "jotai": "*",
     "jotai-family": "*",

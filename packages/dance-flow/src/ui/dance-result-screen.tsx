@@ -2,10 +2,10 @@ import { mergeAudioOffsetMs } from "@bnewapp/dance-core";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
 import { useSyncedMusicTrack } from "@bnewapp/mobile-kit/media/use-synced-music-track";
 import { BouncablePress } from "@bnewapp/mobile-kit/ui";
+import { MediaScrimPanel } from "@bnewapp/mobile-kit/ui/media-scrim";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useAtomValue } from "jotai";
 import { StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { optionalDanceMoveAtomFamily } from "../_atoms/queries";
 import { useDanceSubmission } from "../use-dance-submission";
 import { SubmissionFeedback } from "./submission-feedback";
@@ -52,40 +52,39 @@ export function DanceResultScreen({
   } = useDanceSubmission({ moveId, clipPath, clipDuration, clipAudioOffsetMs });
 
   return (
-    <SafeAreaView className="flex-1 bg-black" edges={["top", "right", "bottom", "left"]}>
-      <View className="flex-1 bg-black">
-        <VideoView player={player} contentFit="cover" nativeControls={false} style={styles.video} />
-        <View className="gap-4 bg-app px-4 py-6">
-          <Text accessibilityRole="header" className="text-2xl font-extrabold text-foreground">
-            {submission.kind === "scored" ? "Your result" : "Reviewing your dance"}
-          </Text>
-          <SubmissionFeedback submission={submission} onRetry={retrySubmission} />
-          {canFinish ? (
-            <View className="flex-row gap-3">
-              <BouncablePress
-                accessibilityRole="button"
-                accessibilityLabel="Record another dance"
-                onPress={onRecordAgain}
-                className="flex-1 items-center rounded-2xl border border-border py-4"
-              >
-                <Text className="font-bold text-foreground">Record again</Text>
-              </BouncablePress>
-              <BouncablePress
-                accessibilityRole="button"
-                accessibilityLabel="Finish dance result"
-                onPress={onDone}
-                className="flex-1 items-center rounded-2xl bg-primary py-4"
-              >
-                <Text className="font-bold text-foreground">Done</Text>
-              </BouncablePress>
-            </View>
-          ) : null}
-        </View>
-      </View>
-    </SafeAreaView>
+    <View className="flex-1 bg-black">
+      <VideoView
+        player={player}
+        contentFit="cover"
+        nativeControls={false}
+        style={StyleSheet.absoluteFill}
+      />
+      <MediaScrimPanel testID="result-panel" className="gap-4 px-4 pt-16" bottomGap={24}>
+        <Text accessibilityRole="header" className="text-2xl font-extrabold text-foreground">
+          {submission.kind === "scored" ? "Your result" : "Reviewing your dance"}
+        </Text>
+        <SubmissionFeedback submission={submission} onRetry={retrySubmission} />
+        {canFinish ? (
+          <View className="flex-row gap-3">
+            <BouncablePress
+              accessibilityRole="button"
+              accessibilityLabel="Record another dance"
+              onPress={onRecordAgain}
+              className="flex-1 items-center rounded-2xl border border-border py-4"
+            >
+              <Text className="font-bold text-foreground">Record again</Text>
+            </BouncablePress>
+            <BouncablePress
+              accessibilityRole="button"
+              accessibilityLabel="Finish dance result"
+              onPress={onDone}
+              className="flex-1 items-center rounded-2xl bg-primary py-4"
+            >
+              <Text className="font-bold text-foreground">Done</Text>
+            </BouncablePress>
+          </View>
+        ) : null}
+      </MediaScrimPanel>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  video: { flex: 1 },
-});

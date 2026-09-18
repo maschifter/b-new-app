@@ -483,6 +483,9 @@ importers:
       expo-file-system:
         specifier: '*'
         version: 55.0.26(expo@55.0.28)(react-native@0.83.10(@babel/core@7.29.7)(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.0))
+      expo-linear-gradient:
+        specifier: '*'
+        version: 55.0.18(expo@55.0.28)(react-native@0.83.10(@babel/core@7.29.7)(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.0))(react@19.2.0)
       expo-video:
         specifier: '*'
         version: 55.0.21(patch_hash=5c53a475dfe8126255b29b1884a56884dcd64321bffe474c30c92dda3e8b1384)(expo@55.0.28)(react-native@0.83.10(@babel/core@7.29.7)(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.0))(react@19.2.0)
@@ -568,6 +571,9 @@ importers:
       expo-device:
         specifier: '*'
         version: 55.0.21(expo@55.0.28)
+      expo-linear-gradient:
+        specifier: '*'
+        version: 55.0.18(expo@55.0.28)(react-native@0.83.10(@babel/core@7.29.7)(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.0))(react@19.2.0)
       jotai:
         specifier: '*'
         version: 2.20.2(@babel/core@7.29.7)(@babel/template@7.29.7)(@types/react@19.2.18)(react@19.2.0)
@@ -589,6 +595,9 @@ importers:
       react-native-reanimated:
         specifier: '*'
         version: 4.2.1(react-native-worklets@0.7.4(@babel/core@7.29.7)(react-native@0.83.10(@babel/core@7.29.7)(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.0))(react@19.2.0))(react-native@0.83.10(@babel/core@7.29.7)(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.0))(react@19.2.0)
+      react-native-safe-area-context:
+        specifier: '*'
+        version: 5.6.2(react-native@0.83.10(@babel/core@7.29.7)(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.0))(react@19.2.0)
       react-native-url-polyfill:
         specifier: '*'
         version: 4.0.0(react-native@0.83.10(@babel/core@7.29.7)(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.0))

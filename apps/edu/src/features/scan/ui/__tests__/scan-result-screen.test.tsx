@@ -107,6 +107,7 @@ import { renderAsync } from "@testing-library/react-native";
 import { Provider } from "jotai";
 import { queryClientAtom } from "jotai-tanstack-query";
 import { BackHandler } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ScanResultScreen } from "../scan-result-screen";
 
 const MOVE_ID = "00000000-0000-4000-8000-000000000001";
@@ -169,13 +170,20 @@ async function mount(store: TestStore) {
   return renderAsync(
     <QueryClientProvider client={store.get(queryClientAtom)}>
       <Provider store={store}>
-        <ScanResultScreen
-          moveId={MOVE_ID}
-          clipPath={CLIP}
-          clipDuration={12.4}
-          onBack={onBack}
-          onFinished={onFinished}
-        />
+        <SafeAreaProvider
+          initialMetrics={{
+            frame: { x: 0, y: 0, width: 360, height: 800 },
+            insets: { top: 44, right: 0, bottom: 48, left: 0 },
+          }}
+        >
+          <ScanResultScreen
+            moveId={MOVE_ID}
+            clipPath={CLIP}
+            clipDuration={12.4}
+            onBack={onBack}
+            onFinished={onFinished}
+          />
+        </SafeAreaProvider>
       </Provider>
     </QueryClientProvider>,
   );
@@ -259,6 +267,16 @@ describe("the score", () => {
     expect(await screen.findByText("82 / 100")).toBeOnTheScreen();
     expect(screen.getByText("Two Step")).toBeOnTheScreen();
     expect(screen.getByRole("button", { name: "Continue and Save your Score" })).toBeOnTheScreen();
+  });
+
+  it("holds the score panel above the system bar the clip plays under", async () => {
+    scanScores(82);
+    const store = newStore();
+
+    await mount(store);
+    await screen.findByText("82 / 100");
+
+    expect(screen.getByTestId("scan-result-panel")).toHaveStyle({ paddingBottom: 48 + 24 });
   });
 
   it("saves a first score automatically, with the snapshot built from the move", async () => {

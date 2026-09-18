@@ -12,12 +12,12 @@ import type { SubmissionState } from "@bnewapp/dance-flow/submission-state";
 import { useDanceSubmission } from "@bnewapp/dance-flow/use-dance-submission";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
 import { BouncablePress } from "@bnewapp/mobile-kit/ui";
+import { MediaScrimPanel } from "@bnewapp/mobile-kit/ui/media-scrim";
 import type { DanceMove } from "@bnewapp/types";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useAtom, useAtomValue, useSetAtom, useStore } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BackHandler, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { discardScanUploadMutationAtom } from "../_atoms/mutations";
 import { scanDecisionAtom } from "../_atoms/ui";
 import { deleteTemporaryClip, isPlayableClip, savePersonalRecordingFile } from "../recording-store";
@@ -234,44 +234,47 @@ export function ScanResultScreen({
   }, [declineVideo, decision]);
 
   return (
-    <SafeAreaView className="flex-1 bg-black" edges={["top", "right", "bottom", "left"]}>
-      <View className="flex-1 bg-black">
-        <VideoView player={player} contentFit="cover" nativeControls={false} style={styles.video} />
-        <View className="gap-4 bg-app px-4 py-6">
-          {decision === "video" && step !== null ? (
-            step.kind === "replace" ? (
-              <ReplaceVideoScreen
-                isSaving={isSavingVideo}
-                hasFailed={hasVideoSaveFailed}
-                onReplace={saveVideo}
-                onKeepExisting={declineVideo}
-              />
-            ) : (
-              <SaveVideoScreen
-                moveTitle={move.data?.title ?? ""}
-                isSaving={isSavingVideo}
-                hasFailed={hasVideoSaveFailed}
-                onSave={saveVideo}
-                onSkip={declineVideo}
-              />
-            )
-          ) : (
-            <ScorePanel
-              submission={submission}
-              moveTitle={move.data?.title ?? null}
-              hasSaveError={saveState.kind === "missing-move" || saveState.kind === "write-failed"}
-              isRetryingSave={isRetryingSave}
-              canConfirm={scoredValue !== null && saveState.kind === "ready"}
-              isAdvancing={isAdvancing}
-              onRetrySave={retrySave}
-              onRetryUpload={retry}
-              onConfirm={confirmScore}
-              onBack={onBack}
+    <View className="flex-1 bg-black">
+      <VideoView
+        player={player}
+        contentFit="cover"
+        nativeControls={false}
+        style={StyleSheet.absoluteFill}
+      />
+      <MediaScrimPanel testID="scan-result-panel" className="gap-4 px-4 pt-16" bottomGap={24}>
+        {decision === "video" && step !== null ? (
+          step.kind === "replace" ? (
+            <ReplaceVideoScreen
+              isSaving={isSavingVideo}
+              hasFailed={hasVideoSaveFailed}
+              onReplace={saveVideo}
+              onKeepExisting={declineVideo}
             />
-          )}
-        </View>
-      </View>
-    </SafeAreaView>
+          ) : (
+            <SaveVideoScreen
+              moveTitle={move.data?.title ?? ""}
+              isSaving={isSavingVideo}
+              hasFailed={hasVideoSaveFailed}
+              onSave={saveVideo}
+              onSkip={declineVideo}
+            />
+          )
+        ) : (
+          <ScorePanel
+            submission={submission}
+            moveTitle={move.data?.title ?? null}
+            hasSaveError={saveState.kind === "missing-move" || saveState.kind === "write-failed"}
+            isRetryingSave={isRetryingSave}
+            canConfirm={scoredValue !== null && saveState.kind === "ready"}
+            isAdvancing={isAdvancing}
+            onRetrySave={retrySave}
+            onRetryUpload={retry}
+            onConfirm={confirmScore}
+            onBack={onBack}
+          />
+        )}
+      </MediaScrimPanel>
+    </View>
   );
 }
 
@@ -411,7 +414,3 @@ function snapshotOf(move: DanceMove): LearnedMoveSnapshot {
     videoUrl: resolvePreviewMedia(move).videoUrl,
   };
 }
-
-const styles = StyleSheet.create({
-  video: { flex: 1 },
-});

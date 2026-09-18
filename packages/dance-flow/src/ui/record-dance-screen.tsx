@@ -10,12 +10,13 @@ import {
 import { queryAuthAtom } from "@bnewapp/mobile-kit";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
 import { BouncablePress, DanceSkeleton, MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
+import { MediaScrimPanel } from "@bnewapp/mobile-kit/ui/media-scrim";
 import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useAtomValue } from "jotai";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   Camera,
   CommonResolutions,
@@ -69,7 +70,7 @@ export function RecordDanceScreen({
   onRecordingComplete,
 }: RecordDanceScreenProps) {
   return (
-    <SafeAreaView className="flex-1 bg-black" edges={["top", "left", "right", "bottom"]}>
+    <View className="flex-1 bg-black">
       <MobileQueryErrorBoundary title="Couldn't load this dance" retryLabel="Retry loading dance">
         <Suspense fallback={<DanceSkeleton />}>
           <RecordDanceContent
@@ -80,7 +81,7 @@ export function RecordDanceScreen({
           />
         </Suspense>
       </MobileQueryErrorBoundary>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -90,6 +91,7 @@ function RecordDanceContent({
   cameraPermissionCopy,
   onRecordingComplete,
 }: RecordDanceScreenProps) {
+  const insets = useSafeAreaInsets();
   const move = useAtomValue(danceMoveDetailAtomFamily(moveId)).data;
   const [step, setStep] = useState(FilmStep.READY);
   const [referenceOnTop, setReferenceOnTop] = useState(true);
@@ -361,7 +363,8 @@ function RecordDanceContent({
 
   const isRecording = step === FilmStep.RECORDING;
   const isStartDisabled = !isRecording && step !== FilmStep.READY;
-  const cameraSurfaceStyle = referenceOnTop ? StyleSheet.absoluteFill : styles.pip;
+  const pipStyle = [styles.pip, { top: insets.top + PIP_TOP_MARGIN }];
+  const cameraSurfaceStyle = referenceOnTop ? StyleSheet.absoluteFill : pipStyle;
   // The guide stays up through the count-in, where the dancer is still framing themselves,
   // and comes down at the first recorded frame so it never sits on top of the take.
   const showSilhouette = hasPermission && step < FilmStep.RECORDING;
@@ -404,7 +407,10 @@ function RecordDanceContent({
         )}
         {showSilhouette ? <DanceSilhouette style={cameraSurfaceStyle} /> : null}
         {referenceOnTop ? (
-          <View className="absolute right-4 top-4 h-48 w-28 overflow-hidden rounded-2xl border border-white/50 bg-black">
+          <View
+            className="absolute right-4 h-48 w-28 overflow-hidden rounded-2xl border border-white/50 bg-black"
+            style={{ top: insets.top + PIP_TOP_MARGIN }}
+          >
             <VideoView
               player={referencePlayer}
               contentFit="cover"
@@ -417,7 +423,8 @@ function RecordDanceContent({
           accessibilityRole="button"
           accessibilityLabel="Swap reference and camera videos"
           onPress={() => setReferenceOnTop((current) => !current)}
-          className="absolute right-4 top-56 rounded-full bg-black/70 px-3 py-2"
+          className="absolute right-4 rounded-full bg-black/70 px-3 py-2"
+          style={{ top: insets.top + PIP_TOP_MARGIN + PIP_HEIGHT + 12 }}
         >
           <Text className="text-xs font-bold text-foreground">Flip PiP</Text>
         </BouncablePress>
@@ -432,7 +439,7 @@ function RecordDanceContent({
           </View>
         ) : null}
       </View>
-      <View className="gap-3 bg-app px-4 py-5">
+      <MediaScrimPanel testID="record-controls" className="gap-3 px-4 pt-14">
         <Text accessibilityRole="header" className="text-xl font-extrabold text-foreground">
           {move.title}
         </Text>
@@ -475,11 +482,14 @@ function RecordDanceContent({
             </Text>
           </BouncablePress>
         </View>
-      </View>
+      </MediaScrimPanel>
     </View>
   );
 }
 
+const PIP_TOP_MARGIN = 16;
+const PIP_HEIGHT = 192;
+
 const styles = StyleSheet.create({
-  pip: { position: "absolute", right: 16, top: 16, width: 112, height: 192 },
+  pip: { position: "absolute", right: 16, width: 112, height: PIP_HEIGHT },
 });

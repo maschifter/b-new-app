@@ -23,6 +23,11 @@
       "types": "./src/ui/index.ts",
       "default": "./src/ui/index.ts"
     },
+    "./ui/media-scrim": {
+      "react-native": "./src/ui/media-scrim-panel.tsx",
+      "types": "./src/ui/media-scrim-panel.tsx",
+      "default": "./src/ui/media-scrim-panel.tsx"
+    },
     "./ui/dev-menu": {
       "react-native": "./src/ui/dev-menu.tsx",
       "types": "./src/ui/dev-menu.tsx",
@@ -91,6 +96,7 @@
     "expo-audio": "*",
     "expo-constants": "*",
     "expo-device": "*",
+    "expo-linear-gradient": "*",
     "jotai": "*",
     "jotai-tanstack-query": "*",
     "nativewind": "*",
@@ -99,6 +105,7 @@
     "react-native-gesture-handler": "*",
     "react-native-mmkv": "*",
     "react-native-reanimated": "*",
+    "react-native-safe-area-context": "*",
     "react-native-url-polyfill": "*",
     "react-native-worklets": "*"
   },

@@ -1,6 +1,7 @@
 import { mergeAudioOffsetMs } from "@bnewapp/dance-core";
 import { createTestQueryClient, renderWithProviders } from "@bnewapp/mobile-kit/testing";
 import { fireEventAsync, screen } from "@testing-library/react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import {
   createDancePost,
   discardUploadingDancePost,
@@ -60,14 +61,21 @@ const mockedUploadDanceVideo = uploadDanceVideo as jest.Mock;
 
 async function mount(clipAudioOffsetMs?: number) {
   return renderWithProviders(
-    <DanceResultScreen
-      moveId={MOVE_ID}
-      clipPath="file:///tmp/dance-attempt.mp4"
-      clipDuration={12.4}
-      {...(clipAudioOffsetMs === undefined ? {} : { clipAudioOffsetMs })}
-      onRecordAgain={onRecordAgain}
-      onDone={onDone}
-    />,
+    <SafeAreaProvider
+      initialMetrics={{
+        frame: { x: 0, y: 0, width: 360, height: 800 },
+        insets: { top: 44, right: 0, bottom: 48, left: 0 },
+      }}
+    >
+      <DanceResultScreen
+        moveId={MOVE_ID}
+        clipPath="file:///tmp/dance-attempt.mp4"
+        clipDuration={12.4}
+        {...(clipAudioOffsetMs === undefined ? {} : { clipAudioOffsetMs })}
+        onRecordAgain={onRecordAgain}
+        onDone={onDone}
+      />
+    </SafeAreaProvider>,
     {
       queryClient: createTestQueryClient({ queries: { gcTime: 0 }, mutations: { gcTime: 0 } }),
       auth: { userId: "dancer", accessToken: "token" },
@@ -97,6 +105,27 @@ beforeEach(() => {
   mockedGetDanceScoreStatus.mockReset();
   mockedMarkDancePostUploaded.mockReset();
   mockedUploadDanceVideo.mockReset();
+});
+
+it("holds the result controls above the system bar the clip plays under", async () => {
+  mockedCreateDancePost.mockResolvedValue({
+    postId: POST_ID,
+    upload: { signedUrl: "https://storage.example.test/upload", path: "dancer/attempt.mp4" },
+  });
+  mockedUploadDanceVideo.mockResolvedValue(undefined);
+  mockedMarkDancePostUploaded.mockResolvedValue({ id: POST_ID, status: "uploaded" });
+  mockedGetDanceScoreStatus.mockResolvedValue({
+    status: "scored",
+    hasScore: true,
+    score: 96,
+    isExternalScore: true,
+    jobState: "completed",
+  });
+
+  await mount();
+  await screen.findByText("You scored 96 points!");
+
+  expect(screen.getByTestId("result-panel")).toHaveStyle({ paddingBottom: 48 + 24 });
 });
 
 it("replays the clip and shows the score after upload and scan completion", async () => {
