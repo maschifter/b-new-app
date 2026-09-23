@@ -478,8 +478,10 @@ In this order, each a self-contained commit.
   exactly the secondary emphasis §9 gives `neon`, and tinting it `accent` would break the
   one rule this pass exists to establish — that yellow means a score. The row therefore
   re-tints for free with the token and needs no edit; only the sheet ground does.
-- `feed-skeleton.tsx`, `pro-tip-overlay.tsx` — re-tint; the pro-tip card gets the
-  `GradientStrokeWrapper` treatment (a `LinearGradient` shell with 2 px inset).
+- `feed-skeleton.tsx` — re-tint. `pro-tip-overlay.tsx` is gone: Pro Tip became the
+  stack route `pro-tip-screen.tsx` (see `plans/educational-app-feed.md` §4.3), a
+  full-bleed player with its own tempo bar rather than a card, so the
+  `GradientStrokeWrapper` treatment this line called for no longer has a card to wrap.
 
 **3b. Record** — nothing app-side; Phase 2 covers it. Device check only.
 

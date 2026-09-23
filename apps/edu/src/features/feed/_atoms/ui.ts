@@ -22,9 +22,6 @@ export const playbackRateAtom = atom(1);
  */
 export const feedPausedAtom = atom(false);
 
-/** `null` = the Pro Tip overlay is closed. */
-export const proTipMoveIdAtom = atom<string | null>(null);
-
 /**
  * A filter change replaces the whole result set, so the index into it has to go back
  * to 0 with the rate. Resetting only the rate strands the index past the end of a

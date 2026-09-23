@@ -100,9 +100,10 @@ so the flow cannot be swiped away mid-scan.
 
 Open against the feed, listed so nobody rediscovers them here and nobody folds them in:
 
-- The Pro Tip overlay is a plain view, not a `Modal`, so Android hardware Back closes the app
+- ~~The Pro Tip overlay is a plain view, not a `Modal`, so Android hardware Back closes the app
   instead of the overlay. **Confirmed on a device.** It is a feed bug; the same trap is designed
-  out of F2 in §5.5.
+  out of F2 in §5.5.~~ **Fixed:** Pro Tip is a stack route, so Back pops it
+  (`plans/educational-app-feed.md` §4.3).
 - **Reset filters** is a no-op in the unfiltered empty state.
 - `tempo-bar.tsx` sets `accessibilityRole="adjustable"` with no `accessibilityActions`.
 - A stale `selectedGenreIdAtom` can render as "All Styles".

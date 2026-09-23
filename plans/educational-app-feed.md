@@ -350,10 +350,16 @@ The button label reflects the selection.
 prop and calls it from the action column instead of importing `router` itself — that is what lets
 §4 say the route file is unchanged.
 
-**Pro Tip must be an in-screen overlay, not a route push.** Document 01 line 55 requires that
-closing it restores the same feed position, filters and playback speed. An overlay driven by
-`proTipMoveIdAtom` keeps the pager mounted and makes that restoration automatic; a pushed route
-risks remounting the list and losing the scroll offset.
+**Pro Tip was an in-screen overlay; it is now a route push. Superseded.** The original rule
+here read "Pro Tip must be an in-screen overlay, not a route push", because document 01 line 55
+requires that closing it restores the same feed position, filters and playback speed, and an
+overlay driven by `proTipMoveIdAtom` made that restoration automatic. What the overlay could not
+do is answer Android's hardware Back: it was a plain view, not a `Modal`, so Back closed the app
+instead of the tip — a feed bug confirmed on a device and logged in
+`plans/educational-app-scan.md` §1.3. Pro Tip is therefore
+`apps/edu/src/app/move/[moveId]/pro-tip.tsx` on the stack. Line 55 still holds and is still met:
+a push leaves the feed screen mounted underneath, so its position, filters and speed are never
+torn down. `proTipMoveIdAtom` is gone, and with it the coupling that hid the filter bar.
 
 ### 4.4 Empty, error and loading states
 
@@ -461,7 +467,10 @@ code. Device checks are named separately because jest cannot judge them.
 - [ ] A move with no video and no poster image still renders its title and the CTA.
 - [ ] Pro Tip is hidden for a move with neither tip field, shown when either exists (line 110).
 - [ ] Closing Pro Tip leaves `selectedLevelAtom`, `selectedGenreIdAtom`, `activeMoveIndexAtom`
-      and `playbackRateAtom` untouched (line 122).
+      and `playbackRateAtom` untouched (line 122). Now a stack pop, not an overlay dismissal:
+      §4.3. **Device box** — the unit test can only prove opening it touches none of them.
+- [ ] Android hardware Back on Pro Tip returns to the feed instead of closing the app —
+      the bug §4.3 records, fixed by the route. **Device box.**
 - [ ] Changing the active move resets `playbackRateAtom` to 1 (line 119).
 - [ ] Changing a filter resets `activeMoveIndexAtom` to 0 as well as the rate to 1, and the first
       item of the new result set is the one that plays (§3).

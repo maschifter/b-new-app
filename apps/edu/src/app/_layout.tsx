@@ -64,6 +64,7 @@ function RootNavigator() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="move/[moveId]/scan" />
+        <Stack.Screen name="move/[moveId]/pro-tip" />
         <Stack.Screen name="move/[moveId]/result" options={{ gestureEnabled: false }} />
         <Stack.Screen name="profile/index" />
         <Stack.Screen name="profile/[moveId]" />

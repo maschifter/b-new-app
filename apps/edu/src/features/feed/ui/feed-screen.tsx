@@ -25,7 +25,6 @@ import {
   activeMoveIndexAtom,
   feedPausedAtom,
   playbackRateAtom,
-  proTipMoveIdAtom,
   resetFeedFiltersAtom,
   selectGenreAtom,
   selectLevelAtom,
@@ -36,7 +35,7 @@ import { FEED_LEVELS, levelLabel } from "../data/levels";
 import { FeedFilterSheet, type FilterOption } from "./feed-filter-sheet";
 import { FeedMovePage } from "./feed-move-page";
 import { FeedSkeleton } from "./feed-skeleton";
-import { ProTipOverlay, hasProTip } from "./pro-tip-overlay";
+import { hasProTip } from "./pro-tip-screen";
 
 interface FeedScreenProps {
   onOpenProfile: () => void;
@@ -58,7 +57,6 @@ export function FeedScreen({ onOpenProfile }: FeedScreenProps) {
 
 function FeedContent({ onOpenProfile }: FeedScreenProps) {
   const genres = useAtomValue(genresAtom).data;
-  const proTipMoveId = useAtomValue(proTipMoveIdAtom);
 
   // The filters sit outside the moves boundary on purpose: both are in that query's
   // key, so every change re-suspends it. Inside, a mis-tap could not be corrected
@@ -75,10 +73,7 @@ function FeedContent({ onOpenProfile }: FeedScreenProps) {
           <FeedPager onOpenProfile={onOpenProfile} />
         </Suspense>
       </MobileQueryErrorBoundary>
-      {/* The bar hides behind the Pro Tip overlay, which renders inside the boundary
-          above. `FeedPager` clears the id whenever that overlay is not on the screen,
-          so this cannot hide the bar with nothing in its place. */}
-      {proTipMoveId === null ? <FeedFilterBar genres={genres} /> : null}
+      <FeedFilterBar genres={genres} />
     </View>
   );
 }
@@ -202,7 +197,6 @@ function FeedPager({ onOpenProfile }: FeedScreenProps) {
   const setPlaybackRate = useSetAtom(playbackRateAtom);
   const setPaused = useSetAtom(feedPausedAtom);
   const resetFilters = useSetAtom(resetFeedFiltersAtom);
-  const [proTipMoveId, setProTipMoveId] = useAtom(proTipMoveIdAtom);
   const genreId = useAtomValue(selectedGenreIdAtom);
   const level = useAtomValue(selectedLevelAtom);
   const [tempoDragging, setTempoDragging] = useState(false);
@@ -237,29 +231,14 @@ function FeedPager({ onOpenProfile }: FeedScreenProps) {
     [activeIndex, height, width],
   );
 
-  const proTipMove =
-    proTipMoveId === null ? null : (moves.find((move) => move.id === proTipMoveId) ?? null);
-
-  // The open id is also what hides the filter bar, one boundary up. An id that no
-  // longer resolves — the move dropped out of a refetched page — would hide the bar
-  // with no overlay to replace it, so the id follows the move.
-  useEffect(() => {
-    if (proTipMoveId !== null && proTipMove === null) setProTipMoveId(null);
-  }, [proTipMove, proTipMoveId, setProTipMoveId]);
-
-  // The overlay lives in this subtree, so anything that takes the subtree away — a
-  // failed reload swapping in the error boundary, a filter change re-suspending it —
-  // takes the overlay with it and leaves the id stale. The position goes back with it:
-  // the next pager builds its list at offset 0, and an index left on the old position
-  // would caption and open a move that is not the one on the screen.
+  // A remounted pager starts at offset 0, so reset the state that describes its page.
   useEffect(
     () => () => {
-      setProTipMoveId(null);
       setActiveIndex(0);
       setPlaybackRate(1);
       setPaused(false);
     },
-    [setActiveIndex, setPaused, setPlaybackRate, setProTipMoveId],
+    [setActiveIndex, setPaused, setPlaybackRate],
   );
 
   if (moves.length === 0) {
@@ -340,7 +319,7 @@ function FeedPager({ onOpenProfile }: FeedScreenProps) {
             <ActionButton
               icon="bulb-outline"
               label="Open Pro Tip"
-              onPress={() => setProTipMoveId(activeMove.id)}
+              onPress={() => router.push(`/move/${activeMove.id}/pro-tip`)}
             />
           ) : null}
         </View>
@@ -378,9 +357,6 @@ function FeedPager({ onOpenProfile }: FeedScreenProps) {
           </BouncablePress>
         </View>
       </View>
-      {proTipMove ? (
-        <ProTipOverlay move={proTipMove} onClose={() => setProTipMoveId(null)} />
-      ) : null}
     </View>
   );
 }

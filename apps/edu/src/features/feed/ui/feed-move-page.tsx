@@ -120,6 +120,11 @@ function FeedMoveVideo({
       testID="feed-move-video"
       player={player}
       nativeControls={false}
+      // A stack push renders the incoming screen over this one for the length of the
+      // transition, and Android's default SurfaceView is composited below the window,
+      // so it neither follows the animation nor stays beneath the screen sliding over
+      // it. A TextureView draws inside the view hierarchy instead.
+      surfaceType="textureView"
       contentFit="cover"
       style={StyleSheet.absoluteFill}
     />

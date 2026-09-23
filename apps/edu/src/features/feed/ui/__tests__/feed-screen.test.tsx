@@ -11,8 +11,6 @@ import {
   activeMoveIndexAtom,
   feedPausedAtom,
   playbackRateAtom,
-  proTipMoveIdAtom,
-  selectLevelAtom,
   selectedGenreIdAtom,
   selectedLevelAtom,
 } from "../../_atoms/ui";
@@ -277,24 +275,27 @@ it("hides Pro Tip for a move that has none and shows it when either tip field ex
   expect(screen.getByLabelText("Open Pro Tip")).toBeOnTheScreen();
 });
 
-it("closes Pro Tip back onto the same position, filters and speed", async () => {
-  const moves = [move("a", { dancerTipImageUrl: "https://cdn.test/tip.jpg" }), move("b")];
+it("opens Pro Tip as its own stack route, leaving the feed as it stands", async () => {
+  const moves = [move("a"), move("b", { dancerTipVideoUrl: "https://cdn.test/tip.mp4" })];
   mockedGetMoves.mockResolvedValue(page(moves, null));
   const store = await mount();
   await screen.findByLabelText("Dance this Move, Move a");
   store.set(selectedLevelAtom, 2);
-  store.set(playbackRateAtom, 0.75);
+  await swipeTo(1, moves);
+  await act(async () => {
+    store.set(playbackRateAtom, 0.75);
+  });
 
   await fireEventAsync.press(screen.getByLabelText("Open Pro Tip"));
-  expect(screen.getByTestId("feed-pro-tip")).toBeOnTheScreen();
-  await fireEventAsync.press(screen.getByLabelText("Close Pro Tip"));
 
-  expect(screen.queryByTestId("feed-pro-tip")).toBeNull();
+  expect(mockPush).toHaveBeenCalledWith(`/move/${MOVE_ID}b/pro-tip`);
+  // The pushed route leaves this screen mounted underneath, so opening Pro Tip must
+  // not touch the position, filters or speed the user comes back to (line 122).
+  expect(store.get(activeMoveIndexAtom)).toBe(1);
+  expect(store.get(playbackRateAtom)).toBe(0.75);
   expect(store.get(selectedLevelAtom)).toBe(2);
   expect(store.get(selectedGenreIdAtom)).toBeNull();
-  expect(store.get(activeMoveIndexAtom)).toBe(0);
-  expect(store.get(playbackRateAtom)).toBe(0.75);
-  expect(store.get(proTipMoveIdAtom)).toBeNull();
+  expect(screen.getByLabelText("Level filter, Level 2")).toBeOnTheScreen();
 });
 
 it("returns to normal speed when the move changes", async () => {
@@ -443,44 +444,6 @@ it("blocks the pager's own scroll gesture while the tempo bar is dragged", async
 
   expect(pager.handlerTag).toBeGreaterThan(0);
   await waitFor(() => expect(pan.config.blocksHandlers).toEqual([pager.handlerTag]));
-});
-
-it("keeps the filter bar reachable when the open Pro Tip's move is not in the feed", async () => {
-  const store = await mount();
-  await screen.findByLabelText("Dance this Move, Move a");
-
-  await act(async () => {
-    store.set(proTipMoveIdAtom, `${MOVE_ID}z`);
-  });
-
-  expect(screen.queryByTestId("feed-pro-tip")).toBeNull();
-  expect(screen.getByLabelText("Level filter, All Levels")).toBeOnTheScreen();
-  expect(store.get(proTipMoveIdAtom)).toBeNull();
-});
-
-it("brings the filter bar back when the pager fails while a Pro Tip is open", async () => {
-  const consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
-  try {
-    mockedGetMoves.mockResolvedValue(
-      page([move("a", { dancerTipImageUrl: "https://cdn.test/tip.jpg" })], null),
-    );
-    const store = await mount();
-    await screen.findByLabelText("Dance this Move, Move a");
-
-    await fireEventAsync.press(screen.getByLabelText("Open Pro Tip"));
-    expect(screen.queryByLabelText("Level filter, All Levels")).toBeNull();
-
-    mockedGetMoves.mockRejectedValue(new Error("offline"));
-    await act(async () => {
-      store.set(selectLevelAtom, 2);
-    });
-
-    expect(await screen.findByText("Couldn't load these moves")).toBeOnTheScreen();
-    expect(screen.getByLabelText("Level filter, Level 2")).toBeOnTheScreen();
-    expect(store.get(proTipMoveIdAtom)).toBeNull();
-  } finally {
-    consoleError.mockRestore();
-  }
 });
 
 it("rebuilds the pager at the top, not on the position the last one left", async () => {
