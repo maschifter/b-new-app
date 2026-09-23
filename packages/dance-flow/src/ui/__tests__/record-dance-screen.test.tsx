@@ -315,6 +315,18 @@ it("keeps choreography audio playing while the camera session is active", async 
   expect(screen.UNSAFE_getByType(Camera).props.device).toBe("front");
 });
 
+it("keeps the capture controls to the Boogiz-style action surface", async () => {
+  mockCameraPermission.hasPermission = true;
+
+  await mount(move(), undefined, { onBack: mockBack });
+
+  expect(screen.queryByText("Electric Slide")).toBeNull();
+  expect(screen.queryByText("Recording length: 60s")).toBeNull();
+  expect(screen.queryByText(/DEV · Simulated/)).toBeNull();
+  expect(screen.queryByLabelText("Discard take")).toBeNull();
+  expect(screen.getByLabelText("Go back")).toBeOnTheScreen();
+});
+
 it("reads the physical orientation on a real device", async () => {
   mockCameraPermission.hasPermission = true;
 
@@ -366,6 +378,35 @@ it("keeps the silhouette guide up through the count-in and drops it at the first
   expect(silhouette()).toBeNull();
 
   await fireEventAsync.press(screen.getByLabelText("Stop recording"));
+});
+
+it("automatically stops and hands the clip to the next step when the take reaches its limit", async () => {
+  mockCameraPermission.hasPermission = true;
+  const recorder = stoppableRecorder();
+  mockCreateRecorder.mockResolvedValue(recorder);
+
+  await mount(move({ bpm: FAST_BPM }));
+  jest.useFakeTimers();
+  try {
+    await fireEventAsync.press(screen.getByLabelText("Start recording"));
+    await act(async () => {
+      jest.advanceTimersByTime(20);
+      await Promise.resolve();
+    });
+
+    expect(screen.getByLabelText("Stop recording")).toBeOnTheScreen();
+    await act(async () => {
+      jest.advanceTimersByTime(60_500);
+      await Promise.resolve();
+    });
+
+    expect(recorder.stopRecording).toHaveBeenCalledTimes(1);
+    expect(mockRecordingComplete).toHaveBeenCalledWith(
+      expect.objectContaining({ path: "file:///tmp/dance-attempt.mp4" }),
+    );
+  } finally {
+    jest.useRealTimers();
+  }
 });
 
 it("withholds the silhouette guide while the camera is still unauthorized", async () => {
@@ -473,6 +514,16 @@ it("uses the back camera when the development toggle is enabled", async () => {
   expect(screen.UNSAFE_getByType(Camera).props.device).toBe("back");
 });
 
+it("lets a dancer choose the production camera before the count-in", async () => {
+  mockCameraPermission.hasPermission = true;
+
+  await mount();
+
+  await fireEventAsync.press(screen.getByLabelText("Flip camera"));
+
+  expect(screen.UNSAFE_getByType(Camera).props.device).toBe("back");
+});
+
 it("shows a recoverable message when the recorder cannot start", async () => {
   mockCameraPermission.hasPermission = true;
   mockCreateRecorder.mockResolvedValue({
@@ -520,7 +571,6 @@ it("records through the simulated adapter, and never the camera, when the dev sw
 
   // The dev switch stands in for the camera permission, so the prompt is gone.
   expect(screen.queryByText("Camera access is needed")).not.toBeOnTheScreen();
-  expect(screen.getByText("DEV · Simulated reference recording")).toBeOnTheScreen();
   expect(screen.UNSAFE_queryByType(Camera)).toBeNull();
 
   await fireEventAsync.press(screen.getByLabelText("Start recording"));

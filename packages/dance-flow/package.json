@@ -86,6 +86,7 @@
     "react-native-mmkv": "*",
     "react-native-reanimated": "*",
     "react-native-safe-area-context": "*",
+    "react-native-svg": "15.15.3",
     "react-native-vision-camera": "*",
     "react-native-worklets": "*"
   },
@@ -95,6 +96,7 @@
     "babel-preset-expo": "~55.0.24",
     "jest": "~29.7.0",
     "jest-expo": "~55.0.20",
+    "react-native-svg": "15.15.3",
     "react-test-renderer": "19.2.0"
   }
 }

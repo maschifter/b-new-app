@@ -273,7 +273,13 @@ describe("the score", () => {
 
     expect(await screen.findByText("82 / 100")).toBeOnTheScreen();
     expect(screen.getByText("Two Step")).toBeOnTheScreen();
-    expect(screen.getByRole("button", { name: "Continue and Save your Score" })).toBeOnTheScreen();
+    await waitFor(
+      () =>
+        expect(
+          screen.getByRole("button", { name: "Continue and Save your Score" }),
+        ).toBeOnTheScreen(),
+      { timeout: 1_500 },
+    );
   });
 
   it("holds the scrim panel above the system bar the clip plays under", async () => {

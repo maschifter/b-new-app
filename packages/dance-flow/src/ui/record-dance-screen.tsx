@@ -17,6 +17,7 @@ import { VideoView, useVideoPlayer } from "expo-video";
 import { useAtomValue } from "jotai";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { useReducedMotion } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   Camera,
@@ -37,6 +38,8 @@ import {
 import { type CameraPermissionCopy, CameraPermissionOverlay } from "./camera-permission-overlay";
 import { CameraUnavailableOverlay } from "./camera-unavailable-overlay";
 import { DanceSilhouette } from "./dance-silhouette";
+import { RecordingControls } from "./recording-controls";
+import { RecordingCountdown } from "./recording-countdown";
 
 export type { CameraPermissionCopy } from "./camera-permission-overlay";
 // Re-exported so `./record-screen` stays the one entry a host app needs for the
@@ -121,14 +124,18 @@ function RecordDanceContent({
   const [referenceOnTop, setReferenceOnTop] = useState(true);
   const [referenceDuration, setReferenceDuration] = useState<number | null>(null);
   const [countdownText, setCountdownText] = useState<string | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const useBackCameraToggle = useAtomValue(useBackDanceCameraAtom);
+  const [cameraPosition, setCameraPosition] = useState<"back" | "front">(
+    __DEV__ && useBackCameraToggle ? "back" : "front",
+  );
   const [recordingError, setRecordingError] = useState<string | null>(null);
   const [cameraFailed, setCameraFailed] = useState(false);
   const [simulatedVideoUrl, setSimulatedVideoUrl] = useState(move.filmYourselfVideoUrl);
   const auth = useAtomValue(queryAuthAtom);
   const simulatedRecordingToggle = useAtomValue(simulatedDanceRecordingEnabledAtom);
-  const useBackCameraToggle = useAtomValue(useBackDanceCameraAtom);
+  const reducedMotion = useReducedMotion();
   const simulatedRecordingEnabled = __DEV__ && simulatedRecordingToggle;
-  const useBackCamera = __DEV__ && useBackCameraToggle;
   const cameraPermission = useCameraPermission();
   const hasPermission = simulatedRecordingEnabled || cameraPermission.hasPermission;
   const canRequestPermission = simulatedRecordingEnabled || cameraPermission.canRequestPermission;
@@ -232,6 +239,18 @@ function RecordDanceContent({
   }, [clearTimers]);
 
   useEffect(() => {
+    if (step !== FilmStep.RECORDING) return;
+    const updateElapsed = () => {
+      const startedAt = recordingStartedAtRef.current;
+      if (startedAt === null) return;
+      setElapsedSeconds(Math.min((Date.now() - startedAt) / 1_000, recordingLength));
+    };
+    updateElapsed();
+    const interval = setInterval(updateElapsed, 500);
+    return () => clearInterval(interval);
+  }, [recordingLength, step]);
+
+  useEffect(() => {
     if (isFilmMusicPlaying(step)) return;
     musicPlayer.pause();
   }, [musicPlayer, step]);
@@ -244,6 +263,7 @@ function RecordDanceContent({
       const duration = Math.max(startedAt === null ? 0 : (Date.now() - startedAt) / 1_000, 0.1);
       const audioOffsetMs = audioOffsetMsRef.current;
       recordingStartedAtRef.current = null;
+      setElapsedSeconds(0);
       audioOffsetMsRef.current = null;
       recorderRef.current = null;
       stopRequestedRef.current = false;
@@ -263,7 +283,7 @@ function RecordDanceContent({
 
   const requestStopRecording = useCallback(() => {
     const recorder = recorderRef.current;
-    if (stopRequestedRef.current || !recorder?.isRecording) return;
+    if (stopRequestedRef.current || recorder === null) return;
     clearTimers();
     stopRequestedRef.current = true;
     setStep(FilmStep.STOP);
@@ -289,6 +309,7 @@ function RecordDanceContent({
     recorderRef.current = null;
     stopRequestedRef.current = false;
     recordingStartedAtRef.current = null;
+    setElapsedSeconds(0);
     audioOffsetMsRef.current = null;
     if (recorder?.isRecording) void recorder.cancelRecording();
     musicPlayer.pause();
@@ -317,6 +338,7 @@ function RecordDanceContent({
       recorderRef.current = recorder;
       stopRequestedRef.current = false;
       recordingStartedAtRef.current = Date.now();
+      setElapsedSeconds(0);
       let didFailToStart = false;
       await recorder.startRecording(finishRecording, () => {
         if (!isMountedRef.current) return;
@@ -349,7 +371,9 @@ function RecordDanceContent({
       setStep(FilmStep.RECORDING);
       referencePlayer.play();
       if (simulatedRecordingEnabled) simulatedCameraPlayer.play();
-      timersRef.current.push(setTimeout(requestStopRecording, recordingLength * 1_000));
+      // The circular control's UI-thread completion is the primary stop signal. This
+      // fallback covers reduced motion and a paused UI runtime without racing it.
+      timersRef.current.push(setTimeout(requestStopRecording, recordingLength * 1_000 + 500));
     } catch {
       if (!isMountedRef.current) return;
       recordingStartedAtRef.current = null;
@@ -412,7 +436,7 @@ function RecordDanceContent({
   ]);
 
   const isRecording = step === FilmStep.RECORDING;
-  const isStartDisabled = cameraFailed || (!isRecording && step !== FilmStep.READY);
+  const isBusy = !isRecording && step !== FilmStep.READY;
   const pipStyle = [styles.pip, { top: insets.top + PIP_TOP_MARGIN }];
   const cameraSurfaceStyle = referenceOnTop ? StyleSheet.absoluteFill : pipStyle;
   // The guide stays up through the count-in, where the dancer is still framing themselves,
@@ -440,7 +464,7 @@ function RecordDanceContent({
           />
         ) : hasPermission && !cameraFailed ? (
           <Camera
-            device={useBackCamera ? "back" : "front"}
+            device={cameraPosition}
             isActive={step !== FilmStep.FINISHED}
             allowBackgroundAudioPlayback
             mirrorMode="auto"
@@ -496,60 +520,38 @@ function RecordDanceContent({
         >
           <Text className="text-xs font-bold text-foreground">Flip PiP</Text>
         </BouncablePress>
-        {countdownText ? (
-          <View
-            pointerEvents="none"
-            className="absolute inset-0 items-center justify-center bg-black/20"
+        {!simulatedRecordingEnabled ? (
+          <BouncablePress
+            accessibilityRole="button"
+            accessibilityLabel="Flip camera"
+            onPress={() => setCameraPosition((current) => (current === "front" ? "back" : "front"))}
+            disabled={step !== FilmStep.READY}
+            className="absolute right-4 rounded-full bg-black/70 px-3 py-2"
+            style={{ top: insets.top + PIP_TOP_MARGIN + PIP_HEIGHT + 56 }}
           >
-            <Text accessibilityLiveRegion="polite" className="text-8xl font-black text-foreground">
-              {countdownText}
-            </Text>
-          </View>
+            <Text className="text-xs font-bold text-foreground">Flip camera</Text>
+          </BouncablePress>
         ) : null}
+        <RecordingCountdown label={countdownText} reducedMotion={reducedMotion} />
       </View>
-      <MediaScrimPanel testID="record-controls" className="gap-3 px-4 pt-14">
-        <Text accessibilityRole="header" className="text-xl font-extrabold text-foreground">
-          {move.title}
-        </Text>
-        <Text className="text-sm text-muted">
-          {step === FilmStep.RECORDING
-            ? "Recording your routine…"
-            : `Recording length: ${recordingLength}s`}
-        </Text>
-        {simulatedRecordingEnabled ? (
-          <Text className="text-xs text-neon">
-            DEV · Simulated{" "}
-            {simulatedVideoUrl === move.filmYourselfVideoUrl ? "reference" : "catalog"} recording
-          </Text>
-        ) : null}
+      <MediaScrimPanel testID="record-controls" className="pt-14">
         {recordingError ? (
-          <Text accessibilityLiveRegion="polite" className="text-sm text-danger">
+          <Text accessibilityLiveRegion="polite" className="px-4 text-sm text-danger">
             {recordingError}
           </Text>
         ) : null}
-        <View className="flex-row gap-3">
-          {onBack ? (
-            <BouncablePress
-              accessibilityRole="button"
-              accessibilityLabel="Go back"
-              onPress={onBack}
-              className="flex-1 items-center rounded-full border border-border py-4"
-            >
-              <Text className="font-bold text-foreground">Back</Text>
-            </BouncablePress>
-          ) : null}
-          <BouncablePress
-            accessibilityRole="button"
-            accessibilityLabel={isRecording ? "Stop recording" : "Start recording"}
-            onPress={isRecording ? requestStopRecording : () => void startDance()}
-            disabled={isStartDisabled}
-            className="flex-1 items-center rounded-full bg-primary py-4"
-          >
-            <Text className="font-bold text-foreground">
-              {isRecording ? "Stop" : "Start recording"}
-            </Text>
-          </BouncablePress>
-        </View>
+        <RecordingControls
+          recordingLength={recordingLength}
+          elapsedSeconds={elapsedSeconds}
+          isRecording={isRecording}
+          isBusy={isBusy}
+          isCameraUnavailable={cameraFailed}
+          hasBackAction={onBack !== undefined}
+          onBack={onBack ?? (() => undefined)}
+          onStart={() => void startDance()}
+          onStop={requestStopRecording}
+          onProgressComplete={requestStopRecording}
+        />
       </MediaScrimPanel>
     </View>
   );
