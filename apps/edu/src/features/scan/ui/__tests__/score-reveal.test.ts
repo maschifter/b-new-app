@@ -5,7 +5,7 @@ jest.mock("react-native-reanimated", () => ({
   useReducedMotion: () => mockReducedMotion,
 }));
 
-import { render } from "@testing-library/react-native";
+import { act, render, screen } from "@testing-library/react-native";
 import { createElement } from "react";
 import { Text } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -18,6 +18,21 @@ function renderScoredReveal(score: number) {
       { initialMetrics: { frame: { x: 0, y: 0, width: 360, height: 800 }, insets: { top: 0, right: 0, bottom: 0, left: 0 } } },
       createElement(ScoreReveal, {
         submission: { kind: "scored", score },
+        moveTitle: "Two Step",
+        actions: createElement(Text, null, "Actions"),
+        onRetryUpload: jest.fn(),
+      }),
+    ),
+  );
+}
+
+function renderScanningReveal() {
+  return render(
+    createElement(
+      SafeAreaProvider,
+      { initialMetrics: { frame: { x: 0, y: 0, width: 360, height: 800 }, insets: { top: 0, right: 0, bottom: 0, left: 0 } } },
+      createElement(ScoreReveal, {
+        submission: { kind: "scanning", isSlow: false },
         moveTitle: "Two Step",
         actions: createElement(Text, null, "Actions"),
         onRetryUpload: jest.fn(),
@@ -65,5 +80,38 @@ describe("ScoreReveal decorations", () => {
 
     expect(view.UNSAFE_getByProps({ testID: "approved-decoration" })).toBeDefined();
     expect(view.UNSAFE_getByProps({ testID: "approved-sparkles" })).toBeDefined();
+  });
+});
+
+describe("ScoreReveal stages", () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("keeps scored actions out of the tree until the reveal gate opens", () => {
+    jest.useFakeTimers();
+    renderScoredReveal(82);
+
+    expect(screen.queryByText("Actions")).not.toBeOnTheScreen();
+
+    act(() => jest.advanceTimersByTime(1_200));
+
+    expect(screen.getByText("Actions")).toBeOnTheScreen();
+  });
+
+  it("shows scored actions immediately when reduced motion is enabled", () => {
+    mockReducedMotion = true;
+    renderScoredReveal(82);
+
+    expect(screen.getByText("Actions")).toBeOnTheScreen();
+  });
+
+  it("starts scanning from five percent and advances on its first interval", () => {
+    jest.useFakeTimers();
+    renderScanningReveal();
+
+    expect(screen.getByLabelText("Scoring your dance, 5 percent")).toBeOnTheScreen();
+    act(() => jest.advanceTimersByTime(500));
+    expect(screen.getByLabelText("Scoring your dance, 6 percent")).toBeOnTheScreen();
   });
 });
