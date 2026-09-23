@@ -5,8 +5,8 @@ import {
 } from "@bnewapp/mobile-kit/testing";
 import type { DanceMove } from "@bnewapp/types";
 import type { QueryClient } from "@tanstack/react-query";
-import * as Device from "expo-device";
 import { act, fireEventAsync, screen, waitFor } from "@testing-library/react-native";
+import * as Device from "expo-device";
 import type { createStore } from "jotai";
 import type { ComponentProps } from "react";
 import { Linking } from "react-native";
@@ -236,6 +236,27 @@ it("uses the mocked camera permission flow and configures capture without audio"
   await fireEventAsync.press(screen.getByLabelText("Allow camera access"));
   expect(mockRequestPermission).toHaveBeenCalledTimes(1);
   expect(mockUseVideoOutput).toHaveBeenCalledWith(expect.objectContaining({ enableAudio: false }));
+});
+
+it("shows a loading skeleton that matches the full-screen recording layout", async () => {
+  mockedGetDanceMove.mockReturnValue(new Promise(() => {}));
+  const { store, queryClient } = createTestStore({
+    queryClient: createTestQueryClient({ mutations: { gcTime: 0 } }),
+    auth: { userId: "dancer", accessToken: "token" },
+  });
+  queryClients.push(queryClient);
+
+  const result = await renderWithProviders(
+    <RecordDanceScreen moveId={MOVE_ID} onRecordingComplete={mockRecordingComplete} />,
+    { store },
+  );
+  mountedScreens.push(result);
+
+  expect(
+    screen.getByTestId("record-dance-skeleton", { includeHiddenElements: true }),
+  ).toBeOnTheScreen();
+  expect(screen.queryByTestId("dance-skeleton", { includeHiddenElements: true })).toBeNull();
+  expect(screen.queryByTestId("record-controls")).toBeNull();
 });
 
 it("renders the host app's pre-prompt copy in place of the shipped defaults", async () => {

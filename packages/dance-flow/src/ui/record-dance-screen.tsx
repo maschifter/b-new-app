@@ -9,7 +9,7 @@ import {
 } from "@bnewapp/dance-core";
 import { queryAuthAtom } from "@bnewapp/mobile-kit";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
-import { BouncablePress, DanceSkeleton, MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
+import { BouncablePress, MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
 import { MediaScrimPanel } from "@bnewapp/mobile-kit/ui/media-scrim";
 import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
 import * as Device from "expo-device";
@@ -67,7 +67,7 @@ export function RecordDanceScreen({
   return (
     <View className="flex-1 bg-black">
       <MobileQueryErrorBoundary title="Couldn't load this dance" retryLabel="Retry loading dance">
-        <Suspense fallback={<DanceSkeleton />}>
+        <Suspense fallback={<RecordDanceSkeleton />}>
           <RecordDanceContent
             moveId={moveId}
             onBack={onBack}
@@ -76,6 +76,35 @@ export function RecordDanceScreen({
           />
         </Suspense>
       </MobileQueryErrorBoundary>
+    </View>
+  );
+}
+
+/** Mirrors the full-bleed camera, PiP reference and bottom controls shown once the move loads. */
+function RecordDanceSkeleton() {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View
+      testID="record-dance-skeleton"
+      className="flex-1 bg-black"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <View className="flex-1 bg-panel" />
+      <View
+        className="absolute right-4 h-48 w-28 rounded-2xl border border-white/50 bg-panel-raised"
+        style={{ top: insets.top + PIP_TOP_MARGIN }}
+      />
+      <View
+        className="absolute right-4 h-8 w-24 rounded-full bg-black/70"
+        style={{ top: insets.top + PIP_TOP_MARGIN + PIP_HEIGHT + 12 }}
+      />
+      <MediaScrimPanel className="gap-3 px-4 pt-14">
+        <View className="h-7 w-3/5 rounded bg-panel-raised" />
+        <View className="h-5 w-2/5 rounded bg-panel" />
+        <View className="h-14 rounded-full bg-panel-raised" />
+      </MediaScrimPanel>
     </View>
   );
 }
