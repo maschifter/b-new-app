@@ -30,7 +30,7 @@ export function ProfileMoveScreen({ moveId, onBack }: ProfileMoveScreenProps) {
     return (
       <SafeAreaView className="flex-1 bg-app" edges={["top", "left", "right", "bottom"]}>
         <View className="flex-1 items-center justify-center gap-3 px-8">
-          <Text accessibilityRole="header" className="font-extrabold text-foreground text-xl">
+            <Text accessibilityRole="header" className="font-display text-foreground text-xl">
             Not in your collection
           </Text>
           <Text className="text-center text-base text-copy">
@@ -58,11 +58,11 @@ export function ProfileMoveScreen({ moveId, onBack }: ProfileMoveScreenProps) {
         <OfficialVideo url={learned.move.videoUrl} onBack={onBack} />
         <View className="gap-5 px-4 py-5">
           <View className="gap-1">
-            <Text accessibilityRole="header" className="font-extrabold text-2xl text-foreground">
+            <Text accessibilityRole="header" className="font-display text-2xl text-foreground">
               {learned.move.title}
             </Text>
             <Text className="text-base text-copy">
-              Your score: <Text className="font-extrabold text-neon">{learned.savedScore}</Text> /
+              Your score: <Text className="font-display text-accent">{learned.savedScore}</Text> /
               100
             </Text>
           </View>

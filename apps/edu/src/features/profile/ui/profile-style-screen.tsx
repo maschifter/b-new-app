@@ -42,7 +42,7 @@ export function ProfileStyleScreen({ styleId, onBack }: ProfileStyleScreenProps)
         >
           <Ionicons name="chevron-back" size={22} color={COLORS.foreground} />
         </BouncablePress>
-        <Text accessibilityRole="header" className="font-extrabold text-2xl text-foreground">
+        <Text accessibilityRole="header" className="font-display text-2xl text-foreground">
           {styleName ?? "Style"}
         </Text>
       </View>

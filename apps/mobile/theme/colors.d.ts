@@ -9,6 +9,7 @@ export declare const COLORS: {
   readonly copy: string;
   readonly border: string;
   readonly neon: string;
+  readonly accent: string;
   readonly primary: string;
   readonly danger: string;
   readonly scrim: string;

@@ -17,6 +17,7 @@ const COLORS = {
   copy: "#C9C9D0",
   border: "#45454F",
   neon: "#A1A1AA",
+  accent: "#B4B4BD",
   primary: "#71717A",
   danger: "#FF8F8F",
 };

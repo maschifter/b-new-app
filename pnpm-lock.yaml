@@ -135,6 +135,9 @@ importers:
       expo-file-system:
         specifier: ~55.0.26
         version: 55.0.26(expo@55.0.28)(react-native@0.83.10(@babel/core@7.29.7)(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.0))
+      expo-font:
+        specifier: ~55.0.8
+        version: 55.0.8(expo@55.0.28)(react-native@0.83.10(@babel/core@7.29.7)(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.0))(react@19.2.0)
       expo-image:
         specifier: ~55.0.11
         version: 55.0.11(expo@55.0.28)(react-native@0.83.10(@babel/core@7.29.7)(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.0))(react@19.2.0)
@@ -480,6 +483,9 @@ importers:
       expo-blur:
         specifier: '*'
         version: 55.0.18(expo@55.0.28)(react-native@0.83.10(@babel/core@7.29.7)(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.0))(react@19.2.0)
+      expo-device:
+        specifier: '*'
+        version: 55.0.21(expo@55.0.28)
       expo-file-system:
         specifier: '*'
         version: 55.0.26(expo@55.0.28)(react-native@0.83.10(@babel/core@7.29.7)(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.0))

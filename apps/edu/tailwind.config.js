@@ -7,6 +7,6 @@ module.exports = {
   content: ["./src/**/*.{js,jsx,ts,tsx}", "../../packages/*/src/**/*.{ts,tsx}"],
   presets: [require("nativewind/preset"), require("@bnewapp/mobile-kit/theme/tailwind-preset")],
   // Stepz's own direction: the preset's token names with this app's values.
-  theme: { extend: { colors: COLORS } },
+  theme: { extend: { colors: COLORS, fontFamily: { display: ["Slackey-Regular"] } } },
   plugins: [],
 };

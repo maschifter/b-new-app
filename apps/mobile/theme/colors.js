@@ -15,6 +15,7 @@ const COLORS = {
   copy: "#C7C7D1",
   border: "#4A4856",
   neon: "#A78BFA",
+  accent: "#C4B5FD",
   primary: "#8B5CF6",
   danger: "#FF8F8F",
 

@@ -2,6 +2,7 @@ import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playba
 import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import type { DanceMove } from "@bnewapp/types";
 import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -19,7 +20,7 @@ export function ProTipOverlay({ move, onClose }: { move: DanceMove; onClose: () 
     <View testID="feed-pro-tip" style={StyleSheet.absoluteFill} className="bg-app/95">
       <SafeAreaView edges={["top", "bottom"]} className="flex-1 px-5 pb-5">
         <View className="flex-row items-center justify-between py-3">
-          <Text accessibilityRole="header" className="font-extrabold text-foreground text-lg">
+          <Text accessibilityRole="header" className="font-display text-foreground text-lg">
             Pro Tip
           </Text>
           <BouncablePress
@@ -31,7 +32,8 @@ export function ProTipOverlay({ move, onClose }: { move: DanceMove; onClose: () 
             <Text className="font-bold text-copy text-sm">Close</Text>
           </BouncablePress>
         </View>
-        <View className="flex-1 overflow-hidden rounded-3xl bg-panel">
+        <LinearGradient colors={[RUNTIME_COLORS["primary-wash"], RUNTIME_COLORS["primary-wash"]]} className="flex-1 rounded-3xl p-0.5">
+          <View className="flex-1 overflow-hidden rounded-[14px] bg-panel">
           {move.dancerTipVideoUrl ? (
             <ProTipVideo url={move.dancerTipVideoUrl} />
           ) : move.dancerTipImageUrl ? (
@@ -41,7 +43,8 @@ export function ProTipOverlay({ move, onClose }: { move: DanceMove; onClose: () 
               style={StyleSheet.absoluteFill}
             />
           ) : null}
-        </View>
+          </View>
+        </LinearGradient>
         <Text className="mt-4 text-base text-copy">{move.description ?? move.title}</Text>
       </SafeAreaView>
     </View>
@@ -65,3 +68,4 @@ function ProTipVideo({ url }: { url: string }) {
     />
   );
 }
+import { RUNTIME_COLORS } from "@/lib/theme/colors";

@@ -62,6 +62,7 @@ function createExpoAppConfig({
   bundleIdentifier,
   cameraUsageDescription,
   photoLibraryAddUsageDescription,
+  plugins,
 }) {
   const buildProfile = process.env.EAS_BUILD_PROFILE;
 
@@ -122,6 +123,7 @@ function createExpoAppConfig({
       ["expo-audio", { recordAudioAndroid: false, enableBackgroundPlayback: false }],
       ...galleryPlugins,
       "@bnewapp/mobile-kit/config-plugins/with-ios-min-deployment-target",
+      ...(plugins ?? []),
     ],
     experiments: { typedRoutes: true },
   });

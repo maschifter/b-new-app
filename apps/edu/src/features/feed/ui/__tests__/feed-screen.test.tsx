@@ -528,7 +528,7 @@ it("holds the call to action above the system bar the feed draws under", async (
 it("holds the move on a tap and plays it again on the next one", async () => {
   const store = await mount();
   await screen.findByLabelText("Dance this Move, Move a");
-  expect(latestPlayer().play).toHaveBeenCalled();
+  await waitFor(() => expect(latestPlayer().play).toHaveBeenCalled());
 
   await fireEventAsync.press(screen.getByLabelText("Pause Move a"));
 

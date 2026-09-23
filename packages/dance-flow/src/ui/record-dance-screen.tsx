@@ -504,7 +504,7 @@ function RecordDanceContent({
               accessibilityRole="button"
               accessibilityLabel="Go back"
               onPress={onBack}
-              className="flex-1 items-center rounded-2xl border border-border py-4"
+              className="flex-1 items-center rounded-full border border-border py-4"
             >
               <Text className="font-bold text-foreground">Back</Text>
             </BouncablePress>
@@ -514,7 +514,7 @@ function RecordDanceContent({
             accessibilityLabel={isRecording ? "Stop recording" : "Start recording"}
             onPress={isRecording ? requestStopRecording : () => void startDance()}
             disabled={isStartDisabled}
-            className="flex-1 items-center rounded-2xl bg-primary py-4"
+            className="flex-1 items-center rounded-full bg-primary py-4"
           >
             <Text className="font-bold text-foreground">
               {isRecording ? "Stop" : "Start recording"}

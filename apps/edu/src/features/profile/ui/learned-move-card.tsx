@@ -45,7 +45,7 @@ export function LearnedMoveCard({ move, styleName, width, onPress }: LearnedMove
           <Image source={thumbnailUrl} contentFit="cover" style={StyleSheet.absoluteFill} />
         )}
         <View className="absolute bottom-1 left-1 rounded-full bg-black/70 px-2 py-0.5">
-          <Text className="font-bold text-foreground text-xs">{move.savedScore}</Text>
+          <Text className="font-display text-accent text-xs">{move.savedScore}</Text>
         </View>
       </View>
       <Text numberOfLines={2} className="font-semibold text-foreground text-xs">

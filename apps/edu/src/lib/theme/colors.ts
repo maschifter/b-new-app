@@ -1,1 +1,1 @@
-export { COLORS } from "../../../theme/colors";
+export { COLORS, RUNTIME_COLORS } from "../../../theme/colors";

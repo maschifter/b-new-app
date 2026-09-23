@@ -10,4 +10,5 @@ export default createExpoAppConfig({
     "Stepz uses your camera to scan your movement and calculate a score for the move you are learning.",
   photoLibraryAddUsageDescription:
     "Stepz saves a copy of your dance video to your gallery when you tap Download.",
+  plugins: [["expo-font", { fonts: ["./assets/fonts/Slackey-Regular.ttf"] }]],
 });

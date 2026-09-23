@@ -4,6 +4,12 @@ const mockFiles = new Map<string, number>();
 const mockDirectories = new Set<string>();
 const mockFsCalls: string[] = [];
 const mockFailCopy = { value: false };
+let mockReducedMotion = true;
+
+jest.mock("react-native-reanimated", () => ({
+  ...require("react-native-reanimated/mock"),
+  useReducedMotion: () => mockReducedMotion,
+}));
 
 jest.mock("expo-file-system", () => {
   function join(parts: unknown[]): string {
@@ -234,6 +240,7 @@ async function confirmScore() {
 }
 
 beforeEach(() => {
+  mockReducedMotion = true;
   mockFiles.clear();
   mockDirectories.clear();
   mockFsCalls.length = 0;
@@ -269,12 +276,12 @@ describe("the score", () => {
     expect(screen.getByRole("button", { name: "Continue and Save your Score" })).toBeOnTheScreen();
   });
 
-  it("holds the score panel above the system bar the clip plays under", async () => {
-    scanScores(82);
+  it("holds the scrim panel above the system bar the clip plays under", async () => {
+    scanFails();
     const store = newStore();
 
     await mount(store);
-    await screen.findByText("82 / 100");
+    await screen.findByText("Dance scoring failed. Please record another attempt.");
 
     expect(screen.getByTestId("scan-result-panel")).toHaveStyle({ paddingBottom: 48 + 24 });
   });

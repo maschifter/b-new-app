@@ -5,17 +5,29 @@
 // @bnewapp/mobile-kit preset, because the `className` strings shipped from the
 // shared packages resolve against them — renaming or dropping one breaks them.
 const COLORS = {
-  app: "#0B0B10",
-  panel: "#141420",
-  "panel-raised": "#1D1D2E",
-  "panel-muted": "#26263C",
+  app: "#1C141F",
+  panel: "#261B2B",
+  "panel-raised": "#332439",
+  "panel-muted": "#3F2D47",
   foreground: "#FFFFFF",
-  muted: "#8A8AA3",
-  copy: "#D3D3E4",
-  border: "#33334D",
-  neon: "#FF4D9D",
-  primary: "#FF2E88",
-  danger: "#FF6B6B",
+  muted: "#9A8CA3",
+  copy: "#E8E8E9",
+  border: "#4A3B52",
+  neon: "#D69EFA",
+  primary: "#AE3EF6",
+  accent: "#F9CF54",
+  danger: "#F94229",
 };
 
-module.exports = { COLORS };
+const RUNTIME_COLORS = {
+  "accent-wash": "rgba(249, 207, 84, 0.2)",
+  "primary-wash": "rgba(214, 158, 250, 0.12)",
+  "score-track-scanning": "rgba(255, 255, 255, 0.2)",
+  "score-track-scored": "rgba(255, 255, 255, 0.4)",
+  celebrate: "#47226C",
+  "celebrate-fade": "rgba(71, 34, 108, 0)",
+  "approved-ribbon-highlight": "rgba(255, 255, 255, 0.25)",
+  "approved-ribbon-copy": "#7A5B12",
+};
+
+module.exports = { COLORS, RUNTIME_COLORS };

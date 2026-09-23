@@ -25,6 +25,7 @@ import { deleteTemporaryClip, isPlayableClip, savePersonalRecordingFile } from "
 import { type VideoStep, videoStep } from "../result-flow";
 import { ReplaceVideoScreen } from "./replace-video-screen";
 import { SaveVideoScreen } from "./save-video-screen";
+import { ScoreReveal } from "./score-reveal";
 
 interface ScanResultScreenProps {
   moveId: string;
@@ -234,6 +235,20 @@ export function ScanResultScreen({
     return () => subscription.remove();
   }, [declineVideo, decision]);
 
+  const scoreActions = (
+    <ScoreActions
+      hasSaveError={saveState.kind === "missing-move" || saveState.kind === "write-failed"}
+      isRetryingSave={isRetryingSave}
+      canConfirm={scoredValue !== null && saveState.kind === "ready"}
+      isAdvancing={isAdvancing}
+      onRetrySave={retrySave}
+      onConfirm={confirmScore}
+      onBack={onBack}
+    />
+  );
+  const isVideoStep = decision === "video" && step !== null;
+  const isReveal = !isVideoStep && (submission.kind === "scanning" || submission.kind === "scored");
+
   return (
     <View className="flex-1 bg-black">
       <VideoView
@@ -242,9 +257,9 @@ export function ScanResultScreen({
         nativeControls={false}
         style={StyleSheet.absoluteFill}
       />
-      <MediaScrimPanel testID="scan-result-panel" className="gap-4 px-4 pt-16" bottomGap={24}>
-        {decision === "video" && step !== null ? (
-          step.kind === "replace" ? (
+      {isVideoStep ? (
+        <MediaScrimPanel testID="scan-result-panel" className="gap-4 px-4 pt-16" bottomGap={24}>
+          {step.kind === "replace" ? (
             <ReplaceVideoScreen
               isSaving={isSavingVideo}
               hasFailed={hasVideoSaveFailed}
@@ -259,8 +274,17 @@ export function ScanResultScreen({
               onSave={saveVideo}
               onSkip={declineVideo}
             />
-          )
-        ) : (
+          )}
+        </MediaScrimPanel>
+      ) : isReveal ? (
+        <ScoreReveal
+          submission={submission}
+          moveTitle={move.data?.title ?? null}
+          actions={scoreActions}
+          onRetryUpload={retry}
+        />
+      ) : (
+        <MediaScrimPanel testID="scan-result-panel" className="gap-4 px-4 pt-16" bottomGap={24}>
           <ScorePanel
             submission={submission}
             moveTitle={move.data?.title ?? null}
@@ -273,8 +297,8 @@ export function ScanResultScreen({
             onConfirm={confirmScore}
             onBack={onBack}
           />
-        )}
-      </MediaScrimPanel>
+        </MediaScrimPanel>
+      )}
     </View>
   );
 }
@@ -304,7 +328,6 @@ function ScorePanel({
   onConfirm,
   onBack,
 }: ScorePanelProps) {
-  const isTerminal = submission.kind === "scored" || submission.kind === "failed";
   return (
     <>
       <Text accessibilityRole="header" className="font-extrabold text-2xl text-foreground">
@@ -318,11 +341,47 @@ function ScorePanel({
         // flow's, so the retry affordance cannot drift from the package's own screen.
         renderScored={(score) => (
           <View className="gap-1">
-            <Text className="font-extrabold text-4xl text-neon">{score} / 100</Text>
+            <Text className="font-extrabold text-4xl text-accent">{score} / 100</Text>
             {moveTitle === null ? null : <Text className="text-base text-copy">{moveTitle}</Text>}
           </View>
         )}
       />
+      {submission.kind === "failed" ? (
+        <ScoreActions
+          hasSaveError={hasSaveError}
+          isRetryingSave={isRetryingSave}
+          canConfirm={canConfirm}
+          isAdvancing={isAdvancing}
+          onRetrySave={onRetrySave}
+          onConfirm={onConfirm}
+          onBack={onBack}
+        />
+      ) : null}
+    </>
+  );
+}
+
+interface ScoreActionsProps {
+  hasSaveError: boolean;
+  isRetryingSave: boolean;
+  canConfirm: boolean;
+  isAdvancing: boolean;
+  onRetrySave: () => void;
+  onConfirm: () => void;
+  onBack: () => void;
+}
+
+function ScoreActions({
+  hasSaveError,
+  isRetryingSave,
+  canConfirm,
+  isAdvancing,
+  onRetrySave,
+  onConfirm,
+  onBack,
+}: ScoreActionsProps) {
+  return (
+    <View className="gap-3">
       {hasSaveError ? (
         <View className="gap-2">
           <Text accessibilityLiveRegion="polite" className="text-danger text-sm">
@@ -340,31 +399,27 @@ function ScorePanel({
           </BouncablePress>
         </View>
       ) : null}
-      {isTerminal ? (
-        <View className="gap-3">
-          {canConfirm && !hasSaveError ? (
-            <BouncablePress
-              accessibilityRole="button"
-              accessibilityLabel="Continue and Save your Score"
-              accessibilityState={{ disabled: isAdvancing }}
-              disabled={isAdvancing}
-              onPress={onConfirm}
-              className="items-center rounded-2xl bg-primary py-4"
-            >
-              <Text className="font-bold text-foreground">Continue and Save your Score</Text>
-            </BouncablePress>
-          ) : null}
-          <BouncablePress
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-            onPress={onBack}
-            className="items-center rounded-2xl border border-border py-4"
-          >
-            <Text className="font-bold text-foreground">Back</Text>
-          </BouncablePress>
-        </View>
+      {canConfirm && !hasSaveError ? (
+        <BouncablePress
+          accessibilityRole="button"
+          accessibilityLabel="Continue and Save your Score"
+          accessibilityState={{ disabled: isAdvancing }}
+          disabled={isAdvancing}
+          onPress={onConfirm}
+          className="items-center rounded-full bg-primary py-4"
+        >
+          <Text className="font-display text-foreground">Continue and Save your Score</Text>
+        </BouncablePress>
       ) : null}
-    </>
+      <BouncablePress
+        accessibilityRole="button"
+        accessibilityLabel="Back"
+        onPress={onBack}
+        className="items-center rounded-full border border-border py-4"
+      >
+        <Text className="font-bold text-foreground">Back</Text>
+      </BouncablePress>
+    </View>
   );
 }
 

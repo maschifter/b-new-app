@@ -1,5 +1,7 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
+export type ExpoPlugin = NonNullable<ExpoConfig["plugins"]>[number];
+
 /** Mirrors `app-config.js`, the Expo config both apps build from. */
 export interface ExpoAppConfigOptions {
   /** Product name, before the build-profile suffix. */
@@ -18,6 +20,8 @@ export interface ExpoAppConfigOptions {
    * permission nor the native module.
    */
   photoLibraryAddUsageDescription?: string | undefined;
+  /** App-owned config plugins appended after the shared plugin contract. */
+  plugins?: ExpoPlugin[] | undefined;
 }
 
 export declare function createExpoAppConfig(

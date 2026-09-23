@@ -1,5 +1,5 @@
 import { genresAtom } from "@/lib/catalog";
-import { COLORS } from "@/lib/theme/colors";
+import { COLORS, RUNTIME_COLORS } from "@/lib/theme/colors";
 import { BouncablePress, MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
 import { TempoBar } from "@bnewapp/mobile-kit/ui/tempo-bar";
 import type { DanceGenre, DanceMove } from "@bnewapp/types";
@@ -114,11 +114,13 @@ function FeedFilterBar({ genres }: { genres: DanceGenre[] }) {
       <View pointerEvents="box-none" className="flex-row gap-2 px-4 pt-2">
         <FilterButton
           label={levelLabel(level)}
+          active={level !== null}
           accessibilityLabel={`Level filter, ${levelLabel(level)}`}
           onPress={() => setOpenSheet("level")}
         />
         <FilterButton
           label={styleLabel}
+          active={genreId !== null}
           accessibilityLabel={`Style filter, ${styleLabel}`}
           onPress={() => setOpenSheet("style")}
         />
@@ -145,10 +147,12 @@ function FeedFilterBar({ genres }: { genres: DanceGenre[] }) {
 
 function FilterButton({
   label,
+  active,
   accessibilityLabel,
   onPress,
 }: {
   label: string;
+  active: boolean;
   accessibilityLabel: string;
   onPress: () => void;
 }) {
@@ -157,9 +161,10 @@ function FilterButton({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       onPress={onPress}
-      className="flex-row items-center gap-1 rounded-full border border-white/20 bg-black/40 px-4 py-2"
+      style={active ? { backgroundColor: RUNTIME_COLORS["primary-wash"] } : undefined}
+      className={`flex-row items-center gap-1 rounded-full border px-4 py-2 ${active ? "border-primary" : "border-border bg-black/40"}`}
     >
-      <Text className="font-bold text-foreground text-sm">{label}</Text>
+      <Text className={active ? "font-display text-foreground text-sm" : "font-bold text-foreground text-sm"}>{label}</Text>
       <Ionicons name="chevron-down" size={14} color={COLORS.foreground} />
     </BouncablePress>
   );
@@ -262,7 +267,7 @@ function FeedPager({ onOpenProfile }: FeedScreenProps) {
   if (moves.length === 0) {
     return (
       <View className="flex-1 items-center justify-center gap-4 px-10">
-        <Text accessibilityRole="header" className="font-extrabold text-foreground text-xl">
+        <Text accessibilityRole="header" className="font-display text-foreground text-xl">
           No moves found
         </Text>
         <BouncablePress
@@ -361,7 +366,7 @@ function FeedPager({ onOpenProfile }: FeedScreenProps) {
           {query.isFetchingNextPage ? (
             <ActivityIndicator testID="feed-pagination-spinner" color={COLORS.neon} />
           ) : null}
-          <Text className="max-w-[60%] font-extrabold text-2xl text-foreground" numberOfLines={2}>
+          <Text className="max-w-[60%] font-display text-2xl text-foreground" numberOfLines={2}>
             {activeMove?.title ?? ""}
           </Text>
           <BouncablePress
@@ -375,7 +380,7 @@ function FeedPager({ onOpenProfile }: FeedScreenProps) {
             }}
             className="items-center justify-center rounded-full bg-primary px-6 py-4"
           >
-            <Text className="font-bold text-base text-foreground">Dance this Move</Text>
+            <Text className="font-display text-base text-foreground">Dance this Move</Text>
           </BouncablePress>
         </View>
       </View>
@@ -400,7 +405,7 @@ function ActionButton({
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
-      className="size-12 items-center justify-center rounded-full border border-white/20 bg-black/40"
+      className="size-12 items-center justify-center rounded-full border border-border bg-black/40"
     >
       <Ionicons name={icon} size={24} color={COLORS.foreground} />
     </BouncablePress>
