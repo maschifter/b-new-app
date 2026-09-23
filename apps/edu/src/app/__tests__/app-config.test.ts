@@ -24,6 +24,7 @@ it("appends Stepz's embedded Slackey face after the shared plugin contract", () 
       },
     ],
     "@bnewapp/mobile-kit/config-plugins/with-ios-min-deployment-target",
+    "@bnewapp/mobile-kit/config-plugins/with-ios-27-scene-lifecycle",
     ["expo-font", { fonts: ["./assets/fonts/Slackey-Regular.ttf"] }],
   ]);
 });

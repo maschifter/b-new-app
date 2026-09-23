@@ -123,6 +123,7 @@ function createExpoAppConfig({
       ["expo-audio", { recordAudioAndroid: false, enableBackgroundPlayback: false }],
       ...galleryPlugins,
       "@bnewapp/mobile-kit/config-plugins/with-ios-min-deployment-target",
+      "@bnewapp/mobile-kit/config-plugins/with-ios-27-scene-lifecycle",
       ...(plugins ?? []),
     ],
     experiments: { typedRoutes: true },

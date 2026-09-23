@@ -76,6 +76,7 @@
     "./metro/expo-app-config": "./metro/expo-app-config.js",
     "./tsconfig.expo-app.json": "./tsconfig.expo-app.json",
     "./config-plugins/with-ios-min-deployment-target": "./config-plugins/with-ios-min-deployment-target.js",
+    "./config-plugins/with-ios-27-scene-lifecycle": "./config-plugins/with-ios-27-scene-lifecycle.js",
     "./theme/colors": "./theme/colors.js",
     "./theme/tailwind-preset": "./theme/tailwind-preset.js",
     "./testing/jest/config": "./testing/jest/config.js",
