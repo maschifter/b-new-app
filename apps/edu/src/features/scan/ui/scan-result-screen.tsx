@@ -21,7 +21,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BackHandler, StyleSheet, Text, View } from "react-native";
 import { discardScanUploadMutationAtom } from "../_atoms/mutations";
 import { scanDecisionAtom } from "../_atoms/ui";
-import { deleteTemporaryClip, isPlayableClip, savePersonalRecordingFile } from "../recording-store";
+import {
+  deleteTemporaryClip,
+  isPlayableClip,
+  personalRecordingUri,
+  savePersonalRecordingFile,
+} from "../recording-store";
 import { type VideoStep, videoStep } from "../result-flow";
 import { ReplaceVideoScreen } from "./replace-video-screen";
 import { SaveVideoScreen } from "./save-video-screen";
@@ -260,9 +265,18 @@ export function ScanResultScreen({
         style={StyleSheet.absoluteFill}
       />
       {isVideoStep ? (
-        <MediaScrimPanel testID="scan-result-panel" className="gap-4 px-4 pt-16" bottomGap={24}>
+        <MediaScrimPanel
+          testID="scan-result-panel"
+          className="gap-4 px-4 pt-16"
+          bottomGap={24}
+          scrollable={step.kind === "replace"}
+        >
           {step.kind === "replace" ? (
             <ReplaceVideoScreen
+              existingVideoUri={personalRecordingUri(
+                store.get(personalRecordingsAtom)[moveId]?.fileName ?? "",
+              )}
+              newVideoUri={clipPath}
               isSaving={isSavingVideo}
               hasFailed={hasVideoSaveFailed}
               onReplace={saveVideo}

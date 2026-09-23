@@ -77,10 +77,10 @@ jest.mock("@react-navigation/native", () => ({ useIsFocused: () => true }));
 jest.mock("expo-video", () => ({
   VideoView: "VideoView",
   useVideoPlayer: (
-    _source: string,
+    source: string,
     configure: (player: { loop: boolean; muted: boolean }) => void,
   ) => {
-    const player = { loop: false, muted: false, play: jest.fn(), pause: jest.fn() };
+    const player = { source, loop: false, muted: false, play: jest.fn(), pause: jest.fn() };
     configure(player);
     return player;
   },
@@ -506,7 +506,7 @@ describe("the video decision", () => {
     expect(screen.getByRole("button", { name: "Not Now" })).toBeOnTheScreen();
   });
 
-  it("renders document 02 section 5's strings when a personal recording exists", async () => {
+  it("lets the user compare playable current and new videos before replacing", async () => {
     scanScores(82);
     mockFiles.set(CLIP, 2_048);
     mockFiles.set(EXISTING_VIDEO, 1_024);
@@ -522,7 +522,7 @@ describe("the video decision", () => {
     await screen.findByText("82 / 100");
     await confirmScore();
 
-    expect(screen.getByText("Do you want to replace your video?")).toBeOnTheScreen();
+    expect(screen.getByText("Replace your saved video?")).toBeOnTheScreen();
     expect(
       screen.getByText(
         "You can keep one personal video for each move. Saving this recording will permanently replace your previous video.",
@@ -530,6 +530,15 @@ describe("the video decision", () => {
     ).toBeOnTheScreen();
     expect(screen.getByRole("button", { name: "Replace Video" })).toBeOnTheScreen();
     expect(screen.getByRole("button", { name: "Keep Existing Video" })).toBeOnTheScreen();
+    expect(screen.getByTestId("replace-current-video-preview")).toBeOnTheScreen();
+    expect(screen.getByTestId("replace-new-video-preview")).toBeOnTheScreen();
+    expect(screen.getByTestId("replace-current-video-preview").props.player.source).toBe(
+      EXISTING_VIDEO,
+    );
+    expect(screen.getByTestId("replace-new-video-preview").props.player.source).toBe(CLIP);
+    await fireEventAsync.press(screen.getByRole("button", { name: "Play current saved video" }));
+    expect(screen.getByRole("button", { name: "Pause current saved video" })).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: "Play new video" })).toBeOnTheScreen();
   });
 
   it("deletes the temporary file and keeps the score on Not Now", async () => {
