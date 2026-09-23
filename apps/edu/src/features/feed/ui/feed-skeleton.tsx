@@ -1,4 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
+import { TempoBarSkeleton } from "@bnewapp/mobile-kit/ui/tempo-bar";
+import { TEMPO_BAR_HEIGHT } from "@bnewapp/mobile-kit/ui/tempo-bar";
 import { View, useWindowDimensions } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -51,9 +53,11 @@ export function FeedSkeleton({ showFilters = true }: FeedSkeletonProps) {
       ) : null}
       <View className="absolute top-16 right-3 size-12 rounded-full bg-panel-raised" />
       <View
-        className="absolute right-3 w-11 rounded-full border border-border bg-black/40"
-        style={{ bottom: insets.bottom + 150, height: Math.round(height * 0.36) }}
-      />
+        className="absolute right-3"
+        style={{ top: "50%", transform: [{ translateY: -TEMPO_BAR_HEIGHT / 2 }] }}
+      >
+        <TempoBarSkeleton />
+      </View>
       <View
         className="absolute inset-x-0 bottom-0 gap-3 px-5"
         style={{ paddingBottom: insets.bottom + 16 }}

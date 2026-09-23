@@ -1,5 +1,6 @@
 import { getDanceGenres, getDanceMoves } from "@bnewapp/dance-flow/api";
 import { type TestStore, renderWithProviders } from "@bnewapp/mobile-kit/testing";
+import { TEMPO_BAR_HEIGHT } from "@bnewapp/mobile-kit/ui/tempo-bar";
 import type { DanceGenre, DanceMove, DanceMovesPage } from "@bnewapp/types";
 import { act, fireEventAsync, screen, waitFor } from "@testing-library/react-native";
 import { Dimensions } from "react-native";
@@ -282,7 +283,7 @@ it("closes Pro Tip back onto the same position, filters and speed", async () => 
   const store = await mount();
   await screen.findByLabelText("Dance this Move, Move a");
   store.set(selectedLevelAtom, 2);
-  store.set(playbackRateAtom, 1.25);
+  store.set(playbackRateAtom, 0.75);
 
   await fireEventAsync.press(screen.getByLabelText("Open Pro Tip"));
   expect(screen.getByTestId("feed-pro-tip")).toBeOnTheScreen();
@@ -292,7 +293,7 @@ it("closes Pro Tip back onto the same position, filters and speed", async () => 
   expect(store.get(selectedLevelAtom)).toBe(2);
   expect(store.get(selectedGenreIdAtom)).toBeNull();
   expect(store.get(activeMoveIndexAtom)).toBe(0);
-  expect(store.get(playbackRateAtom)).toBe(1.25);
+  expect(store.get(playbackRateAtom)).toBe(0.75);
   expect(store.get(proTipMoveIdAtom)).toBeNull();
 });
 
@@ -301,7 +302,7 @@ it("returns to normal speed when the move changes", async () => {
   mockedGetMoves.mockResolvedValue(page(moves, null));
   const store = await mount();
   await screen.findByLabelText("Dance this Move, Move a");
-  store.set(playbackRateAtom, 1.5);
+  store.set(playbackRateAtom, 0.75);
 
   await swipeTo(1, moves);
 
@@ -364,21 +365,21 @@ it("hands the focused move to the scan route and the profile to its route prop",
   expect(onOpenProfile).toHaveBeenCalledTimes(1);
 });
 
-it("snaps the drag onto a tempo level, within the shared 0.5x to 1.5x bounds", async () => {
+it("snaps the drag onto a Boogiz tempo level, within the shared 0.1x to 1x bounds", async () => {
   const store = await mount();
   await screen.findByLabelText("Dance this Move, Move a");
 
-  const barHeight = Math.round(Dimensions.get("window").height * 0.36);
+  const barHeight = TEMPO_BAR_HEIGHT;
   await act(async () => {
     fireGestureHandler(getByGestureTestId("tempo-bar-pan"), [
       { state: State.BEGAN, translationY: 0 },
       { state: State.ACTIVE, translationY: 0 },
-      { translationY: -barHeight / 4 },
-      { state: State.END, translationY: -barHeight / 4 },
+      { translationY: barHeight / 4 },
+      { state: State.END, translationY: barHeight / 4 },
     ]);
   });
 
-  expect(store.get(playbackRateAtom)).toBeCloseTo(1.25, 5);
+  expect(store.get(playbackRateAtom)).toBeCloseTo(0.75, 5);
 
   await act(async () => {
     fireGestureHandler(getByGestureTestId("tempo-bar-pan"), [
@@ -389,7 +390,7 @@ it("snaps the drag onto a tempo level, within the shared 0.5x to 1.5x bounds", a
     ]);
   });
 
-  expect(store.get(playbackRateAtom)).toBe(0.5);
+  expect(store.get(playbackRateAtom)).toBe(0.1);
 });
 
 // Whether the value appears *during* the drag is a device check: the jest helper
@@ -489,7 +490,7 @@ it("rebuilds the pager at the top, not on the position the last one left", async
   await screen.findByLabelText("Dance this Move, Move a");
   await swipeTo(1, moves);
   await act(async () => {
-    store.set(playbackRateAtom, 1.5);
+    store.set(playbackRateAtom, 0.75);
     store.set(feedPausedAtom, true);
   });
   expect(screen.getByLabelText("Dance this Move, Move b")).toBeOnTheScreen();
@@ -592,6 +593,7 @@ it("falls back to the feed's own shape, with one set of filter chips", async () 
   // draws the pager's furniture only, so the two cannot stack.
   await screen.findByLabelText("Level filter, All Levels");
   expect(screen.getByTestId("feed-skeleton", HIDDEN)).toBeOnTheScreen();
+  expect(screen.getByTestId("tempo-bar-skeleton", HIDDEN)).toBeOnTheScreen();
   expect(screen.getAllByLabelText(/^Level filter/)).toHaveLength(1);
 
   await act(async () => {

@@ -8,16 +8,22 @@ import {
   State,
 } from "react-native-gesture-handler";
 import { fireGestureHandler, getByGestureTestId } from "react-native-gesture-handler/jest-utils";
-import { TEMPO_BAR_TEST_ID, TEMPO_BAR_VALUE_TEST_ID, TempoBar } from "../tempo-bar";
+import {
+  TEMPO_BAR_HEIGHT,
+  TEMPO_BAR_TEST_ID,
+  TEMPO_BAR_VALUE_TEST_ID,
+  TempoBar,
+} from "../tempo-bar";
 
-const BAR_HEIGHT = 400;
+const BAR_HEIGHT = TEMPO_BAR_HEIGHT;
 
 function Host({
   initialRate = 1,
+  iconColor = "#A855F7",
   ...props
 }: { initialRate?: number } & Partial<Parameters<typeof TempoBar>[0]>) {
   const [rate, setRate] = useState(initialRate);
-  const bar = <TempoBar height={BAR_HEIGHT} rate={rate} onRateChange={setRate} {...props} />;
+  const bar = <TempoBar rate={rate} onRateChange={setRate} iconColor={iconColor} {...props} />;
   // A gesture is only registered once a detector mounts it, so a supplied pager
   // gesture needs the host view a real pager would give it.
   return (
@@ -34,13 +40,13 @@ function Host({
 }
 
 /** Drags by `translationY` pixels; negative is upwards, which speeds the video up. */
-function drag(translationY: number) {
+function drag(translationY: number, velocityY = 0) {
   act(() => {
     fireGestureHandler(getByGestureTestId("tempo-bar-pan"), [
       { state: State.BEGAN, translationY: 0 },
       { state: State.ACTIVE, translationY: 0 },
       { translationY },
-      { state: State.END, translationY },
+      { state: State.END, translationY, velocityY },
     ]);
   });
 }
@@ -58,74 +64,60 @@ function dragThrough(...translations: number[]) {
   });
 }
 
-/** Taps `y` pixels down from the top of the bar, where 0 is the fastest level. */
-function tapAt(y: number) {
-  act(() => {
-    fireGestureHandler(getByGestureTestId("tempo-bar-tap"), [
-      { state: State.BEGAN, y },
-      { state: State.ACTIVE, y },
-      { state: State.END, y },
-    ]);
-  });
-}
-
 function rateFromLabel(): string {
   return screen.getByTestId(TEMPO_BAR_VALUE_TEST_ID).props.children;
 }
 
 it("snaps a drag to the nearest level instead of a free number", () => {
-  render(<Host showValueAtRest />);
+  render(<Host initialRate={0.5} showValueAtRest />);
 
-  // A quarter of the bar is a quarter of the 0.5x-to-1.5x span: exactly one level up.
+  // A quarter of the bar is exactly one Boogiz stop.
   drag(-BAR_HEIGHT / 4);
-  expect(rateFromLabel()).toBe("1.25×");
+  expect(rateFromLabel()).toBe("0.75×");
 
   // Two thirds of a level still resolves to the whole level.
   drag(-BAR_HEIGHT / 6);
-  expect(rateFromLabel()).toBe("1.5×");
+  expect(rateFromLabel()).toBe("1×");
 });
 
 it("rounds a drag that stops between two levels back to the closer one", () => {
-  render(<Host showValueAtRest />);
+  render(<Host initialRate={0.5} showValueAtRest />);
 
   // 40% of one level's travel: short of the halfway point, so the level does not change.
   drag(-BAR_HEIGHT * 0.1);
-  expect(rateFromLabel()).toBe("1×");
+  expect(rateFromLabel()).toBe("0.5×");
 
   // 60% of it: past halfway, so it does.
   drag(-BAR_HEIGHT * 0.15);
-  expect(rateFromLabel()).toBe("1.25×");
+  expect(rateFromLabel()).toBe("0.75×");
+});
+
+it("snaps to the drag position even when the release is fast", () => {
+  render(<Host initialRate={0.5} showValueAtRest />);
+
+  // A 500 px/s release used to project the thumb 100 px farther down the track.
+  drag(-BAR_HEIGHT * 0.1, 500);
+
+  expect(rateFromLabel()).toBe("0.5×");
 });
 
 it("clamps a drag past either end of the scale", () => {
   render(<Host showValueAtRest />);
 
   drag(BAR_HEIGHT * 10);
-  expect(rateFromLabel()).toBe("0.5×");
+  expect(rateFromLabel()).toBe("0.1×");
 
   drag(-BAR_HEIGHT * 10);
-  expect(rateFromLabel()).toBe("1.5×");
+  expect(rateFromLabel()).toBe("1×");
 });
 
-// The fill follows the finger and only settles on release, so travel inside one level's
-// span moves the bar without touching the level itself.
-it("leaves the level alone while the finger moves inside it", () => {
+it("publishes only the final Boogiz snap after a drag", () => {
   const onRateChange = jest.fn();
-  render(<Host onRateChange={onRateChange} />);
+  render(<Host initialRate={0.5} onRateChange={onRateChange} />);
 
-  dragThrough(-10, -20, -30);
-
-  expect(onRateChange).not.toHaveBeenCalled();
-});
-
-it("reports each level a drag crosses exactly once", () => {
-  const onRateChange = jest.fn();
-  render(<Host onRateChange={onRateChange} />);
-
-  // Past 1.25x, further into it, then past 1.5x.
   dragThrough(-BAR_HEIGHT * 0.15, -BAR_HEIGHT * 0.275, -BAR_HEIGHT * 0.4);
 
-  expect(onRateChange.mock.calls).toEqual([[1.25], [1.5]]);
+  expect(onRateChange.mock.calls).toEqual([[1]]);
 });
 
 it("keeps the value off the screen at rest unless the host asks for it", () => {
@@ -142,11 +134,11 @@ it("reports the current level to assistive technology and steps on its actions",
   expect(bar.props.accessibilityValue).toEqual({ text: "1 times normal speed" });
 
   fireEvent(bar, "accessibilityAction", { nativeEvent: { actionName: "increment" } });
-  expect(rateFromLabel()).toBe("1.25×");
+  expect(rateFromLabel()).toBe("1×");
 
   fireEvent(bar, "accessibilityAction", { nativeEvent: { actionName: "decrement" } });
   fireEvent(bar, "accessibilityAction", { nativeEvent: { actionName: "decrement" } });
-  expect(rateFromLabel()).toBe("0.75×");
+  expect(rateFromLabel()).toBe("0.5×");
 });
 
 it("tells the host when a drag starts and ends so it can hold its own scrolling", () => {
@@ -236,47 +228,4 @@ it("snaps on the scale the host last passed, not the one the gesture was built w
   drag(-BAR_HEIGHT / 2);
 
   expect(rateFromLabel()).toBe("1.5×");
-});
-
-// The bar is the only playback-speed control on either surface, so a tap on it has to
-// land a level rather than wait for a drag the user may not think to make.
-it("sets the level a tap lands on", () => {
-  render(<Host showValueAtRest />);
-
-  tapAt(0);
-  expect(rateFromLabel()).toBe("1.5×");
-
-  tapAt(BAR_HEIGHT);
-  expect(rateFromLabel()).toBe("0.5×");
-
-  tapAt(BAR_HEIGHT / 2);
-  expect(rateFromLabel()).toBe("1×");
-});
-
-it("snaps a tap between two levels to the closer one", () => {
-  render(<Host showValueAtRest />);
-
-  // 60% of the way up the bar, short of the 62.5% that separates 1x from 1.25x.
-  tapAt(BAR_HEIGHT * 0.4);
-  expect(rateFromLabel()).toBe("1×");
-
-  // 70% of the way up, past it.
-  tapAt(BAR_HEIGHT * 0.3);
-  expect(rateFromLabel()).toBe("1.25×");
-});
-
-it("taps on the scale the host passed", () => {
-  render(<Host initialRate={1} steps={[1, 2, 3]} showValueAtRest />);
-
-  tapAt(BAR_HEIGHT / 2);
-  expect(rateFromLabel()).toBe("2×");
-});
-
-// A tap changes nothing the host has to hold its own scrolling for.
-it("does not report a tap as a drag", () => {
-  const onDragChange = jest.fn();
-  render(<Host onDragChange={onDragChange} />);
-
-  tapAt(BAR_HEIGHT / 2);
-  expect(onDragChange).not.toHaveBeenCalled();
 });

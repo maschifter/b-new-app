@@ -92,6 +92,7 @@
     "@bnewapp/types": "workspace:*"
   },
   "peerDependencies": {
+    "@expo/vector-icons": "*",
     "@react-native-async-storage/async-storage": "*",
     "@react-navigation/native": "*",
     "@supabase/supabase-js": "*",

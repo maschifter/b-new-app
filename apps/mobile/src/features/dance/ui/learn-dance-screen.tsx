@@ -2,12 +2,14 @@ import { COLORS } from "@/lib/theme/colors";
 import { danceMoveDetailAtomFamily } from "@bnewapp/dance-flow/atoms";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
 import { BouncablePress, DanceSkeleton, MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
-import { TempoBar } from "@bnewapp/mobile-kit/ui/tempo-bar";
+import { TEMPO_BAR_HEIGHT, TempoBar } from "@bnewapp/mobile-kit/ui/tempo-bar";
 import type { DanceMove } from "@bnewapp/types";
 import { Ionicons } from "@expo/vector-icons";
+import { useEventListener } from "expo";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useAtom, useAtomValue } from "jotai";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useIsFocused } from "@react-navigation/native";
 import {
   FlatList,
   type LayoutChangeEvent,
@@ -118,16 +120,19 @@ function LearnDanceContent({ moveId, onBack, onStartRecording }: LearnDanceScree
               testID="dance-tempo-gutter"
               pointerEvents="box-none"
               className="absolute right-0 items-center"
-              style={{ width: TEMPO_GUTTER, bottom: Math.round(videoAreaHeight * 0.22) }}
+              style={{
+                width: TEMPO_GUTTER,
+                top: "50%",
+                transform: [{ translateY: -TEMPO_BAR_HEIGHT / 2 }],
+              }}
             >
               <TempoBar
-                height={Math.round(videoAreaHeight * 0.45)}
                 rate={rate}
                 onRateChange={setRate}
+                iconColor={COLORS.primary}
                 pagerGesture={pagerGesture}
                 pagerAxis="horizontal"
                 onDragChange={setTempoDragging}
-                showValueAtRest
               />
             </View>
           ) : null}
@@ -188,10 +193,17 @@ function LessonVideo({
     createdPlayer.loop = true;
     createdPlayer.muted = true;
   });
+  const isFocused = useIsFocused();
+  const [shouldPlay, setShouldPlay] = useState(true);
   useEffect(() => {
     player.playbackRate = rate;
   }, [player, rate]);
-  useFocusedPlayback(player, playing);
+  // A pause from the native controls is a user decision and must survive tempo updates.
+  // Pauses caused by an inactive page or an unfocused screen are only temporary.
+  useEventListener(player, "playingChange", ({ isPlaying }) => {
+    if (isFocused && playing) setShouldPlay(isPlaying);
+  });
+  useFocusedPlayback(player, playing && shouldPlay);
   return (
     <View
       testID="dance-lesson-page"

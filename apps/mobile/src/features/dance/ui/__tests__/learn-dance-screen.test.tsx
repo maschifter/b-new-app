@@ -1,4 +1,5 @@
 import { renderWithProviders } from "@bnewapp/mobile-kit/testing";
+import { TEMPO_BAR_HEIGHT } from "@bnewapp/mobile-kit/ui/tempo-bar";
 import type { DanceMove } from "@bnewapp/types";
 import { act, fireEvent, fireEventAsync, screen, waitFor } from "@testing-library/react-native";
 import { Dimensions, StyleSheet } from "react-native";
@@ -16,6 +17,8 @@ const videoPlayers: Array<{
   playbackRate: number;
   play: jest.Mock;
   pause: jest.Mock;
+  addListener: jest.Mock;
+  emitPlayingChange: (isPlaying: boolean) => void;
 }> = [];
 
 jest.mock("expo-video", () => ({
@@ -30,12 +33,20 @@ jest.mock("expo-video", () => ({
       pause: () => void;
     }) => void,
   ) => {
+    let playingChangeListener: ((payload: { isPlaying: boolean }) => void) | undefined;
     const player = {
       loop: false,
       muted: false,
       playbackRate: 1,
       play: jest.fn(),
       pause: jest.fn(),
+      addListener: jest.fn(
+        (event: "playingChange", listener: (payload: { isPlaying: boolean }) => void) => {
+          if (event === "playingChange") playingChangeListener = listener;
+          return { remove: jest.fn() };
+        },
+      ),
+      emitPlayingChange: (isPlaying: boolean) => playingChangeListener?.({ isPlaying }),
     };
     // The player object itself, not a copy: `playbackRate` is written after creation
     // and a snapshot would never show the tempo bar's effect.
@@ -88,7 +99,7 @@ async function layoutStage() {
 }
 
 function tempoBarHeight(): number {
-  return Math.round(STAGE_HEIGHT * 0.45);
+  return TEMPO_BAR_HEIGHT;
 }
 
 /** Drags by `translationY` pixels; negative is upwards, which speeds the video up. */
@@ -122,14 +133,32 @@ it("snaps a tempo drag onto a level and plays the lesson at it", async () => {
   await screen.findByText("Electric Slide");
   await layoutStage();
 
-  // A quarter of the bar is a quarter of the 0.5x-to-1.5x span: one level up.
-  await dragTempo(-tempoBarHeight() / 4);
-  expect(screen.getByTestId("tempo-bar-value")).toHaveTextContent("1.25×");
-  await waitFor(() => expect(videoPlayers.at(-1)?.playbackRate).toBe(1.25));
+  // A quarter of the bar is one Boogiz stop down from normal speed.
+  await dragTempo(tempoBarHeight() / 4);
+  await waitFor(() => expect(videoPlayers.at(-1)?.playbackRate).toBe(0.75));
 
   // Well short of the next level's halfway point, so the level holds.
   await dragTempo(-tempoBarHeight() * 0.05);
-  expect(screen.getByTestId("tempo-bar-value")).toHaveTextContent("1.25×");
+  expect(screen.getByLabelText("Playback speed").props.accessibilityValue).toEqual({
+    text: "0.75 times normal speed",
+  });
+});
+
+it("keeps a manually paused lesson paused while changing tempo", async () => {
+  mockedGetDanceMove.mockResolvedValue(move());
+  await mount();
+  await screen.findByText("Electric Slide");
+  await layoutStage();
+  const player = videoPlayers.at(-1);
+
+  await act(async () => {
+    player?.emitPlayingChange(false);
+  });
+  await dragTempo(tempoBarHeight() / 4);
+
+  const updatedPlayer = videoPlayers.at(-1);
+  await waitFor(() => expect(updatedPlayer?.playbackRate).toBe(0.75));
+  expect(updatedPlayer?.play).not.toHaveBeenCalled();
 });
 
 it("steps the tempo one level at a time for assistive technology", async () => {
@@ -144,7 +173,6 @@ it("steps the tempo one level at a time for assistive technology", async () => {
   await act(async () => {
     fireEvent(bar, "accessibilityAction", { nativeEvent: { actionName: "decrement" } });
   });
-  expect(screen.getByTestId("tempo-bar-value")).toHaveTextContent("0.75×");
   await waitFor(() => expect(videoPlayers.at(-1)?.playbackRate).toBe(0.75));
 });
 

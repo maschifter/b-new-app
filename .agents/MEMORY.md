@@ -23,3 +23,6 @@
 - The admin panel is a Vite 6 / React 19 / React Admin 5 app in `apps/admin`, served at
   `http://localhost:5174` with its API expected at `http://localhost:3000`. Validate it with
   `corepack pnpm --filter @bnewapp/admin test`, `typecheck`, and `corepack pnpm admin:build`.
+- Environment rechecked on 2026-09-23: `apps/edu` is also an Expo iOS/Android app (bundle id
+  `com.bnewapp.stepz`); its checks are `corepack pnpm --filter @bnewapp/edu typecheck` and
+  `corepack pnpm --filter @bnewapp/edu test`.

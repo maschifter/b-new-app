@@ -1,3 +1,4 @@
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type AccessibilityActionEvent, Text, View } from "react-native";
 import { Gesture, GestureDetector, type NativeGesture } from "react-native-gesture-handler";
@@ -13,14 +14,14 @@ import {
 
 export const TEMPO_BAR_TEST_ID = "tempo-bar";
 export const TEMPO_BAR_PAN_TEST_ID = "tempo-bar-pan";
-export const TEMPO_BAR_TAP_TEST_ID = "tempo-bar-tap";
 export const TEMPO_BAR_VALUE_TEST_ID = "tempo-bar-value";
+export const TEMPO_BAR_HEIGHT = 174;
 
 interface TempoBarProps {
-  height: number;
   rate: number;
   onRateChange: (rate: number) => void;
-  /** The selectable levels, slowest first. A drag or a tap settles on the nearest one. */
+  iconColor: string;
+  /** The selectable levels, slowest first. A drag settles on the nearest one. */
   steps?: readonly number[];
   /**
    * The host pager's own scroll gesture, which this bar has to out-argue. Two vertical
@@ -39,14 +40,14 @@ interface TempoBarProps {
    */
   pagerAxis?: "vertical" | "horizontal";
   onDragChange?: (dragging: boolean) => void;
-  /** Keeps the value label on the screen at rest, where no other control shows the level. */
+  /** Shows a diagnostic value label; production controls intentionally omit it. */
   showValueAtRest?: boolean;
 }
 
 export function TempoBar({
-  height,
   rate,
   onRateChange,
+  iconColor,
   steps = TEMPO_STEPS,
   pagerGesture,
   pagerAxis = "vertical",
@@ -54,7 +55,7 @@ export function TempoBar({
   showValueAtRest = false,
 }: TempoBarProps) {
   const [dragging, setDragging] = useState(false);
-  // The gesture is built once per host geometry and reads everything else through this
+  // The gesture is built once and reads everything else through this
   // ref. A rebuild keyed on a prop the host passes inline would replace the handler under
   // the finger already on it.
   const latest = useRef({ rate, steps, onRateChange, onDragChange });
@@ -70,8 +71,8 @@ export function TempoBar({
   const freeFraction = useRef(restFraction);
   const lastEmitted = useRef(rate);
 
-  // Anything that moves the level without a drag — a tap, an assistive action, the host
-  // setting it — settles the fill the same way a release does.
+  // Anything that moves the level without a drag — an assistive action or the host
+  // setting it — settles the thumb the same way a release does.
   useEffect(() => {
     if (draggingRef.current) return;
     fill.value = withTiming(restFraction, SETTLE);
@@ -94,17 +95,14 @@ export function TempoBar({
         latest.current.onDragChange?.(true);
       })
       .onUpdate((event) => {
-        // Dragging up is a negative translationY, hence the sign. The fill takes the raw
-        // position so the bar stays under the finger; the level it is nearest is published
-        // separately, and only when it changes.
-        const { steps: levels, onRateChange: emit } = latest.current;
-        const fraction = clamp01(fractionAtDragStart.current - event.translationY / height);
+        // Dragging up is a negative translationY, hence the sign. The thumb takes the raw
+        // position so it stays under the finger. Boogiz publishes the nearest level
+        // only after the drag ends and the thumb has snapped.
+        const fraction = clamp01(
+          fractionAtDragStart.current - event.translationY / TEMPO_BAR_HEIGHT,
+        );
         freeFraction.current = fraction;
         fill.value = fraction;
-        const level = tempoRateAtFraction(fraction, levels);
-        if (level === lastEmitted.current) return;
-        lastEmitted.current = level;
-        emit(level);
       })
       .onEnd(() => {
         const { steps: levels, onRateChange: emit } = latest.current;
@@ -116,7 +114,7 @@ export function TempoBar({
         emit(level);
       })
       .onFinalize(() => {
-        // A cancelled drag never reaches `onEnd`, so the fill is still wherever the finger
+        // A cancelled drag never reaches `onEnd`, so the thumb is still wherever the finger
         // left it and has to fall back to the level in force.
         if (!settledRef.current) {
           const { rate: current, steps: levels } = latest.current;
@@ -133,26 +131,7 @@ export function TempoBar({
       gesture.activeOffsetY([-AXIS_SLOP, AXIS_SLOP]).failOffsetX([-AXIS_SLOP, AXIS_SLOP]);
     }
     return gesture.blocksExternalGesture(pagerGesture);
-  }, [fill, height, pagerAxis, pagerGesture]);
-
-  // A tap sets the level it lands on. Without it the bar answers only to a drag, which
-  // leaves a plain tap doing nothing at all.
-  const tap = useMemo(
-    () =>
-      Gesture.Tap()
-        .withTestId(TEMPO_BAR_TAP_TEST_ID)
-        .runOnJS(true)
-        .onEnd((event) => {
-          const { steps: levels, onRateChange: emit } = latest.current;
-          // The bar fills from the bottom, so a y measured from its top inverts.
-          emit(tempoRateAtFraction(1 - event.y / height, levels));
-        }),
-    [height],
-  );
-
-  // Whichever recognises the touch first takes it: a tap never travels far enough to
-  // start the pan, and a drag leaves the tap's own distance limit behind.
-  const gesture = useMemo(() => Gesture.Race(pan, tap), [pan, tap]);
+  }, [fill, pagerAxis, pagerGesture]);
 
   const onAccessibilityAction = useCallback(
     (event: AccessibilityActionEvent) => {
@@ -163,24 +142,23 @@ export function TempoBar({
     [onRateChange, rate, steps],
   );
 
-  const fillStyle = useAnimatedStyle(() => ({ height: `${fill.value * 100}%` }));
-  // The ends of the scale are the ends of the bar, so only the levels between them
-  // need a mark.
-  const interiorSteps = steps.slice(1, -1);
+  const thumbStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: (1 - fill.value) * TEMPO_BAR_HEIGHT - THUMB_SIZE / 2 }],
+  }));
 
   return (
-    <View className="items-end">
-      {/* The value is an interaction label, not furniture. It is positioned absolutely
-          so appearing mid-drag cannot move the bar under the finger already on it. */}
-      {dragging || showValueAtRest ? (
+    <View style={{ width: THUMB_SIZE }} className="items-center">
+      {/* Kept as an opt-in diagnostic label; production surfaces use the Boogiz control
+          without a numeric readout. */}
+      {showValueAtRest ? (
         <Text
           testID={TEMPO_BAR_VALUE_TEST_ID}
-          className="-top-7 absolute right-0 font-extrabold text-foreground text-xs"
+          className="-top-7 absolute font-extrabold text-foreground text-xs"
         >
           {formatTempoRate(rate)}
         </Text>
       ) : null}
-      <GestureDetector gesture={gesture}>
+      <GestureDetector gesture={pan}>
         <View
           testID={TEMPO_BAR_TEST_ID}
           accessibilityRole="adjustable"
@@ -188,22 +166,17 @@ export function TempoBar({
           accessibilityValue={{ text: describeTempoRate(rate) }}
           accessibilityActions={ACCESSIBILITY_ACTIONS}
           onAccessibilityAction={onAccessibilityAction}
-          style={{ height }}
-          className="w-11 justify-end overflow-hidden rounded-full border border-border bg-black/40"
+          style={{ height: TEMPO_BAR_HEIGHT, width: THUMB_SIZE }}
+          className="items-center"
         >
-          {/* The height is the animated value, so it stays a plain reanimated view and
-              the paint sits on a child the class names can reach. */}
-          <Animated.View pointerEvents="none" style={fillStyle}>
-            <View className="h-full w-full bg-primary/70" />
+          <View pointerEvents="none" style={{ width: TRACK_WIDTH }} className="h-full rounded-full bg-white/60" />
+          <Animated.View
+            pointerEvents="none"
+            style={[{ height: THUMB_SIZE, width: THUMB_SIZE }, thumbStyle]}
+            className="absolute items-center justify-center rounded-full bg-white"
+          >
+            <MaterialCommunityIcons name="run-fast" size={16} color={iconColor} />
           </Animated.View>
-          {interiorSteps.map((step) => (
-            <View
-              key={step}
-              pointerEvents="none"
-              style={{ bottom: `${tempoFraction(step, steps) * 100}%` }}
-              className="absolute h-px w-full bg-white/30"
-            />
-          ))}
         </View>
       </GestureDetector>
     </View>
@@ -217,6 +190,22 @@ const AXIS_SLOP = 8;
 
 /** Long enough to read as a settle, short enough that the level still feels immediate. */
 const SETTLE = { duration: 160 };
+
+/** Exact dimensions of the Boogiz `VideoSpeedControl`. */
+const TRACK_WIDTH = 8;
+const THUMB_SIZE = 28;
+
+export function TempoBarSkeleton() {
+  return (
+    <View testID="tempo-bar-skeleton" style={{ height: TEMPO_BAR_HEIGHT, width: THUMB_SIZE }} className="items-center">
+      <View style={{ width: TRACK_WIDTH }} className="h-full rounded-full bg-panel-raised" />
+      <View
+        style={{ height: THUMB_SIZE, width: THUMB_SIZE, top: -THUMB_SIZE / 2 }}
+        className="absolute rounded-full bg-panel-raised"
+      />
+    </View>
+  );
+}
 
 function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value));

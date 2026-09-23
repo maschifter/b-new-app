@@ -1,7 +1,7 @@
 import { genresAtom } from "@/lib/catalog";
 import { COLORS, RUNTIME_COLORS } from "@/lib/theme/colors";
 import { BouncablePress, MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
-import { TempoBar } from "@bnewapp/mobile-kit/ui/tempo-bar";
+import { TEMPO_BAR_HEIGHT, TempoBar } from "@bnewapp/mobile-kit/ui/tempo-bar";
 import type { DanceGenre, DanceMove } from "@bnewapp/types";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -173,11 +173,9 @@ function FilterButton({
 // The rate is read here rather than in the pager, so a drag re-renders the bar alone
 // instead of the whole full-screen page under it.
 function FeedTempoBar({
-  height,
   pagerGesture,
   onDragChange,
 }: {
-  height: number;
   pagerGesture: NativeGesture;
   onDragChange: (dragging: boolean) => void;
 }) {
@@ -185,9 +183,9 @@ function FeedTempoBar({
 
   return (
     <TempoBar
-      height={height}
       rate={rate}
       onRateChange={setRate}
+      iconColor={COLORS.primary}
       pagerGesture={pagerGesture}
       onDragChange={onDragChange}
     />
@@ -349,13 +347,9 @@ function FeedPager({ onOpenProfile }: FeedScreenProps) {
         <View
           pointerEvents="box-none"
           className="absolute right-3"
-          style={{ bottom: insets.bottom + 150 }}
+          style={{ top: "50%", transform: [{ translateY: -TEMPO_BAR_HEIGHT / 2 }] }}
         >
-          <FeedTempoBar
-            height={Math.round(height * 0.36)}
-            pagerGesture={pagerGesture}
-            onDragChange={setTempoDragging}
-          />
+          <FeedTempoBar pagerGesture={pagerGesture} onDragChange={setTempoDragging} />
         </View>
         <View
           testID="feed-actions"
