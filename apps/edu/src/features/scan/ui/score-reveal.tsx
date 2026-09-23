@@ -1,6 +1,5 @@
 import { ScoreRing } from "@/features/score";
 import { COLORS, RUNTIME_COLORS } from "@/lib/theme/colors";
-import { SubmissionFeedback } from "@bnewapp/dance-flow/submission-feedback";
 import type { SubmissionState } from "@bnewapp/dance-flow/submission-state";
 import { LinearGradient } from "expo-linear-gradient";
 import { type ReactNode, useEffect, useRef, useState } from "react";
@@ -20,10 +19,9 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export interface ScoreRevealProps {
-  submission: Extract<SubmissionState, { kind: "scanning" } | { kind: "scored" }>;
+  submission: Extract<SubmissionState, { kind: "uploading" } | { kind: "scanning" } | { kind: "scored" }>;
   moveTitle: string | null;
   actions: ReactNode;
-  onRetryUpload: () => void;
 }
 
 export function progressAnnouncementMilestone(previous: number, current: number): number | null {
@@ -32,10 +30,10 @@ export function progressAnnouncementMilestone(previous: number, current: number)
   return milestone >= 10 && milestone > previous ? milestone : null;
 }
 
-export function ScoreReveal({ submission, moveTitle, actions, onRetryUpload }: ScoreRevealProps) {
+export function ScoreReveal({ submission, moveTitle, actions }: ScoreRevealProps) {
   const reducedMotion = useReducedMotion();
   const insets = useSafeAreaInsets();
-  const [progress, setProgress] = useState(5);
+  const [progress, setProgress] = useState(0);
   const [actionsVisible, setActionsVisible] = useState(reducedMotion);
   const announcedRef = useRef(0);
 
@@ -69,18 +67,23 @@ export function ScoreReveal({ submission, moveTitle, actions, onRetryUpload }: S
     return () => clearTimeout(timeout);
   }, [reducedMotion, submission.kind]);
 
-  if (submission.kind === "scanning") {
+  if (submission.kind !== "scored") {
+    const isUploading = submission.kind === "uploading";
+    const displayedProgress = isUploading ? 0 : progress;
+    const progressLabel = isUploading
+      ? "Uploading your dance"
+      : `Scoring your dance, ${displayedProgress} percent`;
     return (
       <View className="flex-1 items-center justify-center px-6">
         <Animated.View {...(reducedMotion ? {} : { entering: ZoomInEasyDown, exiting: FadeOutDown })}>
           <RingDisc size={120}>
-            <ScoreRing percent={progress} size={120} strokeWidth={10} trackColor={RUNTIME_COLORS["score-track-scanning"]} fillColor={COLORS.accent} accessibilityLabel={`Scoring your dance, ${progress} percent`} testID="scoring-ring">
-              <Text className="font-bold text-accent text-base">{progress}%</Text>
+            <ScoreRing percent={displayedProgress} size={120} strokeWidth={10} trackColor={RUNTIME_COLORS["score-track-scanning"]} fillColor={COLORS.accent} accessibilityLabel={progressLabel} testID="scoring-ring">
+              <Text className="font-bold text-accent text-base">{displayedProgress}%</Text>
             </ScoreRing>
           </RingDisc>
         </Animated.View>
         <View className="mt-6 items-center" accessibilityLiveRegion="polite">
-          <SubmissionFeedback submission={submission} onRetry={onRetryUpload} renderScanning={(isSlow) => <ScanningCopy isSlow={isSlow} />} />
+          {isUploading ? <UploadingCopy /> : <ScanningCopy isSlow={submission.isSlow} />}
         </View>
       </View>
     );
@@ -130,6 +133,15 @@ export function ScoreReveal({ submission, moveTitle, actions, onRetryUpload }: S
 
 function ScanningCopy({ isSlow }: { isSlow: boolean }) {
   return <View className="items-center gap-1"><Text className="font-bold text-center text-foreground text-xl">Scoring your dance…</Text>{isSlow ? <Text className="text-center text-base text-copy">Still scoring — you can check back here shortly.</Text> : null}</View>;
+}
+
+function UploadingCopy() {
+  return (
+    <View className="items-center gap-1">
+      <Text className="font-bold text-center text-foreground text-xl">Uploading your dance…</Text>
+      <Text className="text-center text-base text-copy">Getting your video ready for scoring.</Text>
+    </View>
+  );
 }
 
 function RingDisc({ size, children }: { size: number; children: ReactNode }) {

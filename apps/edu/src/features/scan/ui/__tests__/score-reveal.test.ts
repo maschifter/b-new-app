@@ -20,7 +20,6 @@ function renderScoredReveal(score: number) {
         submission: { kind: "scored", score },
         moveTitle: "Two Step",
         actions: createElement(Text, null, "Actions"),
-        onRetryUpload: jest.fn(),
       }),
     ),
   );
@@ -35,7 +34,20 @@ function renderScanningReveal() {
         submission: { kind: "scanning", isSlow: false },
         moveTitle: "Two Step",
         actions: createElement(Text, null, "Actions"),
-        onRetryUpload: jest.fn(),
+      }),
+    ),
+  );
+}
+
+function renderUploadingReveal() {
+  return render(
+    createElement(
+      SafeAreaProvider,
+      { initialMetrics: { frame: { x: 0, y: 0, width: 360, height: 800 }, insets: { top: 0, right: 0, bottom: 0, left: 0 } } },
+      createElement(ScoreReveal, {
+        submission: { kind: "uploading" },
+        moveTitle: "Two Step",
+        actions: createElement(Text, null, "Actions"),
       }),
     ),
   );
@@ -100,7 +112,6 @@ describe("ScoreReveal decorations", () => {
           submission: { kind: "scored", score: 70 },
           moveTitle: "Two Step",
           actions: createElement(Text, null, "Actions"),
-          onRetryUpload: jest.fn(),
         }),
       ),
     );
@@ -140,5 +151,13 @@ describe("ScoreReveal stages", () => {
     expect(screen.getByLabelText("Scoring your dance, 5 percent")).toBeOnTheScreen();
     act(() => jest.advanceTimersByTime(500));
     expect(screen.getByLabelText("Scoring your dance, 6 percent")).toBeOnTheScreen();
+  });
+
+  it("uses the same progress ring while the video is uploading", () => {
+    renderUploadingReveal();
+
+    expect(screen.getByLabelText("Uploading your dance")).toBeOnTheScreen();
+    expect(screen.getByText("0%")).toBeOnTheScreen();
+    expect(screen.getByText("Getting your video ready for scoring.")).toBeOnTheScreen();
   });
 });

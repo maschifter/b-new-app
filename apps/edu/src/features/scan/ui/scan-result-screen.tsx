@@ -247,7 +247,9 @@ export function ScanResultScreen({
     />
   );
   const isVideoStep = decision === "video" && step !== null;
-  const isReveal = !isVideoStep && (submission.kind === "scanning" || submission.kind === "scored");
+  const isReveal =
+    !isVideoStep &&
+    (submission.kind === "uploading" || submission.kind === "scanning" || submission.kind === "scored");
 
   return (
     <View className="flex-1 bg-black">
@@ -281,7 +283,6 @@ export function ScanResultScreen({
           submission={submission}
           moveTitle={move.data?.title ?? null}
           actions={scoreActions}
-          onRetryUpload={retry}
         />
       ) : (
         <MediaScrimPanel testID="scan-result-panel" className="gap-4 px-4 pt-16" bottomGap={24}>
