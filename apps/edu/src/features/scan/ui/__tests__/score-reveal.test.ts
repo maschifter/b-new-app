@@ -60,6 +60,33 @@ describe("progressAnnouncementMilestone", () => {
 });
 
 describe("ScoreReveal decorations", () => {
+  it("lays out the full result screen while keeping the replay visible above the bottom scrim", () => {
+    mockReducedMotion = true;
+    renderScoredReveal(82);
+
+    expect(screen.getByTestId("score-reveal")).toHaveStyle({
+      position: "absolute",
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+    });
+    expect(screen.getByTestId("score-bottom-scrim")).toHaveStyle({
+      position: "absolute",
+      bottom: 0,
+      height: 256,
+    });
+    expect(screen.getByTestId("score-actions")).toBeOnTheScreen();
+  });
+
+  it("keeps a three-digit score and its denominator inside the larger score ring", () => {
+    renderScoredReveal(100);
+
+    expect(screen.getByText("100 / 100")).toHaveStyle({ maxWidth: 100, textAlign: "center" });
+    expect(screen.getByTestId("scored-ring")).toHaveStyle({ width: 116, height: 116 });
+    expect(screen.getByLabelText("Score, 100 out of 100")).toBeOnTheScreen();
+  });
+
   it("shows the all-score ray burst but reserves approval decoration for scores of 70 or above", () => {
     const view = renderScoredReveal(69);
 

@@ -88,26 +88,43 @@ export function ScoreReveal({ submission, moveTitle, actions, onRetryUpload }: S
 
   const approved = submission.score >= 70;
   return (
-    <LinearGradient
-      colors={[RUNTIME_COLORS["celebrate-fade"], RUNTIME_COLORS.celebrate]}
-      className="flex-1 justify-end px-6"
-      style={{ paddingBottom: insets.bottom + 24 }}
+    <View
+      testID="score-reveal"
+      style={[styles.reveal, { paddingBottom: insets.bottom + 24, paddingTop: insets.top + 24 }]}
     >
-      <View className="items-center gap-2">
-        <Text accessibilityRole="header" className="font-display text-center text-4xl text-foreground">Well done!</Text>
-        {moveTitle === null ? null : <Text className="text-center text-base text-copy">{moveTitle}</Text>}
-        <Animated.View {...(reducedMotion ? {} : { entering: BounceIn.duration(1000) })} className="mt-3 items-center">
-          <ScoreRayBurst reducedMotion={reducedMotion} />
-          <RingDisc size={100}>
-            <ScoreRing percent={submission.score} size={100} strokeWidth={8} trackColor={RUNTIME_COLORS["score-track-scored"]} fillColor={COLORS.accent} accessibilityLabel={`Score, ${submission.score} out of 100`} testID="scored-ring">
-              <Text className="font-bold text-accent text-3xl">{submission.score} / 100</Text>
-            </ScoreRing>
-          </RingDisc>
-          {approved ? <ApprovedDecoration reducedMotion={reducedMotion} /> : null}
-        </Animated.View>
+      <LinearGradient
+        testID="score-bottom-scrim"
+        pointerEvents="none"
+        colors={["transparent", "rgba(0,0,0,0.72)", "rgba(0,0,0,0.94)"]}
+        locations={[0, 0.55, 1]}
+        style={[styles.bottomScrim, { height: 256 + insets.bottom }]}
+      />
+      <View className="flex-1 justify-between">
+        <View className="flex-1 items-center justify-center gap-2">
+          <Text accessibilityRole="header" className="font-display text-center text-4xl text-foreground">Well done!</Text>
+          {moveTitle === null ? null : <Text className="text-center text-base text-copy">{moveTitle}</Text>}
+          <Animated.View {...(reducedMotion ? {} : { entering: BounceIn.duration(1000) })} className="mt-3 items-center">
+            <ScoreRayBurst reducedMotion={reducedMotion} />
+            <RingDisc size={116}>
+              <ScoreRing percent={submission.score} size={116} strokeWidth={8} trackColor={RUNTIME_COLORS["score-track-scored"]} fillColor={COLORS.accent} accessibilityLabel={`Score, ${submission.score} out of 100`} testID="scored-ring">
+                <Text
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
+                  numberOfLines={1}
+                  style={styles.scoreLabel}
+                  className="font-bold text-accent text-3xl"
+                >
+                  {submission.score}
+                  <Text className="font-bold text-accent text-xs"> / 100</Text>
+                </Text>
+              </ScoreRing>
+            </RingDisc>
+            {approved ? <ApprovedDecoration reducedMotion={reducedMotion} /> : null}
+          </Animated.View>
+        </View>
+        {actionsVisible ? <Animated.View {...(reducedMotion ? {} : { entering: FadeIn.duration(1000) })} testID="score-actions">{actions}</Animated.View> : null}
       </View>
-      {actionsVisible ? <Animated.View {...(reducedMotion ? {} : { entering: FadeIn.duration(1000) })} className="mt-6" testID="score-actions">{actions}</Animated.View> : null}
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -190,9 +207,12 @@ const SPARKLES = [
 ] as const;
 
 const styles = StyleSheet.create({
+  reveal: { ...StyleSheet.absoluteFillObject, paddingHorizontal: 24 },
+  bottomScrim: { position: "absolute", bottom: 0, left: 0, right: 0 },
   rayBurst: { position: "absolute", width: 148, height: 148, alignItems: "center", justifyContent: "center" },
   ray: { position: "absolute", top: 0, width: 2, height: 26, borderRadius: 1, backgroundColor: COLORS.accent, opacity: 0.3, transformOrigin: "1px 74px" },
-  approvedDecoration: { position: "absolute", width: 140, height: 80, alignItems: "center", top: 74 },
+  scoreLabel: { maxWidth: 100, textAlign: "center" },
+  approvedDecoration: { position: "absolute", width: 140, height: 80, alignItems: "center", top: 90 },
   ribbon: { paddingHorizontal: 20, paddingVertical: 4, borderRadius: 999, zIndex: 1 },
   ribbonTail: { position: "absolute", top: 10, width: 28, height: 18, backgroundColor: COLORS.accent },
   ribbonTailLeft: { left: 14, transform: [{ skewX: "-25deg" }] },
