@@ -411,6 +411,10 @@ async function remuxObject(environment, object, workDirectory, dryRun) {
       "copy",
       "-map",
       "0",
+      // A tmcd timecode track has no decoder, so an explicit copy of it fails the whole remux.
+      // The mov muxer rebuilds it from the input's timecode, which keeps the track count equal.
+      "-map",
+      "-0:d",
       "-movflags",
       "+faststart",
       outputPath,
