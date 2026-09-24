@@ -16,9 +16,11 @@ available hardware can run**. One physical-Android, unthrottled-Wi-Fi feed sessi
 [diagnostic](video-playback-ios-simulator-baseline-2026-09-24.md) covers the same 30 forward
 transitions. The simulator diagnostic does not replace the required physical-iPhone baseline;
 the rest of Phase 0 remains open. [Tier A](video-playback-catalog-assets-2026-09-24.md) closes
-**decision 4** and overturns three assumptions in the sections below: catalog media is not on
-Supabase, **95.6 % of it has `moov` at the end of the file**, and 83 % of it is 60 fps. Every
-number in *Targets* is a proposal, not a product contract.
+**decision 4** and changes three things below: **98.3 % of the catalog has `moov` at the end of
+the file**, 87 % of it is 60 fps, and the migrated objects are served `no-cache` behind a CDN.
+It also found that the `dance_moves` URL columns were never repointed at the migrated objects,
+so the apps — and every baseline measured so far — are exercising the pre-migration copies.
+Every number in *Targets* is a proposal, not a product contract.
 ## Goal
 
 Make video playback feel immediate and reliable for dance lessons, reference clips, the
@@ -29,11 +31,11 @@ This document is a working record for the next research and implementation sessi
 
 - Both Expo apps use Expo SDK 55's `expo-video` (`expo-video@55.0.21`) for playback.
 - Lesson, reference, feed and catalog videos are remote MP4 URLs supplied in dance-move
-  records. **They are not served from the `dance-media` bucket.** Measured 2026-09-24: all 5,127
-  distinct URLs across the 1,086 `dance_moves` rows point at two legacy Boogiz S3 buckets
-  (`boogiz.s3.eu-central-1.amazonaws.com`, `boogiz-avatar.s3.eu-central-1.amazonaws.com`),
-  served by S3 directly with **no CDN in front and no `cache-control` header at all**. The
-  `dance-media` bucket takes new admin uploads; the existing corpus predates it. See
+  records. The media lives in the public `dance-media` bucket, keyed by `legacy_id`
+  (`moves/<legacy_id>/main.mp4`, …), and all 808 published moves have a complete copy there.
+  **But the `dance_moves` URL columns were never repointed:** all 5,127 of them still address the
+  two legacy Boogiz S3 buckets, and `service.ts:toDanceMove` passes them through unrewritten, so
+  the apps serve the pre-migration copies today. Measured 2026-09-24 —
   [tier A](video-playback-catalog-assets-2026-09-24.md).
 - User recordings are uploaded to the private `dance-videos` bucket. The API generates
   short-lived signed read URLs for those videos, merged outputs, and posters.
@@ -58,11 +60,11 @@ This document is a working record for the next research and implementation sessi
 | Recorded-dance grid | A history cell without a worker-created poster mounts and displays a `VideoView` (`DanceVideoCell`). | Multiple grid cells can allocate player/decoder/network work during scroll. |
 | Signed UGC URLs | `service.ts` signs profile videos for 1 h; the media and scan workers sign for 5 min. Each list/detail response mints new URLs. | The full signed URL changes; both CDN and the device cache miss even for the same object. |
 | No cache key escape hatch | `VideoSourceObject` has `uri`, `headers`, `useCaching`, `contentType`, `drm`, `metadata` — **no `cacheKey`**, unlike `expo-image`, which `dance-post-grid.tsx` already uses with `cacheKey: post.thumbnailPath`. | Video cache identity *is* the URL. Rotating signed URLs makes `useCaching` useless for UGC. |
-| Published asset cache-control | Admin uploads **do** set `cacheControl: "31536000, immutable"` — `media-upload-input.tsx:150` for video/audio via `uploadToSignedUrl`, `dance-media-service.ts:147` for images. **But no catalog asset went through that path**: measured 2026-09-24, all 4,886 reachable catalog objects are on legacy S3 with **no `cache-control` at all**, no CDN, and `binary/octet-stream` on 94 % of them. | The code path is correct and the corpus does not use it. Headers *are* a gap, contrary to the earlier reading — and the gap is on the surface the pilot measures. |
-| Catalog `moov` placement | **95.6 % of the corpus has `moov` at the end** (`ftyp > free > mdat`); only 214/4,886 are `+faststart`. `main_video_url`, `dancer_tip_video_url` and `presentation_video_url` are **0 % faststart across all 808 published moves**. | The player must range-fetch the end of the file before decoding a frame — on every first play, from eu-central-1, with no CDN. `resolvePreviewMedia` prefers `mainVideoUrl`, so this is every page of the Stepz feed. |
-| Catalog frame rate | **83 % of the sampled corpus is 60 fps** (166/200), the rest 30 fps; all H.264 High / yuv420p, mostly 720×1280, median bitrate 1.18 Mbps, median duration 9.4 s. | Decode cost per second is double the implied 30 fps assumption, on the platform where decoder count binds. |
-| Catalog keyframe interval | Median GOP **4.167 s** (= `-g 250` at 60 fps, FFmpeg's default), p90 8.333 s; 47/50 sampled clips exceed 2 s. | Seek, section-loop and scrub accuracy on the practice surfaces is bounded at ~4 s, twice as coarse as the `-g 60` case this plan already called wrong. |
-| Dead catalog URLs | 241 of 5,127 return **HTTP 403**; 210 published moves (26 %) have a dead `pro_dancer_video_url`, consumed by `learn-dance-screen.tsx:173`. | A quarter of published moves have a broken "Pro dancer" tab today. No published move's *preview* URL is dead, so the feed is unaffected. |
+| Published asset cache-control | Admin uploads **do** set `cacheControl: "31536000, immutable"` — `media-upload-input.tsx:150` for video/audio via `uploadToSignedUrl`, `dance-media-service.ts:147` for images. **The migrated legacy corpus did not come through that path**: measured 2026-09-24, all 3,829 published objects in `dance-media` carry **`cache-control: no-cache`**, Supabase's default for an upload that sets none. Supabase's Cloudflare layer is in front of them and returned `cf-cache-status: MISS` on all 3,828 reachable objects. | The admin code path is correct; the corpus does not use it. A CDN exists and is being told never to serve from cache. Fixable by updating object metadata, without re-uploading. |
+| Catalog `moov` placement | **98.3 % of the corpus has `moov` at the end** (`ftyp > free > mdat`); only 66/3,828 are `+faststart`. The `main`, `dancer-tip` and `presentation` roles are **0 % faststart across all 808 published moves**. Inherited from the pre-migration copies, which the migration copied byte-wise. | The player must range-fetch the end of the file before decoding a frame, on every first play. `resolvePreviewMedia` prefers `mainVideoUrl`, so this is every page of the Stepz feed. |
+| Catalog frame rate | **87 % of the sampled corpus is 60 fps** (174/200), the rest 30 fps; all H.264 High / yuv420p, mostly 720×1280, median bitrate 1.20 Mbps, median duration 9.6 s. | Decode cost per second is double the implied 30 fps assumption, on the platform where decoder count binds. |
+| Catalog keyframe interval | Median GOP **4.167 s** (= `-g 250` at 60 fps, FFmpeg's default), p90 8.333 s; 48/50 sampled clips exceed 2 s. | Seek, section-loop and scrub accuracy on the practice surfaces is bounded at ~4 s, twice as coarse as the `-g 60` case this plan already called wrong. |
+| Catalog URLs the apps actually request | The `dance_moves` columns still hold Boogiz S3 URLs for every row; 241 of those 5,127 return **HTTP 403**, including `pro_dancer_video_url` on 210 published moves, which `learn-dance-screen.tsx:173` plays. The Supabase copies of those 210 do not exist — the migration skipped what it could not read. | Two things, not one: the rows need repointing, and those 210 moves need their pro-dancer video re-uploaded. No published move's *preview* URL is dead, so the feed is unaffected either way. |
 | Upload path | Recording upload calls `File.bytes()` and makes one `PUT`, capped at 64 MB. | Larger future captures can cause memory pressure and transfers cannot resume. |
 
 ### Verified against the installed package (source-level)
@@ -899,19 +901,20 @@ available. It sits in tier C, reached only if tiers A and B leave a question ope
 
 **A1 — done 2026-09-24. Full results in
 [the catalog asset statistics](video-playback-catalog-assets-2026-09-24.md).** It answers
-decision 4 and overturns three assumptions this document held: the hosting, the `moov`
-placement and the frame rate. Headline numbers, over 1,086 `dance_moves` rows / 5,127 distinct
-video URLs:
+decision 4 and changes what this document assumed about `moov` placement, frame rate and
+delivery headers. Headline numbers, over 1,086 `dance_moves` rows and the **3,829 published
+objects in the `dance-media` bucket**:
 
 | Measure | Result |
 | --- | --- |
-| Hosting | two legacy Boogiz S3 buckets, no CDN, **no `cache-control`**, `binary/octet-stream` on 94 % |
-| Reachability | 241 URLs return 403; **210 published moves (26 %) have a dead `pro_dancer_video_url`** |
-| `+faststart` | **214 / 4,886 (4.4 %)**; 0 % on `main`, `dancer_tip`, `presentation` |
+| Migration state | all 808 published moves have a complete copy in `dance-media/moves/<legacy_id>/`; **0 `dance_moves` rows point at it** |
+| Delivery | `video/mp4`, Cloudflare in front, but **`cache-control: no-cache` on all 3,829** → `cf-cache-status: MISS` on all |
+| `+faststart` | **66 / 3,828 (1.7 %)**; **0 %** on `main`, `dancer-tip`, `presentation` |
 | Codec | h264 200/200 sampled, High profile, yuv420p, 720×1280 dominant |
-| Frame rate | **60 fps 83 %**, 30 fps 17 % |
-| Duration / bitrate | median 9.4 s / 1.18 Mbps; p90 38.2 s / 2.08 Mbps |
-| Keyframe interval | median GOP **4.167 s**, p90 8.333 s; 47/50 clips above 2 s |
+| Frame rate | **60 fps 87 %**, 30 fps 13 % |
+| Duration / bitrate | median 9.6 s / 1.20 Mbps; p90 32.9 s / 1.92 Mbps |
+| Keyframe interval | median GOP **4.167 s**, p90 8.333 s; 48/50 clips above 2 s |
+| Needs re-upload | the 210 published moves whose Boogiz `pro_dancer_video_url` 403s were skipped by the migration |
 
 A method note worth carrying: `-skip_frame nokey -show_frames` is **not** a valid keyframe probe
 on this corpus — its frames carry no `pts_time`, so it reports one keyframe per clip. Use
@@ -1060,13 +1063,19 @@ URLs**, so it is the one surface where every caching mechanism works without the
 and its metrics — swipe to first frame, and bytes moved per swipe — are unambiguous and
 measurable from a screen recording and a netstats delta, with no telemetry.
 
-**Corrected 2026-09-24:** those URLs are *not* immutable-headered and carry no CDN — they are
-raw eu-central-1 S3 objects with no `cache-control`
-([tier A](video-playback-catalog-assets-2026-09-24.md)). `expo-video`'s device cache keys on the
-URL and does not need a `cache-control` header, so rung 2 still works; what does not hold is any
-expectation of edge-cache help behind it. And the feed's own source, `mainVideoUrl`, is **0 %
-faststart**, which is a cause of the blank interval the baseline measured and which no rung of
-this ladder addresses. The `+faststart` remux now sits beside rung 0 — see *Phase 3*.
+**Qualified 2026-09-24** ([tier A](video-playback-catalog-assets-2026-09-24.md)). Three things
+the pilot has to account for:
+
+- the feed is currently playing the **pre-migration Boogiz copies**, because the `dance_moves`
+  URL columns were never repointed at the `dance-media` objects. Repoint first, or the pilot
+  measures a corpus the product is about to stop serving;
+- the migrated objects carry **`cache-control: no-cache`** behind Supabase's Cloudflare layer, so
+  every request is an edge miss. `expo-video`'s device cache keys on the URL and needs no
+  `cache-control`, so rung 2 still works — but no edge-cache help exists behind it until the
+  object metadata is fixed;
+- the feed's own source, `mainVideoUrl`, is **0 % faststart** in both copies. That is a cause of
+  the blank interval the baseline measured, and no rung of this ladder addresses it. The
+  `+faststart` remux now sits beside rung 0 — see *Phase 3*.
 
 Climb the ladder one rung at a time and re-measure after each. **Stop at the first rung that hits
 the target**; the rungs above it are then not worth their cost.
@@ -1104,9 +1113,9 @@ neighbours were cold.
 **Rung 2 — turn the remaining knobs (about half a day).** No architectural change:
 
 - `useCaching: true` on the feed source — public and stable, exactly the case option 3 calls
-  for. The device cache keys on the URL, so the missing `cache-control` header does not block it,
-  but it also means there is no edge cache behind the miss: a cold fetch goes to eu-central-1 S3
-  every time. It means passing a `VideoSourceObject` where a string is passed today; an inline literal is
+  for. The device cache keys on the URL, so the objects' `cache-control: no-cache` does not block
+  it; it does mean every device-cache miss is also an edge-cache miss until that metadata is
+  fixed. It means passing a `VideoSourceObject` where a string is passed today; an inline literal is
   safe because `useVideoPlayer` keys on `JSON.stringify(parsedSource)`, but the same literal would
   be a new-player-per-render bug under `createVideoPlayer` in rung 3;
 - `setVideoCacheSizeAsync(200–500 MB)` at startup, before any player exists;
@@ -1197,10 +1206,13 @@ Otherwise unchanged in content, deliberately deferred in time:
 - Server-side signed-URL memoization (option 4A), stored on the row rather than in process
   memory if the server runs more than one replica, plus a signed-URL TTL audit that accounts for
   the edge cache outliving the token.
-- **Give public catalog media a CDN and cache headers at all.** Measured 2026-09-24: no `Via`
-  header, no `cache-control`, `binary/octet-stream` on 94 % of objects, served from
-  eu-central-1 S3. This is no longer a "verify the hit rate" item; there is nothing in front to
-  hit. Decision 2 has to be answered first.
+- **Repoint the `dance_moves` URL columns at the `dance-media` objects, then give those objects a
+  real `cache-control`.** Measured 2026-09-24: the CDN exists (Cloudflare, via Supabase), but all
+  3,829 published objects carry `cache-control: no-cache` and returned `cf-cache-status: MISS`.
+  `dance-media-service.ts:147` and `media-upload-input.tsx:150` already write
+  `31536000, immutable` for anything uploaded through admin; the migrated corpus needs the same
+  metadata set on the existing objects. Neither step is an app change, and until the first one
+  lands every measurement is taken against the pre-migration copies.
 - Define the logout/cache-clear lifecycle before any UGC is cached.
 
 ### Phase 3 — encode; the data warrants it, but not for the reason assumed
@@ -1209,15 +1221,16 @@ Tier A kept this phase and changed its content. The corpus is uniformly H.264 Hi
 a sane resolution and bitrate, so the *compatibility* motivation is gone. Three ingest-side
 defects replace it, and the first is large enough that it should not wait for Phase 3 at all:
 
-- **`+faststart` remux — promote this to run beside rung 0.** 95.6 % of the corpus has `moov` at
-  the end, and `main_video_url` — what the feed plays — is 0 % faststart across all 808 published
-  moves. `ffmpeg -i in.mp4 -c copy -movflags +faststart out.mp4` is a stream copy, needs no app
-  change, and removes a *cause* of the blank frame that rung 0 merely covers. Over 10.79 GiB of
-  legacy objects it is a one-off batch job plus a pipeline step for new uploads.
+- **`+faststart` remux — promote this to run beside rung 0.** 98.3 % of the published objects in
+  `dance-media` have `moov` at the end, and the `main` role — what the feed plays — is 0 %
+  faststart across all 808 published moves. `ffmpeg -i in.mp4 -c copy -movflags +faststart out.mp4`
+  is a stream copy, needs no app change, and removes a *cause* of the blank frame that rung 0
+  merely covers. It is a one-off batch over the bucket plus a pipeline step for new uploads, and
+  it pairs naturally with setting `cache-control` on the same objects.
 - **A 1 s GOP for the practice assets.** The measured median is 4.167 s (`-g 250` at 60 fps),
   p90 8.333 s. This one is a real re-encode, so it is Phase 3 proper and it applies to the lesson,
   pro-tip and presentation roles rather than the whole corpus.
-- **Decide what to do about 60 fps.** 83 % of the corpus is 60 fps; the feed holds three prepared
+- **Decide what to do about 60 fps.** 87 % of the corpus is 60 fps; the feed holds three prepared
   decoders. Measure before re-encoding — a 30 fps rendition halves decode work but is a visible
   change to the product, not just a delivery change.
 - Ingest normalisation/transcode for admin-uploaded catalog media and for the media
@@ -1227,9 +1240,9 @@ defects replace it, and the first is large enough that it should not wait for Ph
 - Resumable/background uploads for larger recordings.
 - Retain `+faststart` and a 1 s keyframe interval on every progressive MP4 output.
 
-Separately, and not a playback item: **210 published moves (26 %) have a dead
-`pro_dancer_video_url`**, which `learn-dance-screen.tsx:173` plays. That is a content repair with
-its own owner.
+Separately, and not a playback item: **210 published moves (26 %) have no pro-dancer video** —
+their Boogiz source 403s, so the migration could not copy it, and `learn-dance-screen.tsx:173`
+plays the dead URL today. Re-uploading those is a content repair with its own owner.
 
 **Explicitly deferred:** HLS/ABR and the localhost-proxy cache. Revisit only if long-form
 lessons ship or measurement shows ABR beating an optimised progressive MP4 on our clips.
@@ -1243,20 +1256,18 @@ lessons ship or measurement shows ABR beating an optimised progressive MP4 on ou
    elsewhere* — the pilot transfers code, not verdicts — and it converts Phase 1b from a gated bet
    into a parallel track. It also means neither track may be silently dropped to fund the other:
    cutting scope now requires naming the surface that loses.
-2. Are published lesson/reference assets allowed to stay public, immutable CDN assets?
-   ~~(They already are — confirm this is intentional.)~~ **Reframed 2026-09-24: they are public,
-   but they are neither immutable-headered nor behind a CDN.** All 5,127 catalog URLs sit on two
-   legacy Boogiz S3 buckets with no `cache-control` and no CDN. The question is now two: is that
-   hosting intentional and permanent, and should the corpus move behind the `dance-media` bucket
-   (or any CDN) with `31536000, immutable` — which is the precondition for `useCaching` in rung 2
-   and for the CDN expectations in Phase 2.
+2. ~~Are published lesson/reference assets allowed to stay public, immutable CDN assets?~~
+   **Answered 2026-09-24, with one follow-up that is work rather than a decision.** They are
+   public and behind Supabase's Cloudflare layer, which is intentional. But the migrated objects
+   carry `cache-control: no-cache`, so nothing is cached at the edge, and the `dance_moves` rows
+   still address the pre-migration Boogiz copies. Both are fixes, not questions — see Phase 2.
 3. May private recordings remain in the device media cache after logout, or must it be
    cleared?
 4. ~~What are the real duration, resolution, codec and bitrate distributions of current
    catalog videos?~~ **Answered 2026-09-24** —
    [tier A](video-playback-catalog-assets-2026-09-24.md). Uniform H.264 High / yuv420p, 720×1280
-   dominant, median 9.4 s at 1.18 Mbps. The distributions are healthy; what is not is
-   `+faststart` (4.4 %), the frame rate (83 % at 60 fps) and the keyframe interval (median
+   dominant, median 9.6 s at 1.20 Mbps. The distributions are healthy; what is not is
+   `+faststart` (1.7 %), the frame rate (87 % at 60 fps) and the keyframe interval (median
    4.167 s).
 5. Is operating an ingest transcode step acceptable (we already run FFmpeg), or should a
    managed provider be evaluated — and separately, is Mux-style playback QoE analytics
