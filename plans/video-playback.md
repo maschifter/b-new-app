@@ -65,7 +65,7 @@ This document is a working record for the next research and implementation sessi
 | Signed UGC URLs | `service.ts` signs profile videos for 1 h; the media and scan workers sign for 5 min. Each list/detail response mints new URLs. | The full signed URL changes; both CDN and the device cache miss even for the same object. |
 | No cache key escape hatch | `VideoSourceObject` has `uri`, `headers`, `useCaching`, `contentType`, `drm`, `metadata` — **no `cacheKey`**, unlike `expo-image`, which `dance-post-grid.tsx` already uses with `cacheKey: post.thumbnailPath`. | Video cache identity *is* the URL. Rotating signed URLs makes `useCaching` useless for UGC. |
 | Published asset cache-control | Correct on every path. Admin uploads set `cacheControl: "31536000, immutable"` (`media-upload-input.tsx:150`, `dance-media-service.ts:147`), and `migrate-dance-media.mjs:263` uploaded the legacy corpus with `max-age=31536000`. Verified 2026-09-24 on a migrated object: a ranged `GET` returns `cache-control: max-age=31536000` and `cf-cache-status: HIT`. | Nothing to fix. A `HEAD` to the same object answers `no-cache` / `REVALIDATED`, which is a property of Supabase's public `HEAD` handler, not of the stored metadata — do not measure cache behaviour with `HEAD`. |
-| Catalog `moov` placement | **98.3 % of the corpus has `moov` at the end** (`ftyp > free > mdat`); only 66/3,828 are `+faststart`. The `main`, `dancer-tip` and `presentation` roles are **0 % faststart across all 808 published moves**. Inherited from the pre-migration copies, which the migration copied byte-wise. | The player must range-fetch the end of the file before decoding a frame, on every first play. `resolvePreviewMedia` prefers `mainVideoUrl`, so this is every page of the Stepz feed. |
+| Catalog `moov` placement | Was **98.3 % `moov` at the end** (`ftyp > free > mdat`), including **0 % faststart on `main`**. **Fixed 2026-09-24 for the feed:** `scripts/remux-faststart.mjs` remuxed all 808 published `main` objects, verified 808/808 at the edge. The other roles (`dancer-tip`, `presentation`, `pro-dancer`, `film-yourself`) are untouched and still tail-`moov`. | The feed no longer pays a range-fetch to the end of the file before its first frame. The practice surfaces still do — run the script with `--field all` when Phase 1b starts. |
 | Catalog frame rate | **87 % of the sampled corpus is 60 fps** (174/200), the rest 30 fps; all H.264 High / yuv420p, mostly 720×1280, median bitrate 1.20 Mbps, median duration 9.6 s. | Decode cost per second is double the implied 30 fps assumption, on the platform where decoder count binds. |
 | Catalog keyframe interval | Median GOP **4.167 s** (= `-g 250` at 60 fps, FFmpeg's default), p90 8.333 s; 48/50 sampled clips exceed 2 s. | Seek, section-loop and scrub accuracy on the practice surfaces is bounded at ~4 s, twice as coarse as the `-g 60` case this plan already called wrong. |
 | Catalog URLs the apps actually request | Repointed 2026-09-24: all 808 published moves now serve `main_video_url` and `thumbnail_url` from `dance-media`; 12/12 sampled preview URLs answered `206` with `cache-control: max-age=31536000` and `cf-cache-status: HIT`. **241 fields stay on Boogiz S3 and return HTTP 403**, 210 of them `pro_dancer_video_url` on published moves, which `learn-dance-screen.tsx:173` plays. | The feed and every thumbnail are now on the migrated corpus behind a CDN. The 210 need their pro-dancer video re-uploaded; no published move's *preview* URL is dead. |
@@ -1074,9 +1074,9 @@ the pilot has to account for:
   no CDN in front of them. The rows were repointed on 2026-09-24
   (`scripts/repoint-dance-media.mjs`), so both baselines must be re-measured before any rung is
   judged against them;
-- the feed's own source, `mainVideoUrl`, is **0 % faststart** in both copies. That is a cause of
-  the blank interval the baseline measured, and no rung of this ladder addresses it. The
-  `+faststart` remux now sits beside rung 0 — see *Phase 3*.
+- the feed's own source, `mainVideoUrl`, was **0 % faststart** when those baselines were taken.
+  All 808 published `main` objects were remuxed on 2026-09-24, so the re-measured baseline
+  already carries that improvement and no rung should be credited with it.
 
 Climb the ladder one rung at a time and re-measure after each. **Stop at the first rung that hits
 the target**; the rungs above it are then not worth their cost.
@@ -1221,12 +1221,13 @@ Tier A kept this phase and changed its content. The corpus is uniformly H.264 Hi
 a sane resolution and bitrate, so the *compatibility* motivation is gone. Three ingest-side
 defects replace it, and the first is large enough that it should not wait for Phase 3 at all:
 
-- **`+faststart` remux — promote this to run beside rung 0.** 98.3 % of the published objects in
-  `dance-media` have `moov` at the end, and the `main` role — what the feed plays — is 0 %
-  faststart across all 808 published moves. `ffmpeg -i in.mp4 -c copy -movflags +faststart out.mp4`
-  is a stream copy, needs no app change, and removes a *cause* of the blank frame that rung 0
-  merely covers. It is a one-off batch over the bucket plus a pipeline step for new uploads, and
-  it pairs naturally with setting `cache-control` on the same objects.
+- ~~**`+faststart` remux — promote this to run beside rung 0.**~~ **Done 2026-09-24 for the feed**
+  (`scripts/remux-faststart.mjs`): 808/808 published `main` objects now carry `moov` before `mdat`,
+  confirmed at the edge. 784 were remuxed in the first pass, 4 more after the script learned to
+  drop a `tmcd` timecode track, 20 in an earlier trial run. Two things this left open: the other
+  video roles are still tail-`moov` (`--field all` covers them, ~3,000 objects, do it before the
+  Phase 1b practice work), and **new uploads still land tail-`moov`** — the admin media pipeline
+  needs the same `-movflags +faststart` step or the corpus drifts back.
 - **A 1 s GOP for the practice assets.** The measured median is 4.167 s (`-g 250` at 60 fps),
   p90 8.333 s. This one is a real re-encode, so it is Phase 3 proper and it applies to the lesson,
   pro-tip and presentation roles rather than the whole corpus.

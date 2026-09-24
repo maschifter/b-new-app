@@ -113,7 +113,7 @@ legacy corpus, and `dance-media-service.ts:147` / `media-upload-input.tsx:150` s
 Boogiz copies the apps serve today have no CDN in front of them at all, so repointing the rows
 is itself the delivery win.
 
-### `moov` is at the end of 98.3 % of the corpus
+### `moov` was at the end of 98.3 % of the corpus — fixed for `main` the same day
 
 | Box order | Objects | Meaning |
 | --- | ---: | --- |
@@ -128,13 +128,41 @@ is itself the delivery win.
 | `film_yourself` | 808 | 8 |
 | `pro_dancer` | 598 | 58 |
 
-`resolvePreviewMedia` prefers `main`, which is **0 % faststart**. Every video the Stepz feed
-plays forces the player to fetch the end of the file before it can decode a single frame — an
-extra round trip on every first play of every page, and behind a CDN that is currently told not
-to cache either request.
+`resolvePreviewMedia` prefers `main`, which measured **0 % faststart**. Every video the Stepz
+feed plays forced the player to fetch the end of the file before it could decode a single frame —
+an extra round trip on every first play of every page.
 
 This is inherited, not introduced: the Boogiz originals are 4.4 % faststart and the migration
 copied the bytes.
+
+**Remuxed 2026-09-24** with `scripts/remux-faststart.mjs` (`ffmpeg -c copy -movflags +faststart`,
+no re-encode):
+
+| | Objects |
+| --- | ---: |
+| Published `main` objects | 808 |
+| Now `ftyp > moov`, confirmed at the edge | **808** |
+| Remuxed in the main pass / after the `tmcd` fix / in the trial run | 784 / 4 / 20 |
+| Rejected for stream, duration or size drift | 0 |
+| Bytes re-uploaded | 1,135 MiB |
+
+Three things the run established that the plan did not anticipate:
+
+1. **Overwriting an object does not purge the CDN synchronously.** An edge kept serving the
+   previous copy for roughly four minutes — same path, old `etag`, old `content-length`,
+   `cf-cache-status: HIT`. Read the storage **origin**
+   (`/storage/v1/object/authenticated/<bucket>/<path>`) to see what is actually stored; the
+   public URL can lie for minutes after a write. The script now polls each public URL until it
+   serves the remuxed head, which both proves the purge and re-warms the edge.
+2. **Four moves carry a `tmcd` timecode data track** (*Jalous*, *Samba*, *Nuhala*, *Cirkum turn*).
+   It has no decoder, so `-map 0` aborts the remux. `-map -0:d` drops the mapping and the mov
+   muxer rebuilds the track from the input's timecode, leaving the stream count equal.
+3. **The size change is negligible** — the sampled file went 735,907 → 735,914 bytes, with
+   identical codecs, frame counts and duration.
+
+The other video roles (`dancer_tip`, `presentation`, `pro_dancer`, `film_yourself`) are still
+tail-`moov`; `--field all` covers them and belongs with the Phase 1b practice work. New admin
+uploads also still land tail-`moov`, so the media pipeline needs the same flag.
 
 ### Codec and encoding — clean, except the frame rate
 
@@ -209,16 +237,15 @@ column so the question becomes SQL once volume exists. `media-processor.ts:238` 
 2. **Phase 3 keeps its place with different content.** Three ingest-side defects survive the
    migration untouched: `+faststart` on 98.3 % of the corpus, a ~4.2 s GOP on the practice
    assets, and the 60 fps question.
-3. **`+faststart` is the cheapest large win available, and it is not in the ladder.** It is a
-   stream copy (`ffmpeg -i in.mp4 -c copy -movflags +faststart out.mp4`), needs no app change,
-   and targets exactly the surface the pilot measures. Rung 0 hides the blank frame; this removes
-   a cause of it. Sequence it *beside* rung 0.
+3. **`+faststart` was the cheapest large win available — taken 2026-09-24, before rung 0.** All
+   808 published `main` objects are remuxed. Rung 0 hides the blank frame; this removed a cause of
+   it, so rung 0 must now be judged against a baseline that already includes it.
 4. **Both Phase 0 baselines are void.** They were recorded against the Boogiz copies, which are
    uncached, `binary/octet-stream` and, for 241 URLs, dead. The apps now fetch the migrated
    corpus from behind a CDN, so the Android and iOS-simulator numbers must be re-measured before
    any rung is judged against them. The one standing follow-up is procedural: keep the URL
    columns out of `import-boogiz-dancemoves.mjs`'s upsert, or re-run the repoint script after
-   every catalog import.
+   every catalog import. They also predate the `+faststart` remux of the feed's `main` objects.
 5. **Rung 2's premise holds.** `expo-video`'s device cache keys on the URL, and behind it the
    migrated objects are genuinely edge-cached (`max-age=31536000`, `HIT`) — but only once the
    rows point at them.
