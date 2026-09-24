@@ -14,10 +14,12 @@ device — deferred by the product owner) and the Pixel 9/10 refresh-rate measur
 available hardware can run**. One physical-Android, unthrottled-Wi-Fi feed session is recorded in
 [the Android baseline](video-playback-android-baseline-2026-09-24.md), re-measured against the
 repointed and remuxed corpus in
-[the second Android baseline](video-playback-android-baseline-repointed-2026-09-24.md), and an iOS Simulator
-[diagnostic](video-playback-ios-simulator-baseline-2026-09-24.md) covers the same 30 forward
-transitions. The simulator diagnostic does not replace the required physical-iPhone baseline;
-the rest of Phase 0 remains open. [Tier A](video-playback-catalog-assets-2026-09-24.md) closes
+[the second Android baseline](video-playback-android-baseline-repointed-2026-09-24.md), and an
+iOS Simulator [diagnostic](video-playback-ios-simulator-baseline-2026-09-24.md) covers the same 30
+forward transitions, likewise
+[re-measured](video-playback-ios-simulator-baseline-repointed-2026-09-24.md). The simulator
+diagnostic does not replace the required physical-iPhone baseline; the rest of Phase 0 remains
+open. [Tier A](video-playback-catalog-assets-2026-09-24.md) closes
 **decision 4** and changes three things below: **98.3 % of the catalog has `moov` at the end of
 the file**, and 87 % of it is 60 fps. It also found that the `dance_moves` URL columns were
 never repointed at the migrated objects; **that was fixed on 2026-09-24**
@@ -1021,7 +1023,12 @@ per transition **rose** to 9.79 MiB. A separate reading put an untouched, loopin
 open decoder-count item: a fresh feed holds 2 hardware AVC decoders, and after 32 swipes the
 process holds 6 and does not release them. An [iOS Simulator diagnostic](video-playback-ios-simulator-baseline-2026-09-24.md)
 then recorded 30 transitions and 23.1 s of uniform blank-video time across 16 intervals
-(median 0.82 s; longest 8.17 s). The simulator result is not comparable head-to-head with
+(median 0.82 s; longest 8.17 s). **Replaying the identical saved flow against the repointed and
+remuxed corpus** ([result](video-playback-ios-simulator-baseline-repointed-2026-09-24.md)) left
+6.03 s across 3 intervals, **all of them before the first swipe**: on the simulator the feed now
+shows no empty media at all while paging. That isolates the remaining Android cost as decode
+capacity and link speed rather than the media, and it means the simulator cannot serve as a
+rung 0 acceptance surface. The simulator result is not comparable head-to-head with
 physical Android and is not the required iPhone baseline. Physical iOS, throttled-network,
 lesson, catalog-asset, merge-rate and Pixel measurements remain open.
 
@@ -1083,10 +1090,12 @@ the pilot has to account for:
 
 - the two Phase 0 baselines were recorded against the **pre-migration Boogiz copies**, which had
   no CDN in front of them. The rows were repointed on 2026-09-24
-  (`scripts/repoint-dance-media.mjs`). **The Android baseline was re-measured the same day**
-  ([result](video-playback-android-baseline-repointed-2026-09-24.md)) and is the one to judge the
-  rungs against; the iPhone pass has still never been run, so there is no iOS baseline on the
-  current corpus;
+  (`scripts/repoint-dance-media.mjs`). **Both were re-measured the same day** — the
+  [Android device run](video-playback-android-baseline-repointed-2026-09-24.md), which is the one
+  to judge the rungs against, and the
+  [simulator diagnostic](video-playback-ios-simulator-baseline-repointed-2026-09-24.md), which now
+  shows no empty media at all while paging. The iPhone pass has still never been run, so there is
+  no measurement on real iOS hardware at all;
 - the feed's own source, `mainVideoUrl`, was **0 % faststart** when those baselines were taken.
   All 808 published `main` objects were remuxed on 2026-09-24, so the re-measured baseline
   already carries that improvement and no rung should be credited with it. Measured: the remux
