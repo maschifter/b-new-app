@@ -92,6 +92,7 @@ function loadEnvironment() {
   return {
     supabaseUrl,
     publicPrefix: `${supabaseUrl}/storage/v1/object/public/${BUCKET}/`,
+    originPrefix: `${supabaseUrl}/storage/v1/object/authenticated/${BUCKET}/`,
     authHeaders: { apikey: secretKey, Authorization: `Bearer ${secretKey}` },
   };
 }
@@ -194,10 +195,12 @@ function classifyHead(head) {
   }
 }
 
-async function readHead(url, label) {
+// Reads through the origin rather than the public URL: the CDN keeps serving the previous copy
+// of an overwritten object for several minutes, so an edge read cannot tell what is stored now.
+async function readHead(environment, objectPath, label) {
   const response = await fetchWithRetry(
-    url,
-    { headers: { Range: `bytes=0-${HEAD_BYTES - 1}` } },
+    `${environment.originPrefix}${objectPath}`,
+    { headers: { ...environment.authHeaders, Range: `bytes=0-${HEAD_BYTES - 1}` } },
     label,
   );
 
@@ -332,7 +335,11 @@ function describeDrift(source, output, sourceSize, outputSize) {
 }
 
 async function remuxObject(environment, object, workDirectory, dryRun) {
-  const { head, contentType } = await readHead(object.url, `head ${object.objectPath}`);
+  const { head, contentType } = await readHead(
+    environment,
+    object.objectPath,
+    `head ${object.objectPath}`,
+  );
   const layout = classifyHead(head);
 
   if (layout !== "tail-moov") {
@@ -347,7 +354,11 @@ async function remuxObject(environment, object, workDirectory, dryRun) {
   const outputPath = join(workDirectory, `output${extension}`);
 
   try {
-    const response = await fetchWithRetry(object.url, {}, `download ${object.objectPath}`);
+    const response = await fetchWithRetry(
+      `${environment.originPrefix}${object.objectPath}`,
+      { headers: environment.authHeaders },
+      `download ${object.objectPath}`,
+    );
 
     if (!response.ok) {
       await response.body?.cancel();
@@ -389,7 +400,7 @@ async function remuxObject(environment, object, workDirectory, dryRun) {
 
     await uploadObject(environment, object.objectPath, contentType, outputBytes);
 
-    const verified = await readHead(object.url, `verify ${object.objectPath}`);
+    const verified = await readHead(environment, object.objectPath, `verify ${object.objectPath}`);
 
     if (classifyHead(verified.head) !== "faststart") {
       return { outcome: "unverified", reason: "the stored object still reads as tail-moov" };
