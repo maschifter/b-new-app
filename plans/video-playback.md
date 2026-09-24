@@ -12,7 +12,9 @@ alongside each other rather than one behind the other. Nothing in this document 
 items stay open and gate only themselves: **decision 7** (may practice clips be downloaded to the
 device — deferred by the product owner) and the Pixel 9/10 refresh-rate measurement, which **no
 available hardware can run**. One physical-Android, unthrottled-Wi-Fi feed session is recorded in
-[the Android baseline](video-playback-android-baseline-2026-09-24.md), and an iOS Simulator
+[the Android baseline](video-playback-android-baseline-2026-09-24.md), re-measured against the
+repointed and remuxed corpus in
+[the second Android baseline](video-playback-android-baseline-repointed-2026-09-24.md), and an iOS Simulator
 [diagnostic](video-playback-ios-simulator-baseline-2026-09-24.md) covers the same 30 forward
 transitions. The simulator diagnostic does not replace the required physical-iPhone baseline;
 the rest of Phase 0 remains open. [Tier A](video-playback-catalog-assets-2026-09-24.md) closes
@@ -20,7 +22,8 @@ the rest of Phase 0 remains open. [Tier A](video-playback-catalog-assets-2026-09
 the file**, and 87 % of it is 60 fps. It also found that the `dance_moves` URL columns were
 never repointed at the migrated objects; **that was fixed on 2026-09-24**
 (`scripts/repoint-dance-media.mjs`, 6,926 fields), so the two baselines recorded before it were
-measured against the pre-migration copies and no longer describe what the apps fetch.
+measured against the pre-migration copies and no longer describe what the apps fetch; the Android
+one was re-run the same day and the iPhone pass is still owed.
 Every number in *Targets* is a proposal, not a product contract.
 ## Goal
 
@@ -942,7 +945,7 @@ Driven with argent plus the platform tools. Nothing here requires an app change.
 | --- | --- | --- |
 | Swipe → first frame | `screen-recording-start/stop`, count frames from finger-lift | Stepz feed |
 | Tap → first frame | the same | move picker → `learn-dance-screen` |
-| Concurrent decoders (Android) | `adb shell dumpsys media.metrics` / `media.player`; device ceiling from `concurrent-instances` in `/vendor/etc/media_codecs*.xml` | **History grid first** (a player per posterless cell, unbounded in the length of the scroll), then the **feed** (three prepared players), then `record-dance-screen.tsx` — which holds two decoders in production, not three |
+| Concurrent decoders (Android) | **`adb shell dumpsys media.resource_manager`** is the one that reports live clients per pid; `media.metrics` gives lifetimes but reports `renderFrameCount` as 0 on MediaTek, and `media.player` gives capabilities only. Device ceiling from `concurrent-instances` in `/vendor/etc/media_codecs*.xml` | **Feed measured 2026-09-24** ([result](video-playback-android-baseline-repointed-2026-09-24.md)): 2 hardware AVC decoders on a fresh feed, **6 after 32 swipes and never released**, with ≥25 decoder destructions in a 49 s swipe window (median lifetime 7.2 s). Still open: the **history grid** (a player per posterless cell, unbounded in the length of the scroll) and `record-dance-screen.tsx` — which holds two decoders in production, not three |
 | Bytes transferred per swipe | `adb shell dumpsys netstats` on Android, a throttling proxy on both; compare bytes moved for one swipe against the clip size | Stepz feed — sizes the unbounded neighbour buffer, which is what ladder rung 1 reclaims and what a latency-only baseline cannot see |
 | Pixel 9/10 30 Hz UI cap | `adb shell dumpsys display` while a 30 fps video plays; drag the tempo bar and watch for judder | feed and `learn-dance-screen` — **blocked: no Pixel 9/10 available (2026-09-24)** |
 | `surfaceView` vs `textureView` | flip the prop, record, compare power and frame timing | `feed-move-page.tsx:127` |
@@ -1008,7 +1011,15 @@ captured 30 forward page transitions. The app received 180.7 MiB during the sess
 app-wide average of 6.02 MiB per transition. A uniform app-background region occupied the
 centre of the video area for 27.2 s across 24 intervals (median interval 0.83 s; longest 3.93 s).
 The recording has no touch-release marker, so these are visible blank intervals, **not** measured
-swipe-to-first-frame times. An [iOS Simulator diagnostic](video-playback-ios-simulator-baseline-2026-09-24.md)
+swipe-to-first-frame times. That run measured the legacy S3, tail-`moov` copies; it was
+**re-measured the same day against the repointed and remuxed corpus**
+([result](video-playback-android-baseline-repointed-2026-09-24.md)), on the same device and
+network and over the same 30 transitions between the same two moves: blank video fell to 17.20 s
+across 17 intervals (0.57 s per transition, median 0.67 s, longest 3.73 s) while received bytes
+per transition **rose** to 9.79 MiB. A separate reading put an untouched, looping page at
+145.6 KB/s — the clip is re-downloaded every loop. `dumpsys media.resource_manager` closes the
+open decoder-count item: a fresh feed holds 2 hardware AVC decoders, and after 32 swipes the
+process holds 6 and does not release them. An [iOS Simulator diagnostic](video-playback-ios-simulator-baseline-2026-09-24.md)
 then recorded 30 transitions and 23.1 s of uniform blank-video time across 16 intervals
 (median 0.82 s; longest 8.17 s). The simulator result is not comparable head-to-head with
 physical Android and is not the required iPhone baseline. Physical iOS, throttled-network,
@@ -1072,11 +1083,15 @@ the pilot has to account for:
 
 - the two Phase 0 baselines were recorded against the **pre-migration Boogiz copies**, which had
   no CDN in front of them. The rows were repointed on 2026-09-24
-  (`scripts/repoint-dance-media.mjs`), so both baselines must be re-measured before any rung is
-  judged against them;
+  (`scripts/repoint-dance-media.mjs`). **The Android baseline was re-measured the same day**
+  ([result](video-playback-android-baseline-repointed-2026-09-24.md)) and is the one to judge the
+  rungs against; the iPhone pass has still never been run, so there is no iOS baseline on the
+  current corpus;
 - the feed's own source, `mainVideoUrl`, was **0 % faststart** when those baselines were taken.
   All 808 published `main` objects were remuxed on 2026-09-24, so the re-measured baseline
-  already carries that improvement and no rung should be credited with it.
+  already carries that improvement and no rung should be credited with it. Measured: the remux
+  and the CDN together cut visible blank video per transition from 0.91 s to 0.57 s and raised
+  bytes per transition by about half, because nothing bounds the buffers that now fill faster.
 
 Climb the ladder one rung at a time and re-measure after each. **Stop at the first rung that hits
 the target**; the rungs above it are then not worth their cost.
