@@ -1226,8 +1226,22 @@ defects replace it, and the first is large enough that it should not wait for Ph
   confirmed at the edge. 784 were remuxed in the first pass, 4 more after the script learned to
   drop a `tmcd` timecode track, 20 in an earlier trial run. Two things this left open: the other
   video roles are still tail-`moov` (`--field all` covers them, ~3,000 objects, do it before the
-  Phase 1b practice work), and **new uploads still land tail-`moov`** — the admin media pipeline
-  needs the same `-movflags +faststart` step or the corpus drifts back.
+  Phase 1b practice work), and new uploads still land tail-`moov` — see the next item.
+- **New admin video uploads land tail-`moov`, so the corpus drifts back.** Not a quick fix, and
+  the reason is architectural: `createUploadTicket`
+  (`apps/server/src/modules/admin/dance-media-service.ts`) only mints a signed upload URL, and
+  `media-upload-input.tsx` then sends the bytes **browser → storage directly**. The server never
+  holds a video, so it has nowhere to run ffmpeg. Images do not have this problem — `uploadImage`
+  streams through Fastify and sharp already rewrites them. The dependency is not the obstacle: the
+  server already ships `ffmpeg-static` and `@ffprobe-installer/ffprobe` for the scan worker.
+  The fix is a post-upload step — the admin calls a new endpoint with the object path once
+  `uploadToSignedUrl` resolves, and the server downloads, remuxes and overwrites, reusing the
+  logic in `scripts/remux-faststart.mjs` (including `-map -0:d` and the origin read, both of which
+  that script had to learn). It must fail soft: the upload has already succeeded by then.
+  **Until that exists, re-run `scripts/remux-faststart.mjs` after a batch of catalog uploads** —
+  it is idempotent and skips everything already faststart, so the cost is one head request per
+  object. This is the second recurring chore on this corpus, beside re-running
+  `scripts/repoint-dance-media.mjs` after every catalog import.
 - **A 1 s GOP for the practice assets.** The measured median is 4.167 s (`-g 250` at 60 fps),
   p90 8.333 s. This one is a real re-encode, so it is Phase 3 proper and it applies to the lesson,
   pro-tip and presentation roles rather than the whole corpus.
