@@ -30,9 +30,14 @@ const FFMPEG_TIMEOUT_MS = 120_000;
 // A stream-copy remux only rewrites the container, so a large size change means ffmpeg did
 // something other than relocating moov and the result must not be uploaded.
 const MAX_SIZE_DRIFT = 0.02;
+// Overwriting an object does not purge the CDN synchronously; an edge kept serving the previous
+// copy for about four minutes in practice, so propagation is polled rather than assumed.
+const WARMUP_POLL_MS = 15_000;
+const WARMUP_TIMEOUT_MS = 600_000;
 
 function parseArguments(arguments_) {
   let dryRun = false;
+  let skipWarmup = false;
   let status = "published";
   let limit = Number.POSITIVE_INFINITY;
   const fields = [];
@@ -50,6 +55,8 @@ function parseArguments(arguments_) {
 
     if (argument === "--dry-run") {
       dryRun = true;
+    } else if (argument === "--skip-warmup") {
+      skipWarmup = true;
     } else if (argument === "--status") {
       status = takeValue("--status");
     } else if (argument === "--limit") {
@@ -73,6 +80,7 @@ function parseArguments(arguments_) {
 
   return {
     dryRun,
+    skipWarmup,
     status,
     limit,
     fields: [...new Set(fields.length > 0 ? fields : DEFAULT_FIELDS)],
@@ -310,6 +318,31 @@ async function probeStreams(filePath) {
   return JSON.parse(output);
 }
 
+// Requests the head of the public URL until it serves the remuxed copy, which both confirms the
+// CDN purged and leaves the edge holding the new object for the next reader.
+async function warmObject(environment, object, awaitPropagation, deadline) {
+  for (;;) {
+    const response = await fetchWithRetry(
+      object.url,
+      { headers: { Range: `bytes=0-${HEAD_BYTES - 1}` } },
+      `warm ${object.objectPath}`,
+    );
+
+    if (!response.ok) {
+      await response.body?.cancel();
+      throw new Error(`warm failed with status ${response.status}`);
+    }
+
+    const layout = classifyHead(Buffer.from(await response.arrayBuffer()));
+
+    if (layout === "faststart" || !awaitPropagation || Date.now() >= deadline) {
+      return layout;
+    }
+
+    await sleep(WARMUP_POLL_MS);
+  }
+}
+
 // Rejects an output whose tracks or duration moved, which a stream copy must never do.
 function describeDrift(source, output, sourceSize, outputSize) {
   const signature = (probe) =>
@@ -430,7 +463,7 @@ async function runPool(items, concurrency, worker) {
   await Promise.all(runners);
 }
 
-const { dryRun, status, limit, fields } = parseArguments(process.argv.slice(2));
+const { dryRun, skipWarmup, status, limit, fields } = parseArguments(process.argv.slice(2));
 const environment = loadEnvironment();
 
 console.log(`Fields: ${fields.join(", ")} | status: ${status}`);
@@ -458,6 +491,7 @@ const counters = {
   failed: 0,
 };
 const problems = [];
+const remuxedPaths = new Set();
 let bytesUploaded = 0;
 let processed = 0;
 
@@ -467,6 +501,10 @@ try {
       const result = await remuxObject(environment, object, workDirectories[slot], dryRun);
       counters[result.outcome] += 1;
       bytesUploaded += result.bytes ?? 0;
+
+      if (result.outcome === "remuxed") {
+        remuxedPaths.add(object.objectPath);
+      }
 
       if (result.reason !== undefined) {
         problems.push({ ...object, outcome: result.outcome, reason: result.reason });
@@ -493,6 +531,33 @@ for (const [outcome, count] of Object.entries(counters)) {
 
 if (bytesUploaded > 0) {
   console.log(`Uploaded ${(bytesUploaded / 1024 ** 2).toFixed(1)} MiB`);
+}
+
+if (!dryRun && !skipWarmup && objects.length > 0) {
+  const deadline = Date.now() + WARMUP_TIMEOUT_MS;
+  let stale = 0;
+
+  console.log(`Warming ${objects.length} public URL(s) and waiting for propagation`);
+
+  await runPool(objects, CONCURRENCY, async (object) => {
+    try {
+      const layout = await warmObject(
+        environment,
+        object,
+        remuxedPaths.has(object.objectPath),
+        deadline,
+      );
+
+      if (layout !== "faststart") {
+        stale += 1;
+        problems.push({ ...object, outcome: "stale-edge", reason: `CDN still serves ${layout}` });
+      }
+    } catch (error) {
+      problems.push({ ...object, outcome: "warm-failed", reason: error.message });
+    }
+  });
+
+  console.log(`  warmed: ${objects.length - stale} | still stale at the edge: ${stale}`);
 }
 
 if (problems.length > 0) {
