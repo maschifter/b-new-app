@@ -1,6 +1,6 @@
 # Video Playback — Research & Implementation Plan
 
-Status: **research complete; Phase 0b shipped, the pilot not started.** Written 2026-09-23,
+Status: **research complete; Phase 0b shipped; Android physical-device baseline and iOS Simulator diagnostic recorded; the pilot not started.** Written 2026-09-23,
 revised through 2026-09-24.
 Every code, package and line reference below was verified against the working tree and against
 `node_modules/expo-video@55.0.21` — including the native iOS and Android sources, not only the
@@ -11,8 +11,11 @@ The feed is won on *first* play, the practice surfaces on *repeat* play, so the 
 alongside each other rather than one behind the other. Nothing in this document is blocked. Two
 items stay open and gate only themselves: **decision 7** (may practice clips be downloaded to the
 device — deferred by the product owner) and the Pixel 9/10 refresh-rate measurement, which **no
-available hardware can run**. Measurement has not been run; every number in *Targets* is a
-proposal, not a baseline.
+available hardware can run**. One physical-Android, unthrottled-Wi-Fi feed session is recorded in
+[the Android baseline](video-playback-android-baseline-2026-09-24.md), and an iOS Simulator
+[diagnostic](video-playback-ios-simulator-baseline-2026-09-24.md) covers the same 30 forward
+transitions. The simulator diagnostic does not replace the required physical-iPhone baseline;
+the rest of Phase 0 remains open. Every number in *Targets* is a proposal, not a product contract.
 ## Goal
 
 Make video playback feel immediate and reliable for dance lessons, reference clips, the
@@ -966,6 +969,17 @@ Suggested initial targets (to validate, not yet a product contract):
 ## Recommended phased roadmap
 
 ### Phase 0 — baseline (tiers A and B; no app change)
+
+**Partial result, 2026-09-24:** the [physical Android Wi-Fi Stepz feed baseline](video-playback-android-baseline-2026-09-24.md)
+captured 30 forward page transitions. The app received 180.7 MiB during the session, an
+app-wide average of 6.02 MiB per transition. A uniform app-background region occupied the
+centre of the video area for 27.2 s across 24 intervals (median interval 0.83 s; longest 3.93 s).
+The recording has no touch-release marker, so these are visible blank intervals, **not** measured
+swipe-to-first-frame times. An [iOS Simulator diagnostic](video-playback-ios-simulator-baseline-2026-09-24.md)
+then recorded 30 transitions and 23.1 s of uniform blank-video time across 16 intervals
+(median 0.82 s; longest 8.17 s). The simulator result is not comparable head-to-head with
+physical Android and is not the required iPhone baseline. Physical iOS, throttled-network,
+lesson, catalog-asset, merge-rate and Pixel measurements remain open.
 
 - Run tier A: catalog `ffprobe` statistics (A1) and the `skippedMergeReason` rate (A2). A1 answers
   question 4 and decides whether Phase 3 exists at all.

@@ -1,0 +1,259 @@
+steps:
+  - echo: Restart Stepz Staging for a paced feed baseline; expect Charlie to be
+      visible.
+  - launch: com.bnewapp.stepz.staging
+  - await: { visible: { id: feed-playback-toggle }, timeout: 25000 }
+  - await: { idle: true, timeout: 1200 }
+  - echo: Swipe up through the feed with two seconds between page transitions.
+  - tool: run-sequence
+    args:
+      steps:
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.76
+            toX: 0.5
+            toY: 0.24
+            durationMs: 450
+          delayMs: 2000
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.76
+            toX: 0.5
+            toY: 0.24
+            durationMs: 450
+          delayMs: 2000
+  - tool: run-sequence
+    args:
+      steps:
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.76
+            toX: 0.5
+            toY: 0.24
+            durationMs: 450
+          delayMs: 2200
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.76
+            toX: 0.5
+            toY: 0.24
+            durationMs: 450
+          delayMs: 2200
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.76
+            toX: 0.5
+            toY: 0.24
+            durationMs: 450
+          delayMs: 2200
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.76
+            toX: 0.5
+            toY: 0.24
+            durationMs: 450
+          delayMs: 2200
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.76
+            toX: 0.5
+            toY: 0.24
+            durationMs: 450
+          delayMs: 2200
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.76
+            toX: 0.5
+            toY: 0.24
+            durationMs: 450
+          delayMs: 2200
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.76
+            toX: 0.5
+            toY: 0.24
+            durationMs: 450
+          delayMs: 2200
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.76
+            toX: 0.5
+            toY: 0.24
+            durationMs: 450
+          delayMs: 2200
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.76
+            toX: 0.5
+            toY: 0.24
+            durationMs: 450
+          delayMs: 2200
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.76
+            toX: 0.5
+            toY: 0.24
+            durationMs: 450
+          delayMs: 2200
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.76
+            toX: 0.5
+            toY: 0.24
+            durationMs: 450
+          delayMs: 2200
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.76
+            toX: 0.5
+            toY: 0.24
+            durationMs: 450
+          delayMs: 2200
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.76
+            toX: 0.5
+            toY: 0.24
+            durationMs: 450
+          delayMs: 2200
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.76
+            toX: 0.5
+            toY: 0.24
+            durationMs: 450
+          delayMs: 2200
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.76
+            toX: 0.5
+            toY: 0.24
+            durationMs: 450
+          delayMs: 2200
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.76
+            toX: 0.5
+            toY: 0.24
+            durationMs: 450
+          delayMs: 2200
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.76
+            toX: 0.5
+            toY: 0.24
+            durationMs: 450
+          delayMs: 2200
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.76
+            toX: 0.5
+            toY: 0.24
+            durationMs: 450
+          delayMs: 2200
+  - echo: After 20 ordinary swipes, make 10 faster flings while allowing each page
+      animation to settle.
+  - tool: run-sequence
+    args:
+      steps:
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.78
+            toX: 0.5
+            toY: 0.2
+            durationMs: 100
+          delayMs: 1800
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.78
+            toX: 0.5
+            toY: 0.2
+            durationMs: 100
+          delayMs: 1800
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.78
+            toX: 0.5
+            toY: 0.2
+            durationMs: 100
+          delayMs: 1800
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.78
+            toX: 0.5
+            toY: 0.2
+            durationMs: 100
+          delayMs: 1800
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.78
+            toX: 0.5
+            toY: 0.2
+            durationMs: 100
+          delayMs: 1800
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.78
+            toX: 0.5
+            toY: 0.2
+            durationMs: 100
+          delayMs: 1800
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.78
+            toX: 0.5
+            toY: 0.2
+            durationMs: 100
+          delayMs: 1800
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.78
+            toX: 0.5
+            toY: 0.2
+            durationMs: 100
+          delayMs: 1800
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.78
+            toX: 0.5
+            toY: 0.2
+            durationMs: 100
+          delayMs: 1800
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.78
+            toX: 0.5
+            toY: 0.2
+            durationMs: 100
+          delayMs: 1800
+  - await: { visible: { id: feed-playback-toggle } }

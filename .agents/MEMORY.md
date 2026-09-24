@@ -3,7 +3,7 @@
 ## Project Environment
 
 - Environment last inspected on 2026-08-25.
-- BNewApp is an Expo 55.0.28 / React Native 0.83.10 development-build app with Expo Router.
+- BNewApp is an Expo 55.0.31 / React Native 0.83.10 development-build app with Expo Router.
 - Mobile supports iOS and Android; native projects are generated on demand and gitignored.
   Generate them through the repository prebuild/run scripts; never depend on manual native edits.
 - Use `corepack pnpm@10.13.1` from the repository root.
@@ -26,3 +26,13 @@
 - Environment rechecked on 2026-09-23: `apps/edu` is also an Expo iOS/Android app (bundle id
   `com.bnewapp.stepz`); its checks are `corepack pnpm --filter @bnewapp/edu typecheck` and
   `corepack pnpm --filter @bnewapp/edu test`.
+- Environment rechecked on 2026-09-24: Stepz is the `@bnewapp/edu` Expo app; Android package IDs
+  are `com.bnewapp.stepz` (production), `.staging`, and `.dev`. Start Metro with
+  `corepack pnpm --filter @bnewapp/edu start` (default port 8081); use
+  `corepack pnpm --filter @bnewapp/edu android:device` for a device build. Android device QA
+  uses Argent and platform `adb` diagnostics.
+- iOS environment rechecked on 2026-09-24: `apps/edu/ios/StepzStaging.xcworkspace`, Podfile,
+  Pods, and workspace dependencies are present. Build/run Stepz with
+  `corepack pnpm --filter @bnewapp/edu ios` and an explicit simulator target. Bundle IDs are
+  `com.bnewapp.stepz`, `.staging`, and `.dev`. The iPhone 17 Pro iOS 26.4 simulator had the
+  staging build installed; Metro on port 8081 served `apps/edu`.
