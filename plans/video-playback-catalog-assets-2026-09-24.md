@@ -46,19 +46,37 @@ changed, because it copied the files rather than re-encoding them.
 
 ## Results
 
-### The rows were never repointed
+### The rows were never repointed — fixed the same day
 
-The files are on Supabase. The database still points at Boogiz:
+The files were on Supabase; the database still pointed at Boogiz. Every one of the 5,127 URLs in
+those columns was on `boogiz.s3.eu-central-1.amazonaws.com` or
+`boogiz-avatar.s3.eu-central-1.amazonaws.com`, and `service.ts:toDanceMove` passes
+`row.main_video_url` straight through with no rewrite, so the apps were serving the legacy S3
+copies — including the Stepz feed, whose source `resolvePreviewMedia` resolves to `mainVideoUrl`.
 
-| Column | Rows whose URL is a Supabase URL |
+**The cause is the catalog import, not the media migration.** `migrate-dance-media.mjs:268`
+repoints each field as it uploads. `import-boogiz-dancemoves.mjs:374` then upserts `dance_moves`
+with `Prefer: resolution=merge-duplicates` from the Mongo backup, which rewrites *every* column,
+URLs included. It ran after the migration, so it restored the legacy URLs. Re-running the catalog
+import will do so again.
+
+`scripts/repoint-dance-media.mjs` repoints the rows without touching storage: it lists each
+object folder and reads the stored file name rather than reconstructing it from the row's
+extension, and each `PATCH` is filtered on the old value so a concurrent admin edit survives.
+Run 2026-09-24:
+
+| | |
 | --- | ---: |
-| `main_video_url`, `pro_dancer_video_url`, `dancer_tip_video_url`, `presentation_video_url`, `film_yourself_video_url`, `thumbnail_url` | **0 of 1,086, each** |
+| Fields repointed | **6,926** (0 stale, 0 failed) |
+| — `dance_moves`, 8 columns | 6,290 |
+| — `music_tracks`, `audio_url` + `thumbnail_url` | 636 |
+| Fields left on S3 for want of a migrated object | 244 |
+| Published moves still on S3 for `main_video_url` / `thumbnail_url` | **0 / 0** |
+| Published moves still on S3 for `pro_dancer_video_url` | 210 |
 
-All 5,127 distinct URLs in those columns are on `boogiz.s3.eu-central-1.amazonaws.com` or
-`boogiz-avatar.s3.eu-central-1.amazonaws.com`. `service.ts:toDanceMove` passes
-`row.main_video_url` straight through with no rewrite, so **the apps are serving the legacy S3
-copies today**, not the migrated ones — including the Stepz feed, whose source
-`resolvePreviewMedia` resolves to `mainVideoUrl`.
+Verified after the run: 12/12 sampled published preview URLs answered `206` with
+`content-type: video/mp4`, `cache-control: max-age=31536000` and `cf-cache-status: HIT`. A second
+dry run reports 0 fields to repoint, so the script is idempotent.
 
 The migration is otherwise complete for the published catalog:
 
@@ -195,14 +213,12 @@ column so the question becomes SQL once volume exists. `media-processor.ts:238` 
    stream copy (`ffmpeg -i in.mp4 -c copy -movflags +faststart out.mp4`), needs no app change,
    and targets exactly the surface the pilot measures. Rung 0 hides the blank frame; this removes
    a cause of it. Sequence it *beside* rung 0.
-4. **One migration follow-up is outstanding, and it is not a code change.** Repoint the
-   `dance_moves` and `music_tracks` URL columns at the Supabase objects —
-   `scripts/repoint-dance-media.mjs`, 6,926 fields across both tables. Until it is done, the apps
-   — and any measurement taken against them, including the existing feed baselines — are
-   exercising the Boogiz copies, which are uncached, `binary/octet-stream` and, for 241 URLs,
-   dead. Note that `import-boogiz-dancemoves.mjs` upserts every column from the Mongo backup, so
-   re-running the catalog import restores the legacy URLs; that is why the rows are stale despite
-   `migrate-dance-media.mjs` having repointed them itself.
+4. **Both Phase 0 baselines are void.** They were recorded against the Boogiz copies, which are
+   uncached, `binary/octet-stream` and, for 241 URLs, dead. The apps now fetch the migrated
+   corpus from behind a CDN, so the Android and iOS-simulator numbers must be re-measured before
+   any rung is judged against them. The one standing follow-up is procedural: keep the URL
+   columns out of `import-boogiz-dancemoves.mjs`'s upsert, or re-run the repoint script after
+   every catalog import.
 5. **Rung 2's premise holds.** `expo-video`'s device cache keys on the URL, and behind it the
    migrated objects are genuinely edge-cached (`max-age=31536000`, `HIT`) — but only once the
    rows point at them.
@@ -211,8 +227,8 @@ column so the question becomes SQL once volume exists. `media-processor.ts:238` 
 7. **Rung 0 is unblocked on the data side:** all 808 published moves have a `thumbnail_url`, so
    the poster overlay always has something to show.
 8. **210 published moves need their pro-dancer video re-uploaded.** Known and expected — they are
-   the moves the migration could not copy because the source 403s. Unrelated to playback
-   performance.
+   the moves the migration could not copy because the source 403s, and the only published fields
+   the repoint left on S3. Unrelated to playback performance.
 
 Still open in Phase 0: the physical iPhone baseline, throttled-network runs, the lesson/practice
 surface, decoder counts, the `surfaceView`/`textureView` comparison, and the Pixel 9/10

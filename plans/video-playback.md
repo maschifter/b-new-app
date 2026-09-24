@@ -18,8 +18,9 @@ transitions. The simulator diagnostic does not replace the required physical-iPh
 the rest of Phase 0 remains open. [Tier A](video-playback-catalog-assets-2026-09-24.md) closes
 **decision 4** and changes three things below: **98.3 % of the catalog has `moov` at the end of
 the file**, and 87 % of it is 60 fps. It also found that the `dance_moves` URL columns were
-never repointed at the migrated objects, so the apps — and every baseline measured so far — are
-exercising the pre-migration copies.
+never repointed at the migrated objects; **that was fixed on 2026-09-24**
+(`scripts/repoint-dance-media.mjs`, 6,926 fields), so the two baselines recorded before it were
+measured against the pre-migration copies and no longer describe what the apps fetch.
 Every number in *Targets* is a proposal, not a product contract.
 ## Goal
 
@@ -33,9 +34,12 @@ This document is a working record for the next research and implementation sessi
 - Lesson, reference, feed and catalog videos are remote MP4 URLs supplied in dance-move
   records. The media lives in the public `dance-media` bucket, keyed by `legacy_id`
   (`moves/<legacy_id>/main.mp4`, …), and all 808 published moves have a complete copy there.
-  **But the `dance_moves` URL columns were never repointed:** all 5,127 of them still address the
-  two legacy Boogiz S3 buckets, and `service.ts:toDanceMove` passes them through unrewritten, so
-  the apps serve the pre-migration copies today. Measured 2026-09-24 —
+  The URL columns were **repointed at those objects on 2026-09-24** by
+  `scripts/repoint-dance-media.mjs` (6,926 fields across `dance_moves` and `music_tracks`); every
+  published move's preview and thumbnail URL is now a `dance-media` URL, and
+  `service.ts:toDanceMove` passes it through unrewritten, which is now correct. What remains on
+  legacy S3 is 241 fields whose object was never migrated because the source 403s — 210 of them
+  `pro_dancer_video_url` on published moves. Measured 2026-09-24 —
   [tier A](video-playback-catalog-assets-2026-09-24.md).
 - User recordings are uploaded to the private `dance-videos` bucket. The API generates
   short-lived signed read URLs for those videos, merged outputs, and posters.
@@ -64,7 +68,7 @@ This document is a working record for the next research and implementation sessi
 | Catalog `moov` placement | **98.3 % of the corpus has `moov` at the end** (`ftyp > free > mdat`); only 66/3,828 are `+faststart`. The `main`, `dancer-tip` and `presentation` roles are **0 % faststart across all 808 published moves**. Inherited from the pre-migration copies, which the migration copied byte-wise. | The player must range-fetch the end of the file before decoding a frame, on every first play. `resolvePreviewMedia` prefers `mainVideoUrl`, so this is every page of the Stepz feed. |
 | Catalog frame rate | **87 % of the sampled corpus is 60 fps** (174/200), the rest 30 fps; all H.264 High / yuv420p, mostly 720×1280, median bitrate 1.20 Mbps, median duration 9.6 s. | Decode cost per second is double the implied 30 fps assumption, on the platform where decoder count binds. |
 | Catalog keyframe interval | Median GOP **4.167 s** (= `-g 250` at 60 fps, FFmpeg's default), p90 8.333 s; 48/50 sampled clips exceed 2 s. | Seek, section-loop and scrub accuracy on the practice surfaces is bounded at ~4 s, twice as coarse as the `-g 60` case this plan already called wrong. |
-| Catalog URLs the apps actually request | The `dance_moves` columns still hold Boogiz S3 URLs for every row; 241 of those 5,127 return **HTTP 403**, including `pro_dancer_video_url` on 210 published moves, which `learn-dance-screen.tsx:173` plays. The Supabase copies of those 210 do not exist — the migration skipped what it could not read. | Two things, not one: the rows need repointing, and those 210 moves need their pro-dancer video re-uploaded. No published move's *preview* URL is dead, so the feed is unaffected either way. |
+| Catalog URLs the apps actually request | Repointed 2026-09-24: all 808 published moves now serve `main_video_url` and `thumbnail_url` from `dance-media`; 12/12 sampled preview URLs answered `206` with `cache-control: max-age=31536000` and `cf-cache-status: HIT`. **241 fields stay on Boogiz S3 and return HTTP 403**, 210 of them `pro_dancer_video_url` on published moves, which `learn-dance-screen.tsx:173` plays. | The feed and every thumbnail are now on the migrated corpus behind a CDN. The 210 need their pro-dancer video re-uploaded; no published move's *preview* URL is dead. |
 | Upload path | Recording upload calls `File.bytes()` and makes one `PUT`, capped at 64 MB. | Larger future captures can cause memory pressure and transfers cannot resume. |
 
 ### Verified against the installed package (source-level)
@@ -907,7 +911,7 @@ objects in the `dance-media` bucket**:
 
 | Measure | Result |
 | --- | --- |
-| Migration state | all 808 published moves have a complete copy in `dance-media/moves/<legacy_id>/`; **0 `dance_moves` rows point at it** |
+| Migration state | all 808 published moves have a complete copy in `dance-media/moves/<legacy_id>/`; **rows repointed 2026-09-24**, 241 fields left on S3 for want of an object |
 | Delivery | `video/mp4`, Cloudflare in front, `cache-control: max-age=31536000`, `cf-cache-status: HIT` |
 | `+faststart` | **66 / 3,828 (1.7 %)**; **0 %** on `main`, `dancer-tip`, `presentation` |
 | Codec | h264 200/200 sampled, High profile, yuv420p, 720×1280 dominant |
@@ -1066,10 +1070,10 @@ measurable from a screen recording and a netstats delta, with no telemetry.
 **Qualified 2026-09-24** ([tier A](video-playback-catalog-assets-2026-09-24.md)). Two things
 the pilot has to account for:
 
-- the feed is currently playing the **pre-migration Boogiz copies**, because the `dance_moves`
-  URL columns were never repointed at the `dance-media` objects. Repoint first
-  (`scripts/repoint-dance-media.mjs`), or the pilot measures a corpus the product is about to
-  stop serving — and the Boogiz copies have no CDN in front of them, while the migrated ones do;
+- the two Phase 0 baselines were recorded against the **pre-migration Boogiz copies**, which had
+  no CDN in front of them. The rows were repointed on 2026-09-24
+  (`scripts/repoint-dance-media.mjs`), so both baselines must be re-measured before any rung is
+  judged against them;
 - the feed's own source, `mainVideoUrl`, is **0 % faststart** in both copies. That is a cause of
   the blank interval the baseline measured, and no rung of this ladder addresses it. The
   `+faststart` remux now sits beside rung 0 — see *Phase 3*.
@@ -1202,12 +1206,13 @@ Otherwise unchanged in content, deliberately deferred in time:
 - Server-side signed-URL memoization (option 4A), stored on the row rather than in process
   memory if the server runs more than one replica, plus a signed-URL TTL audit that accounts for
   the edge cache outliving the token.
-- **Repoint the `dance_moves` and `music_tracks` URL columns at the `dance-media` objects** —
-  `scripts/repoint-dance-media.mjs`, 6,926 fields, no app change. The objects themselves are
-  already correct (`max-age=31536000`, served `HIT` by Supabase's Cloudflare layer); the rows are
-  what still address the pre-migration Boogiz copies, which have no CDN at all. Until this lands
-  every measurement is taken against the wrong corpus. `import-boogiz-dancemoves.mjs` upserts
-  every column from the Mongo backup, so re-running the catalog import undoes this.
+- ~~Repoint the `dance_moves` and `music_tracks` URL columns at the `dance-media` objects.~~
+  **Done 2026-09-24** — `scripts/repoint-dance-media.mjs`, 6,926 fields, no app change. The
+  objects were already correct (`max-age=31536000`, served `HIT`); only the rows were stale.
+  **`import-boogiz-dancemoves.mjs` upserts every column from the Mongo backup, so re-running the
+  catalog import restores the legacy URLs** — that is how they went stale after
+  `migrate-dance-media.mjs` had repointed them. Either keep the URL columns out of that upsert,
+  or re-run the repoint script after every import.
 - Define the logout/cache-clear lifecycle before any UGC is cached.
 
 ### Phase 3 — encode; the data warrants it, but not for the reason assumed
@@ -1254,8 +1259,8 @@ lessons ship or measurement shows ABR beating an optimised progressive MP4 on ou
 2. ~~Are published lesson/reference assets allowed to stay public, immutable CDN assets?~~
    **Answered 2026-09-24, with one follow-up that is work rather than a decision.** They are
    public, immutable (`max-age=31536000`) and served `HIT` by Supabase's Cloudflare layer, which
-   is intentional and already correct. The follow-up is that the `dance_moves` rows still address
-   the pre-migration Boogiz copies, which get none of that — a fix, not a question. See Phase 2.
+   is intentional and already correct. The follow-up — repointing the rows at those objects — was
+   done the same day; what is left is keeping the catalog import from undoing it. See Phase 2.
 3. May private recordings remain in the device media cache after logout, or must it be
    cleared?
 4. ~~What are the real duration, resolution, codec and bitrate distributions of current
