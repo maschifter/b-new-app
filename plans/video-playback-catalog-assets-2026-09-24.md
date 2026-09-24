@@ -11,9 +11,15 @@ measurements that touch neither app. **A1 is complete and answers decision 4.**
 > numbers below are re-measured against the Supabase objects. What the stored URLs are still
 > pointing at is itself a finding, kept as *The rows were never repointed*.
 
+> **Second correction.** The *Delivery headers* section first reported `cache-control: no-cache`
+> and `cf-cache-status: MISS` on every object. That was a measurement artifact: the header pass
+> used `HEAD`, and Supabase's public `HEAD` handler answers `no-cache` regardless of the stored
+> metadata. A ranged `GET` — what a video player actually issues — returns
+> `cache-control: max-age=31536000` and `cf-cache-status: HIT`. The delivery layer needs no fix.
+
 Encoding quality is fine: every sampled asset is H.264 High / yuv420p at a sane resolution and
-bitrate. The problems are `moov` placement, cache headers, and frame rate — none of which the
-migration changed, because it copied the files rather than re-encoding them.
+bitrate. The problems are `moov` placement and frame rate — neither of which the migration
+changed, because it copied the files rather than re-encoding them.
 
 ## Conditions and method
 
@@ -27,7 +33,8 @@ migration changed, because it copied the files rather than re-encoding them.
 - Object set under test: for each published move, the `main`, `pro-dancer`, `dancer-tip`,
   `presentation` and `film-yourself` video present in its folder → **3,829 objects**, addressed
   as `…/storage/v1/object/public/dance-media/moves/<legacy_id>/<name>`.
-- **Header pass (all 3,829):** one HTTP `HEAD` each.
+- **Header pass (all 3,829):** one HTTP `HEAD` each, plus a ranged `GET` spot check, which is
+  the request that reflects the stored `cache-control` (see *Delivery headers*).
 - **`moov` placement pass (all reachable):** top-level MP4 boxes walked with 16-byte `Range`
   reads, so `moov` before `mdat` (`+faststart`) is decided without downloading the files.
 - **Codec pass (200-object stratified sample):** `ffprobe -show_format -show_streams` over HTTP,
@@ -67,25 +74,26 @@ what was already broken at source, so **the 210 are moves needing re-upload, not
 They matter today only because the rows still point at the dead S3 objects, which
 `learn-dance-screen.tsx:173` plays in its "Pro dancer" tab.
 
-### Delivery headers — a CDN that is told not to cache
+### Delivery headers — correct, and better than the copies in use
 
 3,829 objects probed; 3,828 returned 200 and one returned 504.
 
-| Header | Result |
-| --- | --- |
-| `content-type` | **`video/mp4` on 3,828** (correct; the Boogiz copies serve `binary/octet-stream`) |
-| `server` | `cloudflare` on all — Supabase's Smart CDN is in front |
-| **`cache-control`** | **`no-cache` on all 3,829** |
-| `cf-cache-status` | **`MISS` on all 3,828** |
+| Header | On `HEAD` | On a ranged `GET` |
+| --- | --- | --- |
+| `content-type` | **`video/mp4` on 3,828** (the Boogiz copies serve `binary/octet-stream`) | same |
+| `server` | `cloudflare` on all — Supabase's Smart CDN is in front | same |
+| `cache-control` | `no-cache` | **`max-age=31536000`** |
+| `cf-cache-status` | `REVALIDATED` | **`HIT`** |
 
-This is the one place the migration lost ground. `dance-media-service.ts:147` and
-`media-upload-input.tsx:150` both set `cacheControl: "31536000, immutable"`, so anything uploaded
-through **admin** is correct — but the legacy corpus did not come through admin, and Supabase's
-default for an upload with no `cacheControl` is `no-cache`. The result is a CDN in front of
-every object that is instructed never to serve from cache: 3,828 requests, 3,828 misses.
+Only the `GET` column is meaningful. Supabase's public `HEAD` handler answers `no-cache` whatever
+the object stores, so a `HEAD`-only pass misreads every object as uncacheable; the stored
+metadata, visible in `object/list`, is `max-age=31536000` on all of them.
 
-Re-uploading is not required to fix it; the object's `cacheControl` metadata can be updated in
-place.
+Every upload path is consistent: `migrate-dance-media.mjs:263` sends `max-age=31536000` for the
+legacy corpus, and `dance-media-service.ts:147` / `media-upload-input.tsx:150` send
+`31536000, immutable` for anything uploaded through admin. **Nothing to fix here** — and the
+Boogiz copies the apps serve today have no CDN in front of them at all, so repointing the rows
+is itself the delivery win.
 
 ### `moov` is at the end of 98.3 % of the corpus
 
@@ -187,14 +195,17 @@ column so the question becomes SQL once volume exists. `media-processor.ts:238` 
    stream copy (`ffmpeg -i in.mp4 -c copy -movflags +faststart out.mp4`), needs no app change,
    and targets exactly the surface the pilot measures. Rung 0 hides the blank frame; this removes
    a cause of it. Sequence it *beside* rung 0.
-4. **Two migration follow-ups are outstanding, both cheap and neither a code change.** Repoint the
-   `dance_moves` URL columns at the Supabase objects, and set `cacheControl: "31536000, immutable"`
-   on the migrated objects so the Cloudflare layer in front of them can actually cache. Until the
-   first is done, the apps — and any measurement taken against them, including the existing
-   feed baselines — are exercising the Boogiz copies.
-5. **Rung 2's premise is sound once the headers are fixed.** `expo-video`'s device cache keys on
-   the URL and does not need `cache-control`, so `useCaching` works either way; but the edge-cache
-   benefit Phase 2 assumes does not exist while every object says `no-cache`.
+4. **One migration follow-up is outstanding, and it is not a code change.** Repoint the
+   `dance_moves` and `music_tracks` URL columns at the Supabase objects —
+   `scripts/repoint-dance-media.mjs`, 6,926 fields across both tables. Until it is done, the apps
+   — and any measurement taken against them, including the existing feed baselines — are
+   exercising the Boogiz copies, which are uncached, `binary/octet-stream` and, for 241 URLs,
+   dead. Note that `import-boogiz-dancemoves.mjs` upserts every column from the Mongo backup, so
+   re-running the catalog import restores the legacy URLs; that is why the rows are stale despite
+   `migrate-dance-media.mjs` having repointed them itself.
+5. **Rung 2's premise holds.** `expo-video`'s device cache keys on the URL, and behind it the
+   migrated objects are genuinely edge-cached (`max-age=31536000`, `HIT`) — but only once the
+   rows point at them.
 6. **60 fps raises the decoder budget.** The ~4-decoder Android ceiling was reasoned about at an
    implied 30 fps. Three concurrent 60 fps 720p decoders is the real feed load.
 7. **Rung 0 is unblocked on the data side:** all 808 published moves have a `thumbnail_url`, so
