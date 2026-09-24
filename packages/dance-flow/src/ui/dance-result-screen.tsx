@@ -1,4 +1,5 @@
 import { mergeAudioOffsetMs } from "@bnewapp/dance-core";
+import { keepBackgroundAudio } from "@bnewapp/mobile-kit/media/audio-mixing";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
 import { useSyncedMusicTrack } from "@bnewapp/mobile-kit/media/use-synced-music-track";
 import { BouncablePress } from "@bnewapp/mobile-kit/ui";
@@ -32,6 +33,7 @@ export function DanceResultScreen({
   const player = useVideoPlayer(clipPath, (videoPlayer) => {
     videoPlayer.loop = true;
     videoPlayer.muted = true;
+    keepBackgroundAudio(videoPlayer);
   });
   useFocusedPlayback(player, true);
   // The clip is silent by design, so the move's track is replayed beside it. The measured

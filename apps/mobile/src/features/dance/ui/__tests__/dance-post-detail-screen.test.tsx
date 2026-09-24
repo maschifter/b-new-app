@@ -13,13 +13,24 @@ jest.mock("@bnewapp/dance-flow/api", () => ({
 jest.mock("@react-navigation/native", () => ({ useIsFocused: () => true }));
 jest.mock("expo-video", () => ({
   VideoView: "VideoView",
-  useVideoPlayer: (source: string | null) => {
+  useVideoPlayer: (source: string | null, setup?: (player: MockPlayer) => void) => {
     mockPlayerSources.push(source);
-    return { play: jest.fn(), pause: jest.fn() };
+    // The native iOS default, so a test can tell an explicit mode from an inherited one.
+    const player: MockPlayer = { audioMixingMode: "doNotMix", play: jest.fn(), pause: jest.fn() };
+    setup?.(player);
+    mockPlayers.push(player);
+    return player;
   },
 }));
 
+interface MockPlayer {
+  audioMixingMode: string;
+  play: jest.Mock;
+  pause: jest.Mock;
+}
+
 const mockPlayerSources: Array<string | null> = [];
+const mockPlayers: MockPlayer[] = [];
 
 const POST_ID = "00000000-0000-4000-8000-000000000010";
 const MOVE_ID = "00000000-0000-4000-8000-000000000001";
@@ -60,6 +71,8 @@ async function mount(onBack = jest.fn()) {
 beforeEach(() => {
   mockedGetDancePost.mockReset();
   jest.mocked(deleteRecordedDancePost).mockReset();
+  mockPlayerSources.length = 0;
+  mockPlayers.length = 0;
 });
 
 it("shows a detail skeleton while the recorded dance is loading", async () => {
@@ -126,6 +139,16 @@ it("plays the merged video and covers the player with the poster until the first
 
   await fireEventAsync(screen.getByTestId("dance-post-detail-video"), "firstFrameRender");
   expect(screen.queryByTestId("dance-post-detail-poster")).not.toBeOnTheScreen();
+});
+
+it("claims the audio session explicitly, since this clip carries the music", async () => {
+  mockedGetDancePost.mockResolvedValue(post());
+
+  await mount();
+
+  expect(await screen.findByTestId("dance-post-detail-video")).toBeOnTheScreen();
+  const player = mockPlayers.at(-1);
+  expect(player?.audioMixingMode).toBe("doNotMix");
 });
 
 it("keeps playing the original silent recording until the merge lands", async () => {

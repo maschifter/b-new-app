@@ -48,6 +48,11 @@
       "types": "./src/ui/tempo-steps.ts",
       "default": "./src/ui/tempo-steps.ts"
     },
+    "./media/audio-mixing": {
+      "react-native": "./src/media/audio-mixing.ts",
+      "types": "./src/media/audio-mixing.ts",
+      "default": "./src/media/audio-mixing.ts"
+    },
     "./media/use-focused-playback": {
       "react-native": "./src/media/use-focused-playback.ts",
       "types": "./src/media/use-focused-playback.ts",

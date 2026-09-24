@@ -1,5 +1,6 @@
 import { COLORS } from "@/lib/theme/colors";
 import { resolvePreviewMedia } from "@bnewapp/dance-core";
+import { keepBackgroundAudio } from "@bnewapp/mobile-kit/media/audio-mixing";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
 import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import type { DanceMove } from "@bnewapp/types";
@@ -101,6 +102,7 @@ function FeedMoveVideo({
     // Silence is a decision, not a default: a feed that autoplays audio on launch is
     // a product change. See the plan's section 4.1.
     createdPlayer.muted = true;
+    keepBackgroundAudio(createdPlayer);
   });
   useFocusedPlayback(player, active && !paused);
 

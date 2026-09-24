@@ -1,4 +1,5 @@
 import { COLORS } from "@/lib/theme/colors";
+import { keepBackgroundAudio } from "@bnewapp/mobile-kit/media/audio-mixing";
 import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import type { DancePostHistoryItem } from "@bnewapp/types";
 import { Image } from "expo-image";
@@ -173,6 +174,7 @@ function DancePosterCell({
 function DanceVideoCell(props: DancePostCellProps) {
   const player = useVideoPlayer(props.post.videoUrl, (createdPlayer) => {
     createdPlayer.muted = true;
+    keepBackgroundAudio(createdPlayer);
   });
   return (
     <DancePostCellShell {...props}>

@@ -1,4 +1,5 @@
 import { resolvePreviewMedia } from "@bnewapp/dance-core";
+import { keepBackgroundAudio } from "@bnewapp/mobile-kit/media/audio-mixing";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
 import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import type { DanceMove } from "@bnewapp/types";
@@ -103,6 +104,7 @@ function DanceMoveVideoPreview({ url, playing }: { url: string; playing: boolean
   const player = useVideoPlayer(url, (createdPlayer) => {
     createdPlayer.loop = true;
     createdPlayer.muted = true;
+    keepBackgroundAudio(createdPlayer);
   });
   useFocusedPlayback(player, playing);
 

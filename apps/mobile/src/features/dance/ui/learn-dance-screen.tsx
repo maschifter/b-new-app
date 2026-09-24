@@ -1,5 +1,6 @@
 import { COLORS } from "@/lib/theme/colors";
 import { danceMoveDetailAtomFamily } from "@bnewapp/dance-flow/atoms";
+import { keepBackgroundAudio } from "@bnewapp/mobile-kit/media/audio-mixing";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
 import { BouncablePress, DanceSkeleton, MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
 import { TEMPO_BAR_HEIGHT, TempoBar } from "@bnewapp/mobile-kit/ui/tempo-bar";
@@ -192,6 +193,7 @@ function LessonVideo({
   const player = useVideoPlayer(video.url, (createdPlayer) => {
     createdPlayer.loop = true;
     createdPlayer.muted = true;
+    keepBackgroundAudio(createdPlayer);
   });
   const isFocused = useIsFocused();
   const [shouldPlay, setShouldPlay] = useState(true);

@@ -11,6 +11,7 @@ import { optionalDanceMoveAtomFamily } from "@bnewapp/dance-flow/atoms";
 import { SubmissionFeedback } from "@bnewapp/dance-flow/submission-feedback";
 import type { SubmissionState } from "@bnewapp/dance-flow/submission-state";
 import { useDanceSubmission } from "@bnewapp/dance-flow/use-dance-submission";
+import { keepBackgroundAudio } from "@bnewapp/mobile-kit/media/audio-mixing";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
 import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import { MediaScrimPanel } from "@bnewapp/mobile-kit/ui/media-scrim";
@@ -70,6 +71,7 @@ export function ScanResultScreen({
   const player = useVideoPlayer(clipPath, (videoPlayer) => {
     videoPlayer.loop = true;
     videoPlayer.muted = true;
+    keepBackgroundAudio(videoPlayer);
   });
   useFocusedPlayback(player, true);
 

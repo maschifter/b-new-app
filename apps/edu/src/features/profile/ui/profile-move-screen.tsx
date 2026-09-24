@@ -1,5 +1,6 @@
 import { learnedMovesAtom, personalRecordingsAtom } from "@/lib/collection";
 import { COLORS } from "@/lib/theme/colors";
+import { keepBackgroundAudio } from "@bnewapp/mobile-kit/media/audio-mixing";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
 import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import { Ionicons } from "@expo/vector-icons";
@@ -92,6 +93,7 @@ function OfficialVideo({ url, onBack }: { url: string; onBack: () => void }) {
   const player = useVideoPlayer(url, (created) => {
     created.loop = true;
     created.muted = true;
+    keepBackgroundAudio(created);
   });
   useFocusedPlayback(player, isPlaying);
 

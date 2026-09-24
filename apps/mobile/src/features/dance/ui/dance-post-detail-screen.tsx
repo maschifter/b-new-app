@@ -1,4 +1,5 @@
 import { AppHeader } from "@/components/app-header";
+import { takeOverBackgroundAudio } from "@bnewapp/mobile-kit/media/audio-mixing";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
 import { MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
 import { Image } from "expo-image";
@@ -34,7 +35,9 @@ function DancePostDetailContent({ postId, onBack }: DancePostDetailScreenProps) 
   const post = useAtomValue(dancePostDetailAtomFamily(postId)).data;
   // The merged file carries the music; the original silent recording is what plays until
   // the media job lands, and stays the fallback if it never does.
-  const player = useVideoPlayer(post.mergedVideoUrl ?? post.videoUrl);
+  const player = useVideoPlayer(post.mergedVideoUrl ?? post.videoUrl, (createdPlayer) => {
+    takeOverBackgroundAudio(createdPlayer);
+  });
   const [hasFirstFrame, setHasFirstFrame] = useState(false);
   useFocusedPlayback(player, true);
   // VideoView has no poster or placeholder prop, so the poster is an overlay dismissed on

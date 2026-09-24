@@ -30,6 +30,7 @@ jest.mock("@react-navigation/native", () => ({ useIsFocused: () => mockUseIsFocu
 interface MockPlayer {
   loop: boolean;
   muted: boolean;
+  audioMixingMode: string;
   playbackRate: number;
   play: jest.Mock;
   pause: jest.Mock;
@@ -45,6 +46,8 @@ jest.mock("expo-video", () => ({
     const player: MockPlayer = {
       loop: false,
       muted: false,
+      // The native iOS default, so a test can tell an explicit mode from an inherited one.
+      audioMixingMode: "doNotMix",
       playbackRate: 1,
       play: jest.fn(),
       pause: jest.fn(),
@@ -236,6 +239,16 @@ it("plays the preview chain's video, muted and looping", async () => {
   expect(urls).toContain("https://cdn.test/b-film-yourself.mp4");
   expect(mockPlayers[0]?.player.loop).toBe(true);
   expect(mockPlayers[0]?.player.muted).toBe(true);
+});
+
+it("leaves the system audio alone, because every feed player is silent", async () => {
+  mockedGetMoves.mockResolvedValue(page([move("a"), move("b")], null));
+  await mount();
+  await screen.findByLabelText("Dance this Move, Move a");
+
+  for (const entry of mockPlayers) {
+    expect(entry.player.audioMixingMode).toBe("mixWithOthers");
+  }
 });
 
 it("still shows the title and the call to action for a move with no media at all", async () => {

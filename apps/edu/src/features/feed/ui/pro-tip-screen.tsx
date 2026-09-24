@@ -1,5 +1,6 @@
 import { COLORS } from "@/lib/theme/colors";
 import { danceMoveDetailAtomFamily } from "@bnewapp/dance-flow/atoms";
+import { keepBackgroundAudio } from "@bnewapp/mobile-kit/media/audio-mixing";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
 import { BouncablePress, MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
 import { TEMPO_BAR_HEIGHT, TempoBar } from "@bnewapp/mobile-kit/ui/tempo-bar";
@@ -72,6 +73,7 @@ export function ProTipVideo({ url, rate }: { url: string; rate: number }) {
   const player = useVideoPlayer(url, (createdPlayer) => {
     createdPlayer.loop = true;
     createdPlayer.muted = true;
+    keepBackgroundAudio(createdPlayer);
   });
   const [loading, setLoading] = useState(true);
   useFocusedPlayback(player, true);

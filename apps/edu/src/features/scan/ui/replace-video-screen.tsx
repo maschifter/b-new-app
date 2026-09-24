@@ -1,3 +1,4 @@
+import { keepBackgroundAudio } from "@bnewapp/mobile-kit/media/audio-mixing";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
 import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import { VideoView, useVideoPlayer } from "expo-video";
@@ -89,6 +90,7 @@ function VideoPreview({ label, videoUri, isPlaying, onToggle }: VideoPreviewProp
   const player = useVideoPlayer(videoUri, (created) => {
     created.loop = true;
     created.muted = true;
+    keepBackgroundAudio(created);
   });
   useFocusedPlayback(player, isPlaying);
 

@@ -8,6 +8,7 @@ import {
   musicSeekSeconds,
 } from "@bnewapp/dance-core";
 import { queryAuthAtom } from "@bnewapp/mobile-kit";
+import { keepBackgroundAudio } from "@bnewapp/mobile-kit/media/audio-mixing";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
 import { BouncablePress, MobileQueryErrorBoundary } from "@bnewapp/mobile-kit/ui";
 import { MediaScrimPanel } from "@bnewapp/mobile-kit/ui/media-scrim";
@@ -145,12 +146,14 @@ function RecordDanceContent({
   const referencePlayer = useVideoPlayer(move.filmYourselfVideoUrl, (player) => {
     player.loop = true;
     player.muted = true;
+    keepBackgroundAudio(player);
   });
   const simulatedCameraPlayer = useVideoPlayer(
     simulatedRecordingEnabled ? simulatedVideoUrl : null,
     (player) => {
       player.loop = true;
       player.muted = true;
+      keepBackgroundAudio(player);
     },
   );
   const musicPlayer = useAudioPlayer(move.music?.audioUrl);

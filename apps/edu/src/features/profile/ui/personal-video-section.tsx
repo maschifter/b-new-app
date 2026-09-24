@@ -1,5 +1,6 @@
 import { deletePersonalRecordingFile, personalRecordingUri } from "@/features/scan/recording-store";
 import { type PersonalRecording, deletePersonalRecordingAtom } from "@/lib/collection";
+import { takeOverBackgroundAudio } from "@bnewapp/mobile-kit/media/audio-mixing";
 import { useFocusedPlayback } from "@bnewapp/mobile-kit/media/use-focused-playback";
 import { BouncablePress } from "@bnewapp/mobile-kit/ui";
 import * as MediaLibrary from "expo-media-library";
@@ -33,6 +34,7 @@ export function PersonalVideoSection({ moveId, recording }: PersonalVideoSection
   const videoUri = personalRecordingUri(recording.fileName);
   const player = useVideoPlayer(videoUri, (created) => {
     created.loop = true;
+    takeOverBackgroundAudio(created);
   });
   useFocusedPlayback(player, isPlaying);
 
