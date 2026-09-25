@@ -346,6 +346,66 @@ export type Database = {
           },
         ]
       }
+      dance_scan_events: {
+        Row: {
+          attempt: number
+          created_at: string
+          dance_move_id: string | null
+          error: string | null
+          event: string
+          id: string
+          is_external_score: boolean | null
+          is_first_time: boolean | null
+          owner_id: string
+          post_id: string
+          raw_score: number | null
+          scan_duration_ms: number | null
+          scan_id: string
+          scan_server_index: number | null
+          scan_server_url: string | null
+          server_attempts: Json | null
+          updated_score: number | null
+        }
+        Insert: {
+          attempt: number
+          created_at?: string
+          dance_move_id?: string | null
+          error?: string | null
+          event: string
+          id?: string
+          is_external_score?: boolean | null
+          is_first_time?: boolean | null
+          owner_id: string
+          post_id: string
+          raw_score?: number | null
+          scan_duration_ms?: number | null
+          scan_id: string
+          scan_server_index?: number | null
+          scan_server_url?: string | null
+          server_attempts?: Json | null
+          updated_score?: number | null
+        }
+        Update: {
+          attempt?: number
+          created_at?: string
+          dance_move_id?: string | null
+          error?: string | null
+          event?: string
+          id?: string
+          is_external_score?: boolean | null
+          is_first_time?: boolean | null
+          owner_id?: string
+          post_id?: string
+          raw_score?: number | null
+          scan_duration_ms?: number | null
+          scan_id?: string
+          scan_server_index?: number | null
+          scan_server_url?: string | null
+          server_attempts?: Json | null
+          updated_score?: number | null
+        }
+        Relationships: []
+      }
       dance_scans: {
         Row: {
           attempts: number

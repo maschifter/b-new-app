@@ -30,6 +30,7 @@ describe("dance scan worker", () => {
       concurrency: 3,
       danceVideoBucket: "dance-videos",
       logger: testLogger() as never,
+      recordEvent: vi.fn(),
       scanServerUrls: "https://scan.example",
       supabase: { from } as never,
     });
@@ -51,6 +52,7 @@ describe("dance scan worker", () => {
         concurrency: 3,
         danceVideoBucket: "dance-videos",
         logger: testLogger() as never,
+        recordEvent: vi.fn(),
         scanServerUrls: "https://scan-one.example,https://scan-two.example",
         supabase: { from } as never,
       });
@@ -91,6 +93,7 @@ describe("dance scan worker", () => {
       concurrency: 3,
       danceVideoBucket: "dance-videos",
       logger: testLogger() as never,
+      recordEvent: vi.fn(),
       scanServerUrls: "https://scan.example",
       supabase: { from } as never,
     });
@@ -145,6 +148,7 @@ describe("dance scan worker", () => {
       danceVideoBucket: "dance-videos",
       logger: testLogger() as never,
       scan: scanRequest,
+      recordEvent: vi.fn(),
       scanServerUrls: "https://scan.example",
       supabase: { from, storage: { from: vi.fn(() => ({ createSignedUrl })) } } as never,
     });
@@ -196,6 +200,7 @@ describe("dance scan worker", () => {
       concurrency: 3,
       danceVideoBucket: "dance-videos",
       logger: testLogger() as never,
+      recordEvent: vi.fn(),
       scanServerUrls: "https://scan.example",
       supabase: { from } as never,
     });
@@ -253,6 +258,7 @@ describe("dance scan worker", () => {
       danceVideoBucket: "dance-videos",
       logger: testLogger() as never,
       scan: vi.fn().mockResolvedValue(outcome(72)),
+      recordEvent: vi.fn(),
       scanServerUrls: "https://scan.example",
       supabase: {
         from,
@@ -319,6 +325,7 @@ describe("dance scan worker", () => {
       danceVideoBucket: "dance-videos",
       logger: testLogger() as never,
       scan: vi.fn().mockResolvedValue(outcome(72)),
+      recordEvent: vi.fn(),
       scanServerUrls: "https://scan.example",
       supabase: {
         from,
@@ -376,11 +383,12 @@ describe("dance scan worker", () => {
       if (!query) throw new Error("Unexpected Supabase query");
       return query;
     });
-    const logger = testLogger();
+    const recordEvent = vi.fn();
     const worker = createScanWorker({
       concurrency: 3,
       danceVideoBucket: "dance-videos",
-      logger: logger as never,
+      logger: testLogger() as never,
+      recordEvent,
       // The failover server answered, after the first one returned an invalid score.
       scan: vi.fn().mockResolvedValue({
         attempts: [
@@ -414,17 +422,16 @@ describe("dance scan worker", () => {
 
     await worker.tick();
 
-    expect(logger.info).toHaveBeenCalledWith(
+    expect(recordEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         attempt: 2,
-        isExternalScore: true,
+        event: "scored",
         postId: scan.post_id,
         rawScore: 72,
         scanServerIndex: 1,
         scanServerUrl: "https://scan-1.example",
         updatedScore: 80,
       }),
-      "Dance scan scored",
     );
   });
 
@@ -465,11 +472,12 @@ describe("dance scan worker", () => {
         error: "HTTP 502",
       },
     ];
-    const logger = testLogger();
+    const recordEvent = vi.fn();
     const worker = createScanWorker({
       concurrency: 3,
       danceVideoBucket: "dance-videos",
-      logger: logger as never,
+      logger: testLogger() as never,
+      recordEvent,
       scan: vi.fn().mockRejectedValue(new ScanRequestError("All scan servers failed", failures)),
       scanServerUrls: "https://scan-0.example,https://scan-1.example",
       supabase: {
@@ -487,14 +495,14 @@ describe("dance scan worker", () => {
 
     await worker.tick();
 
-    expect(logger.warn).toHaveBeenCalledWith(
+    expect(recordEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         attempt: 1,
-        remainingAttempts: 2,
+        event: "requeued",
         scanId: scan.id,
         serverAttempts: failures,
       }),
-      "Dance scan attempt failed; returned it to the queue",
+      expect.objectContaining({ remainingAttempts: 2 }),
     );
   });
 });
