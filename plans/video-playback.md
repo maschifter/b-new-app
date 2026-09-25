@@ -1,7 +1,14 @@
 # Video Playback — Research & Implementation Plan
 
-Status: **research complete; Phase 0b shipped; tier A catalog statistics complete; Android physical-device baseline and iOS Simulator diagnostic recorded; the pilot not started.** Written 2026-09-23,
-revised through 2026-09-24.
+Status: **research complete; Phase 0b shipped; tier A catalog statistics complete; Android physical-device baseline and iOS Simulator diagnostic recorded; the whole published corpus remuxed to faststart; the pilot not started.** Written 2026-09-23,
+revised through 2026-09-25.
+
+**2026-09-25 — the faststart remux was extended to every video role**
+(`scripts/remux-faststart.mjs --field all`): 2,930 of 3,829 published objects remuxed, 892 already
+faststart, **3,822 / 3,829 (99.8 %) now `moov`-first**. It also surfaced a defect nothing else had:
+**four `dancer-tip` objects are truncated and contain no `moov` at all**, so they do not play
+today. Both results are in *Confirmed findings* and Phase 3. Nothing about the plan's direction
+changed — the remaining Phase 3 encode items and the whole Phase 1 ladder stand as written.
 Every code, package and line reference below was verified against the working tree and against
 `node_modules/expo-video@55.0.21` — including the native iOS and Android sources, not only the
 changelog. Three questions are closed: the `expo-video` version (**stay on SDK 55**, see
@@ -70,7 +77,8 @@ This document is a working record for the next research and implementation sessi
 | Signed UGC URLs | `service.ts` signs profile videos for 1 h; the media and scan workers sign for 5 min. Each list/detail response mints new URLs. | The full signed URL changes; both CDN and the device cache miss even for the same object. |
 | No cache key escape hatch | `VideoSourceObject` has `uri`, `headers`, `useCaching`, `contentType`, `drm`, `metadata` — **no `cacheKey`**, unlike `expo-image`, which `dance-post-grid.tsx` already uses with `cacheKey: post.thumbnailPath`. | Video cache identity *is* the URL. Rotating signed URLs makes `useCaching` useless for UGC. |
 | Published asset cache-control | Correct on every path. Admin uploads set `cacheControl: "31536000, immutable"` (`media-upload-input.tsx:150`, `dance-media-service.ts:147`), and `migrate-dance-media.mjs:263` uploaded the legacy corpus with `max-age=31536000`. Verified 2026-09-24 on a migrated object: a ranged `GET` returns `cache-control: max-age=31536000` and `cf-cache-status: HIT`. | Nothing to fix. A `HEAD` to the same object answers `no-cache` / `REVALIDATED`, which is a property of Supabase's public `HEAD` handler, not of the stored metadata — do not measure cache behaviour with `HEAD`. |
-| Catalog `moov` placement | Was **98.3 % `moov` at the end** (`ftyp > free > mdat`), including **0 % faststart on `main`**. **Fixed 2026-09-24 for the feed:** `scripts/remux-faststart.mjs` remuxed all 808 published `main` objects, verified 808/808 at the edge. The other roles (`dancer-tip`, `presentation`, `pro-dancer`, `film-yourself`) are untouched and still tail-`moov`. | The feed no longer pays a range-fetch to the end of the file before its first frame. The practice surfaces still do — run the script with `--field all` when Phase 1b starts. |
+| Catalog `moov` placement | Was **98.3 % `moov` at the end** (`ftyp > free > mdat`), including **0 % faststart on `main`**. **Fixed 2026-09-24 for the feed** and **2026-09-25 for every other role** (`scripts/remux-faststart.mjs --field all`): of the 3,829 published objects, 2,930 were remuxed that day, 892 were already faststart, and **7 failed — 3 on transient errors, 4 because the stored object is truncated** (see the corrupt-object row below). **3,822 / 3,829 (99.8 %) now carry `moov` before `mdat`**, verified at the edge. | Neither the feed nor the practice surfaces pay a range-fetch to the end of the file before the first frame. What remains is keeping it that way: new admin uploads still land tail-`moov` (Phase 3). |
+| Four `dancer-tip` objects are truncated, not merely tail-`moov` | Found by the `--field all` remux on 2026-09-25, which could not decode them. Each is **exactly 48 bytes of header (`ftyp` + `free`) followed by a whole number of MiB of `mdat`** — 7.5, 11, 6 and 7 MiB — and **contains no `moov` atom at all**: `moves/67d074bbaa61641e052dc693`, `moves/67d083afaa61641e052dce00`, `moves/67d072f2aa61641e052dc5e0`, `moves/67cd5639758b6525ac4eb61e`. The MiB-aligned length is an upload cut at a chunk boundary during `migrate-dance-media.mjs`, and the `moov` was at the tail. A fifth `dancer-tip` that failed the same run (`moves/61c786eaf194ca00396384dd`) has its `moov` and failed only on a dropped connection, which rules out the role itself. | **These four videos do not play at all today**, on any player — a content defect the remux surfaced rather than caused. They need re-uploading from the Boogiz source; see the content-repair note at the end of Phase 3. |
 | Catalog frame rate | **87 % of the sampled corpus is 60 fps** (174/200), the rest 30 fps; all H.264 High / yuv420p, mostly 720×1280, median bitrate 1.20 Mbps, median duration 9.6 s. | Decode cost per second is double the implied 30 fps assumption, on the platform where decoder count binds. |
 | Catalog keyframe interval | Median GOP **4.167 s** (= `-g 250` at 60 fps, FFmpeg's default), p90 8.333 s; 48/50 sampled clips exceed 2 s. | Seek, section-loop and scrub accuracy on the practice surfaces is bounded at ~4 s, twice as coarse as the `-g 60` case this plan already called wrong. |
 | Catalog URLs the apps actually request | Repointed 2026-09-24: all 808 published moves now serve `main_video_url` and `thumbnail_url` from `dance-media`; 12/12 sampled preview URLs answered `206` with `cache-control: max-age=31536000` and `cf-cache-status: HIT`. **241 fields stay on Boogiz S3 and return HTTP 403**, 210 of them `pro_dancer_video_url` on published moves, which `learn-dance-screen.tsx:173` plays. | The feed and every thumbnail are now on the migrated corpus behind a CDN. The 210 need their pro-dancer video re-uploaded; no published move's *preview* URL is dead. |
@@ -1245,12 +1253,27 @@ Tier A kept this phase and changed its content. The corpus is uniformly H.264 Hi
 a sane resolution and bitrate, so the *compatibility* motivation is gone. Three ingest-side
 defects replace it, and the first is large enough that it should not wait for Phase 3 at all:
 
-- ~~**`+faststart` remux — promote this to run beside rung 0.**~~ **Done 2026-09-24 for the feed**
-  (`scripts/remux-faststart.mjs`): 808/808 published `main` objects now carry `moov` before `mdat`,
-  confirmed at the edge. 784 were remuxed in the first pass, 4 more after the script learned to
-  drop a `tmcd` timecode track, 20 in an earlier trial run. Two things this left open: the other
-  video roles are still tail-`moov` (`--field all` covers them, ~3,000 objects, do it before the
-  Phase 1b practice work), and new uploads still land tail-`moov` — see the next item.
+- ~~**`+faststart` remux — promote this to run beside rung 0.**~~ **Done 2026-09-24 for the feed
+  and 2026-09-25 for every other role.** The feed pass (`scripts/remux-faststart.mjs`) took
+  808/808 published `main` objects; 784 were remuxed in the first pass, 4 more after the script
+  learned to drop a `tmcd` timecode track, 20 in an earlier trial run. The `--field all` pass then
+  covered `pro-dancer`, `dancer-tip`, `presentation` and `film-yourself` as well — **3,829 objects,
+  2,930 remuxed, 892 already faststart, 6.1 GiB uploaded, 3,822 warmed with 0 stale at the edge**.
+  A read-only `--dry-run` taken immediately before it counted 2,955 tail-`moov` against 874
+  faststart, and that 874 reconciles exactly with the history (808 `main` remuxed on 2026-09-24
+  plus the 66 the tier A survey found already faststart), which is what makes the before-snapshot
+  trustworthy. Two findings came out of the run:
+  - **4 objects are corrupt, not tail-`moov`** — truncated on upload, no `moov` at all. They are
+    a content repair, not a remux target; see the *Confirmed findings* row and the note at the end
+    of this phase.
+  - **3 failed transiently** (2 × Cloudflare `520` on upload, 1 dropped download). A rerun picks
+    exactly those up, the script being idempotent — started 2026-09-25, outcome not yet recorded
+    here. Worth fixing in the script itself: `520` is **not**
+    in its `RETRYABLE_STATUSES` (`{429, 500, 502, 503, 504}`), so those two were never retried, and
+    a missing `moov` is worth detecting up front so a corrupt object is reported as corrupt rather
+    than as an opaque ffmpeg `Invalid data found when processing input`.
+
+  What this leaves open is only the drift: new uploads still land tail-`moov` — see the next item.
 - **New admin video uploads land tail-`moov`, so the corpus drifts back.** Not a quick fix, and
   the reason is architectural: `createUploadTicket`
   (`apps/server/src/modules/admin/dance-media-service.ts`) only mints a signed upload URL, and
@@ -1279,9 +1302,18 @@ defects replace it, and the first is large enough that it should not wait for Ph
 - Resumable/background uploads for larger recordings.
 - Retain `+faststart` and a 1 s keyframe interval on every progressive MP4 output.
 
-Separately, and not a playback item: **210 published moves (26 %) have no pro-dancer video** —
-their Boogiz source 403s, so the migration could not copy it, and `learn-dance-screen.tsx:173`
-plays the dead URL today. Re-uploading those is a content repair with its own owner.
+Separately, and not a playback item, the corpus carries **two content defects that share one
+owner and one fix — a re-upload from the Boogiz source**:
+
+- **210 published moves (26 %) have no pro-dancer video** — their Boogiz source 403s, so the
+  migration could not copy it, and `learn-dance-screen.tsx:173` plays the dead URL today.
+- **4 published moves have a truncated `dancer-tip` video** that no player can open, listed in
+  the *Confirmed findings* row above. Unlike the 210, the row's URL resolves and the object exists,
+  so nothing in the app or the database looks wrong — only the bytes are short. That is worth
+  noting as a class: **a migration that fails silently mid-object is invisible to every check this
+  plan otherwise runs**, including the tier A survey, which read only the first 64 KB of each file.
+  A whole-corpus integrity pass (`moov` present, `ffprobe` decodes the container) is cheap and has
+  never been run.
 
 **Explicitly deferred:** HLS/ABR and the localhost-proxy cache. Revisit only if long-form
 lessons ship or measurement shows ABR beating an optimised progressive MP4 on our clips.
