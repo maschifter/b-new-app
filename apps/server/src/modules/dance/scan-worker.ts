@@ -135,6 +135,22 @@ export function createScanWorker(options: ScanWorkerOptions) {
         amateurUrl: signedRead.signedUrl,
         jobId: scan.post_id,
       });
+      // Recorded before the write below, not after it: a score that arrives and then
+      // fails to persist is requeued and fetched again, and without this row nothing
+      // would show the scan server had ever produced it.
+      await recordEvent({
+        attempt,
+        danceMoveId: post.dance_move_id,
+        event: "answered",
+        ownerId: scan.owner_id,
+        postId: scan.post_id,
+        rawScore: outcome.score,
+        scanDurationMs: outcome.durationMs,
+        scanId: scan.id,
+        scanServerIndex: outcome.index,
+        scanServerUrl: outcome.url,
+        serverAttempts: outcome.attempts,
+      });
       const { isFirstTime, updatedScore } = await completeScan(
         scan,
         post.dance_move_id,

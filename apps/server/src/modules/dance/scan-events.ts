@@ -24,6 +24,15 @@ interface ScanEventBase {
 export type ScanEvent =
   | (ScanEventBase & { event: "claimed" })
   | (ScanEventBase & {
+      event: "answered";
+      danceMoveId: string;
+      rawScore: number;
+      scanDurationMs: number;
+      scanServerIndex: number;
+      scanServerUrl: string;
+      serverAttempts: readonly ScanServerAttempt[];
+    })
+  | (ScanEventBase & {
       event: "scored";
       danceMoveId: string;
       isFirstTime: boolean;
@@ -50,6 +59,7 @@ export type ScanEvent =
     });
 
 const MESSAGES: Record<ScanEvent["event"], string> = {
+  answered: "Dance scan server answered",
   claimed: "Dance scan claimed",
   fallback: "Dance scan exhausted its attempts; wrote a fallback score",
   requeued: "Dance scan attempt failed; returned it to the queue",
@@ -69,7 +79,7 @@ function toJson(attempts: readonly ScanServerAttempt[]): ScanEventJson {
 
 /** Derived from the event, never passed in: the two can then never disagree. */
 function isExternalScore(event: ScanEvent): boolean | null {
-  if (event.event === "scored") return true;
+  if (event.event === "answered" || event.event === "scored") return true;
   if (event.event === "fallback") return false;
   return null;
 }
@@ -83,25 +93,48 @@ function toRow(event: ScanEvent): ScanEventRow {
     post_id: event.postId,
     scan_id: event.scanId,
   };
-  if (event.event === "claimed") return base;
-  if (event.event === "requeued") {
-    return { ...base, error: event.error, server_attempts: toJson(event.serverAttempts) };
+  switch (event.event) {
+    case "claimed":
+      return base;
+    case "requeued":
+      return { ...base, error: event.error, server_attempts: toJson(event.serverAttempts) };
+    case "answered":
+      // No updated_score or is_first_time: the bonus is computed during the write this
+      // event is recorded ahead of, so neither is known yet.
+      return {
+        ...base,
+        dance_move_id: event.danceMoveId,
+        raw_score: event.rawScore,
+        scan_duration_ms: event.scanDurationMs,
+        scan_server_index: event.scanServerIndex,
+        scan_server_url: event.scanServerUrl,
+        server_attempts: toJson(event.serverAttempts),
+      };
+    case "scored":
+      // Repeats what 'answered' already holds so the row stands alone: the question
+      // this table answers is asked of a score, not of a pair of rows.
+      return {
+        ...base,
+        dance_move_id: event.danceMoveId,
+        is_first_time: event.isFirstTime,
+        raw_score: event.rawScore,
+        scan_duration_ms: event.scanDurationMs,
+        scan_server_index: event.scanServerIndex,
+        scan_server_url: event.scanServerUrl,
+        server_attempts: toJson(event.serverAttempts),
+        updated_score: event.updatedScore,
+      };
+    case "fallback":
+      return {
+        ...base,
+        dance_move_id: event.danceMoveId,
+        error: event.error,
+        is_first_time: event.isFirstTime,
+        raw_score: event.rawScore,
+        server_attempts: toJson(event.serverAttempts),
+        updated_score: event.updatedScore,
+      };
   }
-  return {
-    ...base,
-    dance_move_id: event.danceMoveId,
-    is_first_time: event.isFirstTime,
-    raw_score: event.rawScore,
-    server_attempts: toJson(event.serverAttempts),
-    updated_score: event.updatedScore,
-    ...(event.event === "fallback"
-      ? { error: event.error }
-      : {
-          scan_duration_ms: event.scanDurationMs,
-          scan_server_index: event.scanServerIndex,
-          scan_server_url: event.scanServerUrl,
-        }),
-  };
 }
 
 interface ScanEventRecorderOptions {
@@ -121,7 +154,7 @@ export function createScanEventRecorder(options: ScanEventRecorderOptions) {
      * backoff the queue chose — and is never persisted.
      */
     async record(event: ScanEvent, logFields: Record<string, unknown> = {}): Promise<void> {
-      const level = event.event === "claimed" || event.event === "scored" ? "info" : "warn";
+      const level = event.event === "requeued" || event.event === "fallback" ? "warn" : "info";
       options.logger[level]({ ...event, ...logFields }, MESSAGES[event.event]);
 
       // Fail-soft, and deliberately so: losing an audit row is worse than losing one,

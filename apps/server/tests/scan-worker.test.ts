@@ -505,4 +505,71 @@ describe("dance scan worker", () => {
       expect.objectContaining({ remainingAttempts: 2 }),
     );
   });
+
+  it("records the server's answer even when persisting the score then fails", async () => {
+    const reaper = queryBuilder({ error: null });
+    const activeCount = queryBuilder({ count: 0, error: null });
+    const candidates = queryBuilder({ data: [scan], error: null });
+    const claim = queryBuilder({ data: scan, error: null });
+    const markScoring = queryBuilder({ error: null });
+    const post = queryBuilder({
+      data: {
+        dance_move_id: "move-id",
+        video_path: "owner/post.mp4",
+        dance_moves: { film_yourself_video_url: "https://media.example/reference.mp4" },
+      },
+      error: null,
+    });
+    const firstTime = queryBuilder({ count: 0, error: null });
+    // The scan server answered; writing that score to the post is what fails.
+    const scorePost = queryBuilder({ data: null, error: { message: "offline" } });
+    const retry = queryBuilder({ error: null });
+    const resetPost = queryBuilder({ error: null });
+    const queries = [
+      reaper,
+      activeCount,
+      candidates,
+      claim,
+      markScoring,
+      post,
+      firstTime,
+      scorePost,
+      retry,
+      resetPost,
+    ];
+    const from = vi.fn(() => {
+      const query = queries.shift();
+      if (!query) throw new Error("Unexpected Supabase query");
+      return query;
+    });
+    const recordEvent = vi.fn();
+    const worker = createScanWorker({
+      concurrency: 3,
+      danceVideoBucket: "dance-videos",
+      logger: testLogger() as never,
+      recordEvent,
+      scan: vi.fn().mockResolvedValue(outcome(72)),
+      scanServerUrls: "https://scan.example",
+      supabase: {
+        from,
+        storage: {
+          from: vi.fn(() => ({
+            createSignedUrl: vi.fn().mockResolvedValue({
+              data: { signedUrl: "https://signed.example/video" },
+              error: null,
+            }),
+          })),
+        },
+      } as never,
+    });
+
+    await worker.tick();
+
+    const events = recordEvent.mock.calls.map((call) => (call[0] as { event: string }).event);
+    // The score the server produced is on the record, and the attempt is not scored.
+    expect(events).toEqual(["claimed", "answered", "requeued"]);
+    expect(recordEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ event: "answered", rawScore: 72 }),
+    );
+  });
 });

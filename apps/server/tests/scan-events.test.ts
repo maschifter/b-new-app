@@ -149,4 +149,31 @@ describe("dance scan event recorder", () => {
       "Could not record a dance scan event",
     );
   });
+
+  it("records the scan server's answer without the bonus the write has yet to compute", async () => {
+    const { logger, query, recorder } = setup();
+
+    await recorder.record({
+      ...base,
+      danceMoveId: IDS.danceMoveId,
+      event: "answered",
+      rawScore: 60,
+      scanDurationMs: 13_725,
+      scanServerIndex: 0,
+      scanServerUrl: "https://scan-0.example",
+      serverAttempts: [
+        { durationMs: 13_725, httpStatus: 200, index: 0, url: "https://scan-0.example" },
+      ],
+    });
+
+    const row = query.insert?.mock.calls[0]?.[0] as Record<string, unknown>;
+    // An external score, even though the attempt has not completed yet.
+    expect(row.is_external_score).toBe(true);
+    expect(row.raw_score).toBe(60);
+    expect(row.scan_server_url).toBe("https://scan-0.example");
+    // Both are computed inside the write this event precedes.
+    expect(row.updated_score).toBeUndefined();
+    expect(row.is_first_time).toBeUndefined();
+    expect(logger.info).toHaveBeenCalledWith(expect.anything(), "Dance scan server answered");
+  });
 });
