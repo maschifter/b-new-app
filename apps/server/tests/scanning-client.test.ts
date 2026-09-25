@@ -14,7 +14,11 @@ describe("scanning client", () => {
       .mockResolvedValue(new Response(JSON.stringify({ score: 72 }), { status: 200 }));
     const client = createScanningClient({ fetchImpl, serverUrls: "https://scan-one.example" });
 
-    await expect(client.scan(request)).resolves.toBe(72);
+    await expect(client.scan(request)).resolves.toMatchObject({
+      index: 0,
+      score: 72,
+      url: "https://scan-one.example",
+    });
     expect(fetchImpl).toHaveBeenCalledWith(
       "https://scan-one.example",
       expect.objectContaining({
@@ -41,7 +45,16 @@ describe("scanning client", () => {
       sleep,
     });
 
-    await expect(client.scan(request)).resolves.toBe(63);
+    const outcome = await client.scan(request);
+
+    // The score names the server that produced it, and carries the failover ahead of it.
+    expect(outcome).toMatchObject({ index: 1, score: 63, url: "https://scan-two.example" });
+    expect(outcome.attempts).toMatchObject([
+      { error: "Invalid scan score", httpStatus: 200, index: 0, url: "https://scan-one.example" },
+      { httpStatus: 200, index: 1, url: "https://scan-two.example" },
+    ]);
+    // The winner carries no error key at all, which is what marks it as the winner.
+    expect(outcome.attempts[1]).not.toHaveProperty("error");
     expect(sleep).toHaveBeenCalledWith(1_000);
     expect(fetchImpl).toHaveBeenNthCalledWith(2, "https://scan-two.example", expect.any(Object));
     expect(client.maxDurationMs).toBe(181_000);
@@ -54,5 +67,26 @@ describe("scanning client", () => {
     });
 
     await expect(client.scan(request)).rejects.toBeInstanceOf(ScanRequestError);
+  });
+
+  it("names each failed server in the message the worker stores on the scan row", async () => {
+    const client = createScanningClient({
+      fetchImpl: vi
+        .fn()
+        .mockResolvedValueOnce(new Response("nope", { status: 502 }))
+        .mockRejectedValueOnce(new Error("offline")),
+      serverUrls: "https://scan-one.example,https://scan-two.example",
+      sleep: vi.fn().mockResolvedValue(undefined),
+    });
+
+    const error = await client.scan(request).catch((thrown: unknown) => thrown);
+
+    if (!(error instanceof ScanRequestError)) throw new Error("Expected a ScanRequestError");
+    expect(error.message).toContain("[0] https://scan-one.example: HTTP 502");
+    expect(error.message).toContain("[1] https://scan-two.example: offline");
+    expect(error.attempts).toMatchObject([
+      { httpStatus: 502, index: 0 },
+      { httpStatus: undefined, index: 1 },
+    ]);
   });
 });

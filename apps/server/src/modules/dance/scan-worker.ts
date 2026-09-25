@@ -10,15 +10,38 @@ import {
   errorMessage,
   retryAt,
 } from "./job-queue.js";
-import { createScanningClient } from "./scanning-client.js";
+import {
+  type ScanOutcome,
+  ScanRequestError,
+  type ScanServerAttempt,
+  createScanningClient,
+} from "./scanning-client.js";
 
 interface ScanWorkerOptions {
   concurrency: number;
   danceVideoBucket: string;
   logger: FastifyBaseLogger;
-  scan?: (request: { amateurUrl: string; expertUrl: string; jobId: string }) => Promise<number>;
+  scan?: (request: {
+    amateurUrl: string;
+    expertUrl: string;
+    jobId: string;
+  }) => Promise<ScanOutcome>;
   scanServerUrls: string;
   supabase: SupabaseClient<Database>;
+}
+
+/**
+ * `attempts` counts the failures behind a row, so the run about to happen is the next
+ * one. Named because every log line reports it and an off-by-one here would misattribute
+ * a score to the wrong try.
+ */
+function attemptNumber(scan: ClaimedJob): number {
+  return scan.attempts + 1;
+}
+
+/** Per-server detail survives only on a `ScanRequestError`; anything else failed earlier. */
+function serverAttempts(error: unknown): readonly ScanServerAttempt[] {
+  return error instanceof ScanRequestError ? error.attempts : [];
 }
 
 export function createScanWorker(options: ScanWorkerOptions) {
@@ -30,7 +53,7 @@ export function createScanWorker(options: ScanWorkerOptions) {
     danceMoveId: string,
     rawScore: number,
     isExternalScore: boolean,
-  ) {
+  ): Promise<{ isFirstTime: boolean; updatedScore: number }> {
     const { count, error: firstTimeError } = await options.supabase
       .from("dance_posts")
       .select("id", { count: "exact", head: true })
@@ -39,7 +62,8 @@ export function createScanWorker(options: ScanWorkerOptions) {
       .eq("status", "scored");
     if (firstTimeError) throw new Error("Could not determine first dance attempt");
 
-    const updatedScore = finalScore(rawScore, (count ?? 0) === 0);
+    const isFirstTime = (count ?? 0) === 0;
+    const updatedScore = finalScore(rawScore, isFirstTime);
     const { data: scoredPost, error: postError } = await options.supabase
       .from("dance_posts")
       .update({ status: "scored", score: rawScore })
@@ -64,7 +88,7 @@ export function createScanWorker(options: ScanWorkerOptions) {
       .eq("status", "processing")
       .select("id")
       .maybeSingle();
-    if (!scanError && completedScan) return;
+    if (!scanError && completedScan) return { isFirstTime, updatedScore };
 
     const { data: restoredPost, error: restoreError } = await options.supabase
       .from("dance_posts")
@@ -80,6 +104,7 @@ export function createScanWorker(options: ScanWorkerOptions) {
   }
 
   async function processClaim(scan: ClaimedJob) {
+    const attempt = attemptNumber(scan);
     try {
       const { data: post, error: postError } = await options.supabase
         .from("dance_posts")
@@ -95,12 +120,39 @@ export function createScanWorker(options: ScanWorkerOptions) {
         .createSignedUrl(post.video_path, 5 * 60);
       if (signedReadError || !signedRead?.signedUrl) throw new Error("Could not sign dance video");
 
-      const rawScore = await performScan({
+      const outcome = await performScan({
         expertUrl: post.dance_moves.film_yourself_video_url,
         amateurUrl: signedRead.signedUrl,
         jobId: scan.post_id,
       });
-      await completeScan(scan, post.dance_move_id, rawScore, true);
+      const { isFirstTime, updatedScore } = await completeScan(
+        scan,
+        post.dance_move_id,
+        outcome.score,
+        true,
+      );
+      // The provenance of a score, in one line: which server answered, on which try,
+      // and after which failovers. The scan row carrying the same facts is deleted with
+      // its post — by the client in Stepz, by the user in b-new-app — so this line is
+      // the only durable record of how a score was reached.
+      options.logger.info(
+        {
+          attempt,
+          danceMoveId: post.dance_move_id,
+          isExternalScore: true,
+          isFirstTime,
+          ownerId: scan.owner_id,
+          postId: scan.post_id,
+          rawScore: outcome.score,
+          scanDurationMs: outcome.durationMs,
+          scanId: scan.id,
+          scanServerIndex: outcome.index,
+          scanServerUrl: outcome.url,
+          serverAttempts: outcome.attempts,
+          updatedScore,
+        },
+        "Dance scan scored",
+      );
     } catch (error) {
       const attempts = scan.attempts + 1;
       if (attempts >= MAX_ATTEMPTS) {
@@ -112,7 +164,30 @@ export function createScanWorker(options: ScanWorkerOptions) {
             .eq("owner_id", scan.owner_id)
             .maybeSingle();
           if (postError || !post) throw new Error("Could not load dance post for fallback score");
-          await completeScan(scan, post.dance_move_id, generateFallbackScore(), false);
+          const rawScore = generateFallbackScore();
+          const { isFirstTime, updatedScore } = await completeScan(
+            scan,
+            post.dance_move_id,
+            rawScore,
+            false,
+          );
+          // warn, not info: the user is shown a number no scan server produced.
+          options.logger.warn(
+            {
+              attempt,
+              danceMoveId: post.dance_move_id,
+              err: error,
+              isExternalScore: false,
+              isFirstTime,
+              ownerId: scan.owner_id,
+              postId: scan.post_id,
+              rawScore,
+              scanId: scan.id,
+              serverAttempts: serverAttempts(error),
+              updatedScore,
+            },
+            "Dance scan exhausted its attempts; wrote a fallback score",
+          );
         } catch (fallbackError) {
           options.logger.error(
             { err: fallbackError, scanId: scan.id },
@@ -121,12 +196,13 @@ export function createScanWorker(options: ScanWorkerOptions) {
         }
         return;
       }
+      const nextRunAt = retryAt(attempts);
       const { error: retryError } = await options.supabase
         .from("dance_scans")
         .update({
           attempts,
           status: "pending",
-          next_run_at: retryAt(attempts),
+          next_run_at: nextRunAt,
           locked_at: null,
           error: errorMessage(error, "Unknown scan error"),
         })
@@ -136,6 +212,19 @@ export function createScanWorker(options: ScanWorkerOptions) {
         options.logger.error({ err: retryError, scanId: scan.id }, "Could not retry dance scan");
         return;
       }
+      options.logger.warn(
+        {
+          attempt,
+          err: error,
+          nextRunAt,
+          ownerId: scan.owner_id,
+          postId: scan.post_id,
+          remainingAttempts: MAX_ATTEMPTS - attempts,
+          scanId: scan.id,
+          serverAttempts: serverAttempts(error),
+        },
+        "Dance scan attempt failed; returned it to the queue",
+      );
       const { error: postError } = await options.supabase
         .from("dance_posts")
         .update({ status: "uploaded" })
@@ -155,6 +244,17 @@ export function createScanWorker(options: ScanWorkerOptions) {
       .eq("id", scan.post_id)
       .eq("owner_id", scan.owner_id);
     if (error) throw new Error("Could not mark dance post as scoring");
+    // Paired with the outcome line below it: a claim with no outcome is a scan still
+    // inside the client's multi-minute budget, which is otherwise silent while it runs.
+    options.logger.info(
+      {
+        attempt: attemptNumber(scan),
+        ownerId: scan.owner_id,
+        postId: scan.post_id,
+        scanId: scan.id,
+      },
+      "Dance scan claimed",
+    );
   }
 
   return createJobQueue({
