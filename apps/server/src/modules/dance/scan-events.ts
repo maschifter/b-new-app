@@ -28,6 +28,7 @@ export type ScanEvent =
       danceMoveId: string;
       rawScore: number;
       scanDurationMs: number;
+      totalScanMs: number;
       scanServerIndex: number;
       scanServerUrl: string;
       serverAttempts: readonly ScanServerAttempt[];
@@ -38,6 +39,7 @@ export type ScanEvent =
       isFirstTime: boolean;
       rawScore: number;
       scanDurationMs: number;
+      totalScanMs: number;
       scanServerIndex: number;
       scanServerUrl: string;
       serverAttempts: readonly ScanServerAttempt[];
@@ -47,6 +49,8 @@ export type ScanEvent =
       event: "requeued";
       error: string;
       serverAttempts: readonly ScanServerAttempt[];
+      /** Absent when the attempt failed before reaching a scan server. */
+      totalScanMs?: number | undefined;
     })
   | (ScanEventBase & {
       event: "fallback";
@@ -55,6 +59,8 @@ export type ScanEvent =
       isFirstTime: boolean;
       rawScore: number;
       serverAttempts: readonly ScanServerAttempt[];
+      /** Absent when the final attempt failed before reaching a scan server. */
+      totalScanMs?: number | undefined;
       updatedScore: number;
     });
 
@@ -97,7 +103,12 @@ function toRow(event: ScanEvent): ScanEventRow {
     case "claimed":
       return base;
     case "requeued":
-      return { ...base, error: event.error, server_attempts: toJson(event.serverAttempts) };
+      return {
+        ...base,
+        error: event.error,
+        server_attempts: toJson(event.serverAttempts),
+        total_scan_ms: event.totalScanMs ?? null,
+      };
     case "answered":
       // No updated_score or is_first_time: the bonus is computed during the write this
       // event is recorded ahead of, so neither is known yet.
@@ -109,6 +120,7 @@ function toRow(event: ScanEvent): ScanEventRow {
         scan_server_index: event.scanServerIndex,
         scan_server_url: event.scanServerUrl,
         server_attempts: toJson(event.serverAttempts),
+        total_scan_ms: event.totalScanMs,
       };
     case "scored":
       // Repeats what 'answered' already holds so the row stands alone: the question
@@ -122,6 +134,7 @@ function toRow(event: ScanEvent): ScanEventRow {
         scan_server_index: event.scanServerIndex,
         scan_server_url: event.scanServerUrl,
         server_attempts: toJson(event.serverAttempts),
+        total_scan_ms: event.totalScanMs,
         updated_score: event.updatedScore,
       };
     case "fallback":
@@ -132,6 +145,7 @@ function toRow(event: ScanEvent): ScanEventRow {
         is_first_time: event.isFirstTime,
         raw_score: event.rawScore,
         server_attempts: toJson(event.serverAttempts),
+        total_scan_ms: event.totalScanMs ?? null,
         updated_score: event.updatedScore,
       };
   }

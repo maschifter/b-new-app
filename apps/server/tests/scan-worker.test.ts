@@ -19,6 +19,7 @@ describe("dance scan worker", () => {
     durationMs: 1_200,
     index,
     score,
+    totalDurationMs: 1_200,
     url: `https://scan-${index}.example`,
   });
 
@@ -404,6 +405,7 @@ describe("dance scan worker", () => {
         durationMs: 1_500,
         index: 1,
         score: 72,
+        totalDurationMs: 2_400,
         url: "https://scan-1.example",
       }),
       scanServerUrls: "https://scan-0.example,https://scan-1.example",
@@ -478,7 +480,9 @@ describe("dance scan worker", () => {
       danceVideoBucket: "dance-videos",
       logger: testLogger() as never,
       recordEvent,
-      scan: vi.fn().mockRejectedValue(new ScanRequestError("All scan servers failed", failures)),
+      scan: vi
+        .fn()
+        .mockRejectedValue(new ScanRequestError("All scan servers failed", failures, 91_120)),
       scanServerUrls: "https://scan-0.example,https://scan-1.example",
       supabase: {
         from,

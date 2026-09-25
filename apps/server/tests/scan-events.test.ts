@@ -21,6 +21,7 @@ const scored: ScanEvent = {
   scanDurationMs: 18_429,
   scanServerIndex: 1,
   scanServerUrl: "https://scan-1.example",
+  totalScanMs: 20_329,
   serverAttempts: [
     {
       durationMs: 900,
@@ -64,6 +65,9 @@ describe("dance scan event recorder", () => {
         scan_duration_ms: 18_429,
         scan_server_index: 1,
         scan_server_url: "https://scan-1.example",
+        // The winning call alone is already asserted above; this is every server
+        // together, so the failover ahead of it is the gap between the two.
+        total_scan_ms: 20_329,
         updated_score: 80,
       }),
     );
@@ -164,6 +168,7 @@ describe("dance scan event recorder", () => {
       serverAttempts: [
         { durationMs: 13_725, httpStatus: 200, index: 0, url: "https://scan-0.example" },
       ],
+      totalScanMs: 13_725,
     });
 
     const row = query.insert?.mock.calls[0]?.[0] as Record<string, unknown>;
@@ -175,5 +180,20 @@ describe("dance scan event recorder", () => {
     expect(row.updated_score).toBeUndefined();
     expect(row.is_first_time).toBeUndefined();
     expect(logger.info).toHaveBeenCalledWith(expect.anything(), "Dance scan server answered");
+  });
+
+  it("stores a null total when an attempt failed before reaching a scan server", async () => {
+    const { query, recorder } = setup();
+
+    await recorder.record({
+      ...base,
+      error: "Could not sign dance video",
+      event: "requeued",
+      serverAttempts: [],
+    });
+
+    const row = query.insert?.mock.calls[0]?.[0] as Record<string, unknown>;
+    // Null, not 0: the scan servers took no time because none was called.
+    expect(row.total_scan_ms).toBeNull();
   });
 });

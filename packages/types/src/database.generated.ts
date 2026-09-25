@@ -364,6 +364,7 @@ export type Database = {
           scan_server_index: number | null
           scan_server_url: string | null
           server_attempts: Json | null
+          total_scan_ms: number | null
           updated_score: number | null
         }
         Insert: {
@@ -383,6 +384,7 @@ export type Database = {
           scan_server_index?: number | null
           scan_server_url?: string | null
           server_attempts?: Json | null
+          total_scan_ms?: number | null
           updated_score?: number | null
         }
         Update: {
@@ -402,6 +404,7 @@ export type Database = {
           scan_server_index?: number | null
           scan_server_url?: string | null
           server_attempts?: Json | null
+          total_scan_ms?: number | null
           updated_score?: number | null
         }
         Relationships: []

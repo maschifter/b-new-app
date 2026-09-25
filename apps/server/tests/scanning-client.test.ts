@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { ScanRequestError, createScanningClient } from "../src/modules/dance/scanning-client.js";
+import {
+  SCAN_RESPONSE_BODY_LIMIT,
+  ScanRequestError,
+  createScanningClient,
+} from "../src/modules/dance/scanning-client.js";
 
 const request = {
   expertUrl: "https://media.example/expert.mp4",
@@ -88,5 +92,86 @@ describe("scanning client", () => {
       { httpStatus: 502, index: 0 },
       { httpStatus: undefined, index: 1 },
     ]);
+  });
+
+  it("keeps what a failing server said, which HTTP 500 alone does not explain", async () => {
+    const client = createScanningClient({
+      fetchImpl: vi.fn().mockResolvedValue(
+        new Response("<html>\n  <body>Internal Server Error: ffmpeg exited 1</body>\n</html>", {
+          status: 500,
+        }),
+      ),
+      serverUrls: "https://scan-one.example",
+    });
+
+    const error = await client.scan(request).catch((thrown: unknown) => thrown);
+
+    if (!(error instanceof ScanRequestError)) throw new Error("Expected a ScanRequestError");
+    // Collapsed to one line, since this reaches a log line and a database column.
+    expect(error.attempts[0]?.responseBody).toBe(
+      "<html> <body>Internal Server Error: ffmpeg exited 1</body> </html>",
+    );
+    expect(error.message).toContain("ffmpeg exited 1");
+  });
+
+  it("keeps the body of a response whose score is unusable", async () => {
+    const client = createScanningClient({
+      fetchImpl: vi.fn().mockResolvedValue(new Response(JSON.stringify({ score: 101 }))),
+      serverUrls: "https://scan-one.example",
+    });
+
+    const error = await client.scan(request).catch((thrown: unknown) => thrown);
+
+    if (!(error instanceof ScanRequestError)) throw new Error("Expected a ScanRequestError");
+    expect(error.attempts[0]).toMatchObject({
+      error: "Invalid scan score",
+      httpStatus: 200,
+      responseBody: '{"score":101}',
+    });
+  });
+
+  it("truncates a long body rather than putting a whole error page in a column", async () => {
+    const client = createScanningClient({
+      fetchImpl: vi.fn().mockResolvedValue(new Response("x".repeat(5_000), { status: 502 })),
+      serverUrls: "https://scan-one.example",
+    });
+
+    const error = await client.scan(request).catch((thrown: unknown) => thrown);
+
+    if (!(error instanceof ScanRequestError)) throw new Error("Expected a ScanRequestError");
+    expect(error.attempts[0]?.responseBody).toHaveLength(SCAN_RESPONSE_BODY_LIMIT);
+  });
+
+  it("times the whole call, not just the server that answered", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchImpl = vi
+        .fn()
+        // The first server burns 30s before failing; the second answers in 2s.
+        .mockImplementationOnce(async () => {
+          vi.advanceTimersByTime(30_000);
+          return new Response("gateway timeout", { status: 504 });
+        })
+        .mockImplementationOnce(async () => {
+          vi.advanceTimersByTime(2_000);
+          return new Response(JSON.stringify({ score: 63 }));
+        });
+      const client = createScanningClient({
+        fetchImpl,
+        serverUrls: "https://scan-one.example,https://scan-two.example",
+        // The failover delay is part of the total, so spend it on the clock too.
+        sleep: async (ms) => {
+          vi.advanceTimersByTime(ms);
+        },
+      });
+
+      const outcome = await client.scan(request);
+
+      // durationMs sees only the winner; totalDurationMs sees the 30s that preceded it.
+      expect(outcome.durationMs).toBe(2_000);
+      expect(outcome.totalDurationMs).toBe(33_000);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

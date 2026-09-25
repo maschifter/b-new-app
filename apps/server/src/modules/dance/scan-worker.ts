@@ -51,6 +51,11 @@ function serverAttempts(error: unknown): readonly ScanServerAttempt[] {
   return error instanceof ScanRequestError ? error.attempts : [];
 }
 
+/** Undefined, not zero: an attempt that never called a server did not take no time. */
+function totalScanMs(error: unknown): number | undefined {
+  return error instanceof ScanRequestError ? error.totalDurationMs : undefined;
+}
+
 export function createScanWorker(options: ScanWorkerOptions) {
   const client = createScanningClient({ serverUrls: options.scanServerUrls });
   const performScan = options.scan ?? ((request) => client.scan(request));
@@ -150,6 +155,7 @@ export function createScanWorker(options: ScanWorkerOptions) {
         scanServerIndex: outcome.index,
         scanServerUrl: outcome.url,
         serverAttempts: outcome.attempts,
+        totalScanMs: outcome.totalDurationMs,
       });
       const { isFirstTime, updatedScore } = await completeScan(
         scan,
@@ -170,6 +176,7 @@ export function createScanWorker(options: ScanWorkerOptions) {
         scanServerIndex: outcome.index,
         scanServerUrl: outcome.url,
         serverAttempts: outcome.attempts,
+        totalScanMs: outcome.totalDurationMs,
         updatedScore,
       });
     } catch (error) {
@@ -204,6 +211,7 @@ export function createScanWorker(options: ScanWorkerOptions) {
               rawScore,
               scanId: scan.id,
               serverAttempts: serverAttempts(error),
+              totalScanMs: totalScanMs(error),
               updatedScore,
             },
             { err: error },
@@ -241,6 +249,7 @@ export function createScanWorker(options: ScanWorkerOptions) {
           postId: scan.post_id,
           scanId: scan.id,
           serverAttempts: serverAttempts(error),
+          totalScanMs: totalScanMs(error),
         },
         { err: error, nextRunAt, remainingAttempts: MAX_ATTEMPTS - attempts },
       );
